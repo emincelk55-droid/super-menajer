@@ -112,6 +112,7 @@ fun MainScreen() {
         }
     }
     GameRepo.selectedPlayer?.let { PlayerDialog(g, it) }
+    GameRepo.negotiation?.let { NegotiationDialog(g, it) }
     if (GameRepo.settingsOpen) SettingsDialog()
 }
 
@@ -168,8 +169,13 @@ private fun TopBar(g: Game) {
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(t.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val wk = if (g.seasonOver) "Sezon bitti" else g.dayLabel(g.week)
-            Text("${g.season} · $wk", color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val wk = when {
+                g.seasonOver -> "Sezon bitti"
+                !g.isMatchDay -> if (g.week == 1) "Hazırlık dönemi" else "Maç yok"
+                else -> g.dayLabel(g.week)
+            }
+            val date = if (g.date > 0) com.supermenajer.game.game.GameCalendar.format(g.date) else "${g.season}"
+            Text("📅 $date · $wk", color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(money(t.budget), color = if (t.budget >= 0) Gold else Red, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -188,7 +194,7 @@ private fun TopBar(g: Game) {
             onClick = { GameRepo.continueGame() },
             enabled = !g.fired,
             shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color.Black),
+            colors = ButtonDefaults.buttonColors(containerColor = if (GameRepo.advancing) Gold else Green, contentColor = Color.Black),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
         ) { Text(GameRepo.continueLabel(g), fontWeight = FontWeight.Black, fontSize = 14.sp) }
     }
@@ -386,11 +392,14 @@ private fun NextMatchCard(g: Game, f: Fixture) {
 @Composable
 private fun RestDayCard(g: Game) {
     val d = g.today
-    SectionCard(g.dayLabel(g.week)) {
+    val cal = com.supermenajer.game.game.GameCalendar
+    SectionCard(if (g.date > 0) cal.format(g.date) else g.dayLabel(g.week)) {
         Text(
-            when (d?.type) {
-                1 -> "Bu kupa turunda maçımız yok."
-                2 -> "Bu Avrupa gecesinde maçımız yok."
+            when {
+                !g.isMatchDay && g.week == 1 -> "Hazırlık dönemi. Transferlerini tamamla, taktiğini hazırla!"
+                !g.isMatchDay -> "Bugün maç yok. Antrenman günü."
+                d?.type == 1 -> "Bu kupa turunda maçımız yok."
+                d?.type == 2 -> "Bu Avrupa gecesinde maçımız yok."
                 else -> "Bugün maçımız yok."
             },
             fontSize = 15.sp,
@@ -398,12 +407,20 @@ private fun RestDayCard(g: Game) {
         g.nextUserFixture()?.let { nf ->
             val opp = g.team(if (nf.home == g.userTeamId) nf.away else nf.home)
             Spacer(Modifier.height(4.dp))
-            Text("Sıradaki maç: ${opp.name} · ${g.dayLabel(nf.week)}", color = TextDim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val left = if (g.date > 0) cal.daysUntil(g, nf.week) else -1
+            val whenText = if (left > 0) " · $left gün sonra (${cal.format(cal.dateOf(g, nf.week), false)})" else " · ${g.dayLabel(nf.week)}"
+            Text("Sıradaki maç: ${opp.name}$whenText", color = TextDim, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(10.dp))
-        Button(onClick = { GameRepo.skipToNextMatch() }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp)) {
-            Text("⏩  SONRAKİ MAÇA GİT", fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { GameRepo.continueGame() }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp)) {
+                Text(if (GameRepo.advancing) "⏸ DURDUR" else "▶ GÜN GÜN", fontWeight = FontWeight.Bold, maxLines = 1)
+            }
+            OutlinedButton(onClick = { GameRepo.skipToNextMatch() }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp)) {
+                Text("⏩ Maça atla", maxLines = 1)
+            }
         }
+        Text("DEVAM günleri tek tek geçer; transfer teklifi, sakatlık gibi önemli bir olayda durur.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

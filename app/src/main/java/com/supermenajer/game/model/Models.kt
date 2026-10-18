@@ -45,6 +45,13 @@ class Player(
     var contractYears: Int = 0,
     /** Sözleşmedeki haftalık maaş (0 ise talep edilen maaş kullanılır). */
     var salary: Long = 0,
+    /** Satış listesinde mi (kulüpler daha sık teklif yapar). */
+    var listed: Boolean = false,
+    /** Sonraki satıştan pay: hangi kulübe yüzde kaç. */
+    var sellOnClub: Int = -1,
+    var sellOnPct: Int = 0,
+    /** Sözleşmede söz verilen kadro rolü: 0 yıldız, 1 ilk 11, 2 rotasyon, 3 yedek, 4 genç yetenek; -1 yok. */
+    var squadRole: Int = -1,
     /** Kiralıktaysa asıl kulübü, değilse -1. */
     var loanFrom: Int = -1,
     /** Mutsuz ve transfer talep etti. */
@@ -111,6 +118,14 @@ class Team(
     var mentality: Int = 1,
     /** 0 = düşük, 1 = orta, 2 = yüksek */
     var pressing: Int = 1,
+    /** Takım talimatları: tempo, genişlik, pas stili, savunma hattı (0/1/2) ve açık/kapalı talimatlar. */
+    var tempo: Int = 1,
+    var width: Int = 1,
+    var passing: Int = 1,
+    var defLine: Int = 1,
+    var counter: Boolean = false,
+    var offsideTrap: Boolean = false,
+    var timeWasting: Boolean = false,
     var lineup: MutableList<Int> = mutableListOf(),
     var won: Int = 0,
     var drawn: Int = 0,
@@ -345,6 +360,10 @@ class Game(
     /** Kullanıcının kulübünün sponsorları ve bekleyen teklifler. */
     var sponsors: MutableList<Sponsor> = mutableListOf(),
     var sponsorOffers: MutableList<Sponsor> = mutableListOf(),
+    /** Taksitli transferlerin gelecek sezon ödenecek kısmı. */
+    var pendingPayments: Long = 0,
+    /** Oyun içi tarih (epoch günü). 0 = eski kayıt, her gün maç günü sayılır. */
+    var date: Long = 0,
     /** Taraftar memnuniyeti (0-100) ve son değişikliklerin nedenleri. */
     var fans: Double = 60.0,
     var fanLog: MutableList<String> = mutableListOf(),
@@ -447,7 +466,11 @@ class Game(
     fun weekFixtures(w: Int): List<Fixture> = fixtures.filter { it.week == w }
 
     /** Kullanıcının bugünkü maçı (yoksa null). */
-    fun todayUserFixture(): Fixture? = fixtures.firstOrNull { it.week == week && !it.played && it.involves(userTeamId) }
+    /** Bugün takvimdeki sıradaki günün tarihi mi (maç günü)? Aradaki günler boş günlerdir. */
+    val isMatchDay: Boolean get() = date == 0L || date >= com.supermenajer.game.game.GameCalendar.dateOf(this, week)
+
+    fun todayUserFixture(): Fixture? =
+        if (!isMatchDay) null else fixtures.firstOrNull { it.week == week && !it.played && it.involves(userTeamId) }
 
     /** Kullanıcının oynanmamış sıradaki maçı. */
     fun nextUserFixture(): Fixture? =

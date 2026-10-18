@@ -70,10 +70,36 @@ object Economy {
 
     fun ticketIncome(t: Team): Long = 20_000L + t.reputation * 900L
 
+    /** Transfer bütçesi ↔ haftalık maaş bütçesi oranı (1 haftalık maaş = 40 katı transfer parası). */
+    const val SHIFT_RATIO = 40L
+    const val SHIFT = "Bütçe aktarımı"
+
+    /** weekly > 0: transfer bütçesinden maaşa; weekly < 0: maaştan transfer bütçesine. */
+    fun shiftBudget(g: Game, weekly: Long): String {
+        val t = g.userTeam
+        val cost = weekly * SHIFT_RATIO
+        if (weekly > 0) {
+            if (t.budget < cost) return "Transfer bütçesi yetersiz."
+            earn(t, SHIFT, -cost)
+            t.wageBudget += weekly
+            return "Maaş bütçesi +${money(weekly)}/hafta (transfer bütçesinden ${money(cost)})."
+        }
+        val w = -weekly
+        if (t.wageBudget - w < squadWages(g, t.id)) return "Maaş bütçesi mevcut maaşların altına inemez."
+        t.wageBudget -= w
+        earn(t, SHIFT, w * SHIFT_RATIO)
+        return "Transfer bütçesi +${money(w * SHIFT_RATIO)} (maaş bütçesi -${money(w)}/hafta)."
+    }
+
     /** Sezon sonu yönetim ödeneği. Mali rapor lastReport'a yazılır. */
     fun seasonPayout(g: Game) {
         // Yapay zekâ kulüpleri harcamadığı paranın bir kısmını işletme giderlerine kullanır (sınırsız birikmesin).
         for (t in g.teams) if (t.id != g.userTeamId && t.budget > 0) t.budget = (t.budget * 0.6).toLong()
+        if (g.pendingPayments > 0 && !g.fired) {
+            earn(g.userTeam, BUYS, -g.pendingPayments)
+            g.addNews("Taksit ödemesi", "Taksitli transferlerin kalan ${money(g.pendingPayments)} tutarı ödendi.")
+            g.pendingPayments = 0
+        }
         for (t in g.divisionTeams(Leagues.LEGACY_EURO)) earn(t, BOARD, r5k(6_000_000.0 * (t.reputation / 70.0).pow(2)))
         for (div in Season.activeLeagues(g)) {
             val lg = Leagues.of(div) ?: continue

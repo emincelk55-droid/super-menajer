@@ -68,6 +68,7 @@ object Season {
             makeLeagueFixtures(g.divisionTeams(id).map { it.id }, id, g.calendar, rnd)
         }.toMutableList()
         g.week = 1
+        g.date = GameCalendar.seasonStart(g)
         g.seasonOver = false
         g.cupWinner = -1
         g.cupWinners = mutableMapOf()
@@ -81,9 +82,33 @@ object Season {
         g.players.forEach { it.startOvr = it.overall }
         for (t in g.teams) {
             if (t.id == g.userTeamId && t.lineup.size == 11) Lineups.validate(g, t) else Lineups.autoPick(g, t)
+            if (t.id != g.userTeamId) aiTactics(g, t, rnd)
         }
         for (country in activeCountries(g)) startCup(g, country, rnd)
         Europe.start(g, rnd)
+    }
+
+    /** Yapay zekâ takımlarının oyun tarzı: büyükler topa sahip olur, küçükler kontra oynar. */
+    fun aiTactics(g: Game, t: Team, rnd: Random) {
+        val n = g.divisionTeams(t.division).size.coerceAtLeast(1)
+        val rank = t.expected.toDouble() / n
+        when {
+            rank <= 0.3 -> {
+                t.mentality = if (rnd.nextDouble() < 0.6) 2 else 1
+                t.passing = 0; t.defLine = 2; t.width = rnd.nextInt(1, 3); t.pressing = 2
+                t.tempo = rnd.nextInt(1, 3); t.counter = false; t.offsideTrap = rnd.nextDouble() < 0.4
+            }
+            rank >= 0.7 -> {
+                t.mentality = if (rnd.nextDouble() < 0.6) 0 else 1
+                t.passing = if (rnd.nextDouble() < 0.6) 2 else 1; t.defLine = 0; t.width = rnd.nextInt(0, 2)
+                t.pressing = rnd.nextInt(0, 2); t.tempo = rnd.nextInt(1, 3); t.counter = true; t.offsideTrap = false
+            }
+            else -> {
+                t.mentality = 1; t.passing = rnd.nextInt(0, 3); t.defLine = 1; t.width = rnd.nextInt(0, 3)
+                t.pressing = 1; t.tempo = 1; t.counter = rnd.nextDouble() < 0.3; t.offsideTrap = rnd.nextDouble() < 0.2
+            }
+        }
+        t.timeWasting = rnd.nextDouble() < 0.3
     }
 
     /** Ülke kupası: 2 ligli ülkelerde 32 takım (son 32), tek ligli ülkelerde 16 takım (son 16). */
@@ -145,6 +170,14 @@ object Season {
             g.addNews(
                 "Güncelleme: v1.1 · Gelen kutusu ve yeni ana sayfa",
                 "Haberler artık Gelen Kutusu'nda; okunmamışlar kırmızı noktayla görünür. Üstteki DEVAM düğmesiyle oyunu ilerlet, ⚙️ ile ayarlara ulaş. Teknik ekip, tesisler, sponsorlar, finans ve taraftar yeni Kulüp menüsünde. Yardımcı antrenörün de birkaç haftada bir rapor gönderecek.",
+            )
+        }
+        if (g.saveVersion < 12) {
+            g.saveVersion = 12
+            if (g.date == 0L) g.date = GameCalendar.dateOf(g, g.week)
+            g.addNews(
+                "Güncelleme: v1.2 · Büyük güncelleme",
+                "Takvim artık gün gün ilerliyor; DEVAM önemli bir olayda durur. Taktikte sürükle-bırak ve yeni takım talimatları, oyuncu yüzleri ve kartları, diyaloglu transfer pazarlığı, bütçe kaydırma ve 3 kayıt yuvası geldi!",
             )
         }
     }
@@ -369,6 +402,7 @@ object Season {
             makeIncomingOffer(g, rnd)
         }
         g.offers.removeAll { g.week - it.day >= 4 || g.player(it.playerId)?.teamId != g.userTeamId || g.teamOrNull(it.teamId) == null }
+        g.date = maxOf(g.date, GameCalendar.dateOf(g, g.week) + 1)
         g.week++
         if (g.week > g.totalDays) seasonEnd(g)
         if (!g.fired && g.confidence <= 5 && (g.seasonOver || g.leagueWeekAt(g.week) >= 8)) fire(g, rnd)
@@ -567,13 +601,29 @@ object Season {
     }
 
     /** Kullanıcının oyuncularına gelen teklifler. */
+    /** Maç olmayan gün: transfer döneminde kulüpler hareketli olur. */
+    fun freeDay(g: Game, rnd: Random = Random.Default) {
+        if (g.fired) return
+        if (transferWindowOpen(g)) {
+            if (rnd.nextDouble() < 0.35) aiTransfers(g, rnd)
+            if (rnd.nextDouble() < 0.4) makeIncomingOffer(g, rnd)
+        }
+        for (p in g.players) if (p.teamId >= 0) p.fitness = (p.fitness + 4).coerceAtMost(100.0)
+        Scouting.processDay(g, false, rnd)
+    }
+
     private fun makeIncomingOffer(g: Game, rnd: Random) {
-        if (g.offers.size >= 3 || rnd.nextDouble() > 0.25) return
         val us = g.userTeam
-        val sq = g.squad(us.id).filter { it.age >= 19 && g.offers.none { o -> o.playerId == it.id } }.sortedByDescending { it.overall }.take(16)
+        val listed = g.squad(us.id).filter { it.listed && it.loanFrom < 0 && g.offers.none { o -> o.playerId == it.id } }
+        if (g.offers.size >= 3 || rnd.nextDouble() > (if (listed.isNotEmpty()) 0.5 else 0.25)) return
+        val sq = g.squad(us.id).filter { it.age >= 19 && it.loanFrom < 0 && g.offers.none { o -> o.playerId == it.id } }.sortedByDescending { it.overall }.take(16)
         val unhappy = sq.filter { it.wantsAway }
-        val p = (if (unhappy.isNotEmpty() && rnd.nextDouble() < 0.6) unhappy.random(rnd) else sq.randomOrNull(rnd)) ?: return
-        val price = r25k(p.value * rnd.nextDouble(0.9, 1.35))
+        val p = when {
+            listed.isNotEmpty() && rnd.nextDouble() < 0.7 -> listed.random(rnd)
+            unhappy.isNotEmpty() && rnd.nextDouble() < 0.6 -> unhappy.random(rnd)
+            else -> sq.randomOrNull(rnd)
+        } ?: return
+        val price = r25k(p.value * if (p.listed) rnd.nextDouble(0.8, 1.15) else rnd.nextDouble(0.9, 1.35))
         val buyer = g.teams.filter {
             it.id != us.id && it.division != Leagues.LEGACY_EURO && it.budget >= price && it.reputation >= us.reputation - 12 &&
                 g.squad(it.id).size < 28 && Economy.fitsWages(g, it, p.demandWage)

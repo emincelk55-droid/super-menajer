@@ -34,3 +34,11 @@ depoda tutulmaz. Dosyalar yoksa APK debug anahtarıyla imzalanır.
 gradle :app:testDebugUnitTest          # sezon simülasyonu ve kayıt taşıma testleri
 gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 ```
+
+### v1.2
+- Gerçekçi (kurgusal) oyuncu isimleri: 35+ ülke, geniş isim havuzları
+- Her oyuncuya özel çizilmiş yüz ve FUT tarzı oyuncu kartları, kalkan şeklinde armalar
+- Taktik tahtası: sürükle-bırak kadro, tempo/genişlik/pas stili/savunma hattı, kontra, ofsayt tuzağı, zaman geçirme
+- Gerçek tarihli takvim: DEVAM gün gün ilerler, önemli olaylarda durur
+- Diyaloglu transfer: kulüple bonservis (taksit, sonraki satıştan pay, kiralık) ve menajerle sözleşme (maaş, süre, imza parası, rol); satış listesi
+- Transfer bütçesi ↔ maaş bütçesi aktarımı, 3 kayıt yuvası

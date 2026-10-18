@@ -100,7 +100,7 @@ fun TacticsTab(g: Game) {
             Chip("Antrenman", mode == 1) { GameRepo.tacticsMode = 1 }
         }
         Spacer(Modifier.height(4.dp))
-        if (mode == 0) TacticsContent(g) else TrainingContent(g)
+        if (mode == 0) TacticsBoard(g) else TrainingContent(g)
     }
 }
 
@@ -150,108 +150,7 @@ private fun TrainingContent(g: Game) {
 }
 
 @Composable
-private fun TacticsContent(g: Game) {
-    val t = g.userTeam
-    var sel by remember { mutableIntStateOf(-1) }
-    val slots = Formations.slots(t.formation)
-    val (atk, mid, def) = Lineups.lineStrength(g, t)
-    Row(Modifier.fillMaxSize().padding(start = 10.dp, bottom = 10.dp)) {
-        // Sol: yatay saha (hücum yönü sağa)
-        BoxWithConstraints(
-            Modifier.fillMaxHeight().aspectRatio(1.45f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(12.dp)),
-        ) {
-            val bw = maxWidth
-            val bh = maxHeight
-            val maxDepth = slots.maxOf { it.y }.coerceAtLeast(0.1f)
-            Canvas(Modifier.fillMaxSize()) { drawPitch(vertical = false) }
-            slots.forEachIndexed { i, s ->
-                val p = g.player(t.lineup.getOrNull(i) ?: -1)
-                val cx = bw * (0.07f + s.y / maxDepth * 0.82f)
-                val cy = bh * (0.08f + s.x * 0.84f)
-                val selected = sel == i
-                Column(
-                    Modifier.offset(x = cx - 36.dp, y = cy - 24.dp).width(72.dp)
-                        .clickable {
-                            when {
-                                sel == -1 -> sel = i
-                                sel == i -> sel = -1
-                                else -> { GameRepo.swapSlots(sel, i); sel = -1 }
-                            }
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    val mismatch = p != null && p.pos != s.pos
-                    Box(
-                        Modifier.size(34.dp).clip(CircleShape)
-                            .background(if (p == null) Color.DarkGray else ovrColor(p.ovrAt(s.pos)))
-                            .border(3.dp, if (selected) Color.White else if (mismatch) Red else Color.Transparent, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(p?.ovrAt(s.pos)?.toString() ?: "?", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                    }
-                    Text(
-                        p?.name?.substringAfterLast(' ') ?: "Boş", fontSize = 10.sp, color = Color.White, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
-                    )
-                }
-            }
-        }
-        // Sağ: diziliş, oyun anlayışı ve yedekler
-        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Formations.names.forEach { f -> Chip(f, t.formation == f) { sel = -1; GameRepo.setFormation(f) } }
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    LineStat("Hücum", atk); LineStat("Orta Saha", mid); LineStat("Savunma", def)
-                }
-            }
-            item {
-                Text(
-                    if (sel >= 0) "Seçili mevki: ${slots[sel].pos.label}. Aşağıdan bir oyuncuya ya da sahada başka bir oyuncuya dokun."
-                    else "Değiştirmek için sahadaki bir oyuncuya dokun. Kırmızı çerçeve: oyuncu kendi mevkisinde değil.",
-                    color = if (sel >= 0) Gold else TextDim, fontSize = 12.sp,
-                )
-            }
-            item {
-                SectionCard("Oyun anlayışı") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s -> Chip(s, t.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i) } }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("Pres", color = TextDim, fontSize = 12.sp)
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Düşük", "Orta", "Yüksek").forEachIndexed { i, s -> Chip(s, t.pressing == i, Modifier.weight(1f)) { GameRepo.setPressing(i) } }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text("Yüksek pres topu kazanmayı kolaylaştırır ama oyuncular daha çabuk yorulur.", color = TextDim, fontSize = 11.sp)
-                }
-            }
-            item {
-                OutlinedButton(onClick = { sel = -1; GameRepo.autoLineup() }, modifier = Modifier.fillMaxWidth()) { Text("🪄 Otomatik En İyi 11") }
-            }
-            item {
-                Text(if (sel >= 0) "MEVKİYE OYUNCU SEÇ" else "YEDEKLER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-            val pos = if (sel >= 0) slots[sel].pos else null
-            val pool = g.squad(t.id).filter { it.id !in t.lineup }
-                .sortedWith(compareByDescending<com.supermenajer.game.model.Player> { pos != null && it.pos == pos }.thenByDescending { if (pos != null) it.ovrAt(pos) else it.overall })
-            items(pool, key = { it.id }) { p ->
-                val extra = if (pos != null) "Bu mevkide: ${p.ovrAt(pos)}" else null
-                PlayerRow(g, p, false, extra) {
-                    if (sel >= 0 && p.available) { GameRepo.putInSlot(sel, p.id); sel = -1 } else GameRepo.selectedPlayer = p
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LineStat(label: String, v: Int) {
+fun LineStat(label: String, v: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         OvrBadge(v, 40.dp)
         Text(label, color = TextDim, fontSize = 11.sp)

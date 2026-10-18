@@ -123,6 +123,30 @@ class MatchSim(
         a /= 4.3; m /= 5.4; d /= 5.9
         when (s.team.mentality) { 0 -> { a *= 0.9; d *= 1.07 }; 2 -> { a *= 1.08; d *= 0.94 } }
         when (s.team.pressing) { 0 -> { m *= 0.96; d *= 1.02 }; 2 -> { m *= 1.05; d *= 0.99 } }
+        val o = other(s).team
+        val t = s.team
+        // Tempo: hızlı oyun daha az top hakimiyeti ama daha direkt hücum
+        when (t.tempo) { 0 -> { m *= 1.04; a *= 0.97 }; 2 -> { m *= 0.98; a *= 1.04 } }
+        // Genişlik: geniş oyun dar savunan rakibe karşı etkili
+        when (t.width) {
+            0 -> { m *= 1.03; a *= 0.98; d *= 1.02 }
+            2 -> { a *= if (o.width == 0) 1.06 else 1.03; d *= 0.98 }
+        }
+        // Pas stili: kısa pas orta sahayı, uzun top yüksek savunma hattını cezalandırır
+        when (t.passing) {
+            0 -> m *= 1.04
+            2 -> { m *= 0.95; a *= if (o.defLine == 2) 1.08 else 1.02 }
+        }
+        // Savunma hattı: yüksek hat orta sahayı sıkıştırır ama hızlı forvetlere açık
+        when (t.defLine) {
+            0 -> { d *= 1.05; m *= 0.96 }
+            2 -> {
+                m *= 1.04
+                val oppPace = other(s).onPitch.filter { it.slot.pos == Pos.FW }.map { it.p.pace }.average().takeIf { !it.isNaN() } ?: 60.0
+                d *= if (oppPace >= 76) 0.92 else 0.98
+            }
+        }
+        if (t.counter) m *= 0.97
         if (s === home) { a *= 1.03; m *= 1.03; d *= 1.03 }
         return Str(a.coerceAtLeast(5.0), m.coerceAtLeast(5.0), d.coerceAtLeast(5.0))
     }
@@ -143,9 +167,33 @@ class MatchSim(
         ballX = 0.5f + dir * (0.05f + rnd.nextFloat() * 0.3f)
         ballY = 0.2f + rnd.nextFloat() * 0.6f
 
-        val pShot = (0.2 * (sA.atk / sD.def).pow(1.6)).coerceIn(0.05, 0.45)
+        var pShot = (0.2 * (sA.atk / sD.def).pow(1.6)).coerceIn(0.05, 0.45)
+        when (atk.team.tempo) { 0 -> pShot *= 0.93; 2 -> pShot *= 1.08 }
+        // Önde olan takım zaman geçiriyorsa oyun yavaşlar
+        val leader = if (home.goals > away.goals) home else if (away.goals > home.goals) away else null
+        if (minute >= 70 && leader != null && leader.team.timeWasting) pShot *= 0.85
         val r = rnd.nextDouble()
-        when {
+        var handled = false
+        // Kontra atak: hücuma çıkan rakibin arkasına
+        if (def.team.counter && atk.team.mentality == 2 && rnd.nextDouble() < 0.03) {
+            val counter = pick(def.onPitch.filter { it.slot.pos == Pos.FW || it.slot.pos == Pos.MF })
+            if (counter != null) ev(Ev.INFO, def.index, "⚡ Hızlı kontra! ${counter.p.name} boş alana koşuyor...")
+            shot(def, atk, if (def === home) sh else sa, sA, forcedQ = 0.12 + rnd.nextDouble() * 0.12)
+            handled = true
+        }
+        // Ofsayt tuzağı: kimi zaman atağı keser, kimi zaman bozulur
+        if (!handled && r < pShot && def.team.offsideTrap) {
+            val t = rnd.nextDouble()
+            if (t < 0.15) {
+                pick(atk.onPitch.filter { it.slot.pos == Pos.FW })?.let { ev(Ev.INFO, def.index, "🚩 Ofsayt! ${it.p.name} tuzağa düştü.") }
+                handled = true
+            } else if (t < 0.21) {
+                ev(Ev.INFO, atk.index, "😱 Ofsayt tuzağı bozuldu, forvet kaleciyle karşı karşıya!")
+                shot(atk, def, sA, sD, forcedQ = 0.28 + rnd.nextDouble() * 0.12)
+                handled = true
+            }
+        }
+        if (!handled) when {
             r < pShot -> shot(atk, def, sA, sD)
             r < pShot + 0.2 -> foul(def, atk)
             r < pShot + 0.3 -> pick(atk.onPitch)?.let { ev(Ev.INFO, atk.index, Comms.filler(atk.team, it.p.name, rnd)) }
@@ -241,7 +289,7 @@ class MatchSim(
         }
         if (!setPiece && rnd.nextDouble() < 0.3) {
             atk.corners++
-            if (rnd.nextDouble() < 0.22) {
+            if (rnd.nextDouble() < (if (atk.team.width == 2) 0.3 else 0.22)) {
                 ev(Ev.CORNER, atk.index, Comms.corner(atk.team, rnd))
                 shot(atk, def, sA, sD, forcedQ = 0.08 + rnd.nextDouble() * 0.1, header = true)
             }
@@ -332,7 +380,8 @@ class MatchSim(
     }
 
     private fun fatigue(s: Side) {
-        val pressF = when (s.team.pressing) { 0 -> 0.8; 2 -> 1.3; else -> 1.0 }
+        val pressF = when (s.team.pressing) { 0 -> 0.8; 2 -> 1.3; else -> 1.0 } *
+            when (s.team.tempo) { 0 -> 0.92; 2 -> 1.1; else -> 1.0 }
         for (m in s.onPitch) {
             val drop = 0.42 * (1.32 - m.p.physical / 100.0) * pressF * (0.8 + rnd.nextDouble() * 0.4)
             m.fit = (m.fit - drop).coerceAtLeast(5.0)

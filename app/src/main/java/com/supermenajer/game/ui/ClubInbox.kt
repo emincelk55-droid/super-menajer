@@ -26,6 +26,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,7 +59,7 @@ fun ClubTab(g: Game) {
             0 -> StaffView(g)
             1 -> FacilitiesView(g)
             2 -> SponsorsView(g)
-            3 -> TwoCards({ FinanceCard(g) }, { BoardCard(g) })
+            3 -> TwoCards({ FinanceCard(g) }, { BudgetShiftCard(g); Spacer(Modifier.height(10.dp)); BoardCard(g) })
             else -> TwoCards({ FansCard(g) }, { FanInfoCard() })
         }
     }
@@ -68,6 +70,46 @@ private fun TwoCards(left: @Composable () -> Unit, right: @Composable () -> Unit
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { left() }
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { right() }
+    }
+}
+
+/** FM tarzı bütçe ayarı: transfer parasını haftalık maaş bütçesine kaydır (ya da tersi). */
+@Composable
+private fun BudgetShiftCard(g: Game) {
+    var msg by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val t = g.userTeam
+    val wages = com.supermenajer.game.game.Economy.squadWages(g, t.id)
+    SectionCard("⚖️ Bütçe ayarı") {
+        Row {
+            Column(Modifier.weight(1f)) {
+                Text("Transfer bütçesi", color = TextDim, fontSize = 11.sp)
+                Text(com.supermenajer.game.game.money(t.budget), color = Gold, fontWeight = FontWeight.Black, fontSize = 18.sp)
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                Text("Maaş bütçesi", color = TextDim, fontSize = 11.sp)
+                Text("${com.supermenajer.game.game.money(t.wageBudget)}/hf", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text("Kullanılan: ${com.supermenajer.game.game.money(wages)}", color = TextDim, fontSize = 11.sp)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("Transfer → Maaş", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(10_000L, 25_000L, 50_000L).forEach { w ->
+                OutlinedButton(onClick = { msg = GameRepo.shiftBudget(w) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) {
+                    Text("+${com.supermenajer.game.game.money(w)}/hf", fontSize = 12.sp)
+                }
+            }
+        }
+        Text("Maaş → Transfer", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(10_000L, 25_000L, 50_000L).forEach { w ->
+                OutlinedButton(onClick = { msg = GameRepo.shiftBudget(-w) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) {
+                    Text("+${com.supermenajer.game.game.money(w * com.supermenajer.game.game.Economy.SHIFT_RATIO)}", fontSize = 12.sp)
+                }
+            }
+        }
+        msg?.let { Text(it, color = Gold, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+        Text("1 haftalık maaş = ${com.supermenajer.game.game.Economy.SHIFT_RATIO} katı transfer parası. Ayar bu sezon için geçerli; yeni sezonda yönetim maaş bütçesini yeniden belirler.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

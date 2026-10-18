@@ -8,43 +8,6 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 object Generator {
-    private val trFirst = listOf(
-        "Ahmet", "Mehmet", "Mustafa", "Emre", "Burak", "Can", "Cenk", "Arda", "Kerem", "Ozan", "Selçuk", "Hakan",
-        "Volkan", "Serkan", "Tolga", "Umut", "Yusuf", "Kaan", "Barış", "Berk", "Efe", "Eren", "Furkan", "Gökhan",
-        "Halil", "İrfan", "İsmail", "Kenan", "Mert", "Murat", "Oğuz", "Okan", "Onur", "Orkun", "Ömer", "Rıdvan",
-        "Sinan", "Taylan", "Uğur", "Yunus", "Zeki", "Alper", "Baran", "Batuhan", "Cengiz", "Deniz", "Doğukan",
-        "Ferdi", "Hamza", "Ufuk", "Salih", "Sercan", "Tarık", "Yasin", "Enes", "Egemen", "Altay", "Çağlar",
-        "Merih", "Abdullah", "Bora", "Emirhan", "Semih", "Kağan", "Tuna", "Yiğit", "Atakan", "Koray", "Erkan",
-    )
-    private val trLast = listOf(
-        "Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Yıldırım", "Öztürk", "Aydın", "Özdemir", "Arslan",
-        "Doğan", "Kılıç", "Aslan", "Çetin", "Kara", "Koç", "Kurt", "Özkan", "Şimşek", "Polat", "Erdem", "Korkmaz",
-        "Aksoy", "Güler", "Ünal", "Tekin", "Bulut", "Turan", "Akın", "Toprak", "Kaplan", "Bozkurt", "Uçar",
-        "Ersoy", "Karaca", "Tosun", "Kahveci", "Akgün", "Sezer", "Ayhan", "Özer", "Duman", "Yavuz", "Keskin",
-        "Gündoğdu", "Tufan", "Yazıcı", "Bayındır", "Karakaya", "Sarı", "Taş", "Ateş", "Erol", "Coşkun", "Işık",
-        "Avcı", "Uysal", "Elmas", "Çınar", "Akbaş", "Soylu", "Altun", "Gürbüz", "Eren", "Tunç", "Baysal",
-    )
-
-    private class NameSet(val nation: String, val first: List<String>, val last: List<String>)
-
-    private val foreignNames = listOf(
-        NameSet("BR", listOf("Lucas", "Thiago", "Gabriel", "Rafael", "Bruno", "Diego", "Felipe", "Vinicius", "Matheus", "Igor", "Caio", "Renan"), listOf("Silva", "Santos", "Oliveira", "Souza", "Costa", "Pereira", "Lima", "Rocha", "Almeida", "Barbosa", "Ribeiro", "Moura")),
-        NameSet("AR", listOf("Matías", "Facundo", "Lautaro", "Nicolás", "Julián", "Santiago", "Emiliano", "Gonzalo", "Valentín"), listOf("González", "Fernández", "Romero", "Álvarez", "Sosa", "Medina", "Acosta", "Benítez", "Ríos")),
-        NameSet("SN", listOf("Moussa", "Ibrahima", "Cheikh", "Sadio", "Mamadou", "Pape", "Idrissa", "Lamine"), listOf("Diallo", "Ndiaye", "Sow", "Diop", "Sarr", "Gueye", "Faye", "Cissé")),
-        NameSet("NG", listOf("Samuel", "Victor", "Emmanuel", "Chidi", "Kelechi", "Ahmed", "Tunde", "Femi"), listOf("Okafor", "Mensah", "Adeyemi", "Okonkwo", "Eze", "Balogun", "Nwosu", "Ige")),
-        NameSet("HR", listOf("Luka", "Marko", "Ivan", "Mateo", "Josip", "Ante", "Domagoj", "Filip"), listOf("Horvat", "Kovač", "Babić", "Marić", "Jurić", "Perić", "Vuković", "Knežević")),
-        NameSet("RS", listOf("Nikola", "Dušan", "Stefan", "Miloš", "Filip", "Lazar", "Uroš"), listOf("Petrović", "Jovanović", "Nikolić", "Ilić", "Lazić", "Stojanović", "Pavlović")),
-        NameSet("DK", listOf("Jonas", "Erik", "Mikkel", "Rasmus", "Andreas", "Mads", "Kasper"), listOf("Jensen", "Larsen", "Nielsen", "Hansen", "Møller", "Pedersen", "Kristensen")),
-        NameSet("PT", listOf("João", "Rúben", "André", "Gonçalo", "Nuno", "Diogo", "Tiago", "Rafael", "Pedro", "Bernardo", "Vitinha", "Hugo"), listOf("Ferreira", "Gomes", "Carvalho", "Mendes", "Pinto", "Silva", "Sousa", "Martins", "Fonseca", "Teixeira", "Lopes", "Moreira")),
-        NameSet("FR", listOf("Hugo", "Théo", "Lucas", "Mathis", "Yanis", "Antoine", "Kylian", "Adrien", "Bastien", "Clément", "Enzo", "Maxime", "Noah", "Rayan"), listOf("Martin", "Bernard", "Dubois", "Moreau", "Laurent", "Lefèvre", "Girard", "Roux", "Fournier", "Mercier", "Blanc", "Garnier", "Faure", "Chevalier")),
-        NameSet("ES", listOf("Pablo", "Sergio", "Álvaro", "Iker", "Javier", "Raúl", "Marcos", "Adrián", "Dani", "Hugo", "Rodrigo", "Unai", "Mikel", "Carlos", "Jorge"), listOf("García", "Martínez", "López", "Sánchez", "Ruiz", "Navarro", "Moreno", "Jiménez", "Romero", "Torres", "Ortega", "Delgado", "Castro", "Vidal", "Herrera")),
-        NameSet("IT", listOf("Marco", "Lorenzo", "Federico", "Matteo", "Andrea", "Davide", "Alessandro", "Simone", "Giacomo", "Riccardo", "Nicolò", "Tommaso", "Filippo", "Gianluca"), listOf("Rossi", "Bianchi", "Esposito", "Ricci", "Romano", "Conti", "Colombo", "Marino", "Greco", "Bruno", "Gallo", "Costa", "Fontana", "Moretti", "Barbieri")),
-        NameSet("DE", listOf("Leon", "Jonas", "Lukas", "Felix", "Niklas", "Tim", "Julian", "Florian", "Kai", "Max", "Moritz", "Paul", "Jan", "Malte", "Timo"), listOf("Müller", "Schmidt", "Weber", "Wagner", "Becker", "Hoffmann", "Schulz", "Koch", "Richter", "Klein", "Wolf", "Neumann", "Schwarz", "Krüger", "Hartmann")),
-        NameSet("GB", listOf("Harry", "Jack", "James", "Oliver", "Mason", "Callum", "Jordan", "Reece", "Kyle", "Declan", "Connor", "Ben", "Luke", "Aaron", "Jamie"), listOf("Smith", "Walker", "Taylor", "Wright", "Hughes", "Clarke", "Johnson", "Brown", "Evans", "Wilson", "Thompson", "White", "Robinson", "Hall", "Green")),
-        NameSet("NL", listOf("Daan", "Sem", "Bram", "Luuk", "Thijs", "Jesse", "Stijn", "Ruben", "Bart", "Niels", "Joost"), listOf("de Jong", "Bakker", "Visser", "van Dijk", "Smit", "Mulder", "de Vries", "Meijer", "Bos", "Vos", "Peters")),
-    )
-    private val nameSetByNation = foreignNames.associateBy { it.nation }
-
     class TeamDef(val name: String, val short: String, val city: String, val c1: Long, val c2: Long, val rep: Int)
 
     val teamDefs = listOf(
@@ -101,7 +64,7 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 11,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 12,
         )
         for (t in teams) fillSquad(g, t, rnd, "TR")
         addLowerDivision(g, rnd)
@@ -214,15 +177,23 @@ object Generator {
     /** Teknik ekip vb. için isim üretir: (isim, uyruk). */
     fun personName(rnd: Random, nation: String): Pair<String, String> = randomName(rnd, nation)
 
-    /** Baskın uyruktan isim (yerli oranı %70-78), kalanı karışık yabancı. */
+    /** Son üretilen isimler: aynı ismin dünyada sık tekrarlanmaması için. */
+    private val recentNames = LinkedHashSet<String>()
+
+    /** Baskın uyruktan isim (yerli oranı %70-78), kalanı ağırlıklı yabancı uyruklar. */
     private fun randomName(rnd: Random, nation: String): Pair<String, String> {
         val r = rnd.nextDouble()
-        if (nation == "TR" && r < 0.78) return "${trFirst.random(rnd)} ${trLast.random(rnd)}" to "TR"
-        val local = nameSetByNation[nation]
-        if (local != null && r < 0.7) return "${local.first.random(rnd)} ${local.last.random(rnd)}" to nation
-        if (nation != "TR" && r < 0.74) return "${trFirst.random(rnd)} ${trLast.random(rnd)}" to "TR"
-        val s = foreignNames.random(rnd)
-        return "${s.first.random(rnd)} ${s.last.random(rnd)}" to s.nation
+        val pool = when {
+            nation == "TR" && r < 0.78 -> Names.pool("TR")!!
+            nation != "TR" && r < 0.70 && Names.pool(nation) != null -> Names.pool(nation)!!
+            nation != "TR" && r < 0.73 -> Names.pool("TR")!!
+            else -> Names.randomForeign(rnd, nation)
+        }
+        var n = Names.name(pool, rnd)
+        repeat(3) { if (n in recentNames) n = Names.name(pool, rnd) }
+        recentNames += n
+        if (recentNames.size > 4000) recentNames.remove(recentNames.first())
+        return n to pool.nation
     }
 
     /** Standart normal dağılım (Box-Muller). */

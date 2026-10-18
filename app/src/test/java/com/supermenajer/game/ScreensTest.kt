@@ -54,6 +54,14 @@ class ScreensTest {
         shot("02_negotiate")
         GameRepo.selectedPlayer = null
         shot("03_transfer")
+        val tgt = g.players.first { it.teamId >= 0 && it.teamId != g.userTeamId && GameRepo.transferBlock(it) == null && g.squad(it.teamId).size > 20 }
+        GameRepo.startTalks(tgt)
+        GameRepo.negotiation!!.fee = GameRepo.askingPrice(tgt) / 2
+        GameRepo.talkClub()
+        GameRepo.negotiation!!.fee = GameRepo.askingPrice(tgt) * 2
+        GameRepo.talkClub()
+        shot("03_talks")
+        GameRepo.closeTalks()
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 0
         shot("03a_staff")
         GameRepo.tab = GameRepo.TAB_SQUAD
@@ -87,6 +95,7 @@ class ScreensTest {
         GameRepo.leagueTab = 2; shot("08_euro")
         GameRepo.leagueTab = 3; shot("09_fixtures")
         GameRepo.tab = 2; GameRepo.tacticsMode = 0; shot("10_tactics")
+        GameRepo.tacticsPanel = 1; shot("10a_instructions"); GameRepo.tacticsPanel = 0
         // canlı maç, devre arası
         while (g.todayUserFixture() == null && !g.seasonOver && !g.fired) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)
@@ -106,5 +115,7 @@ class ScreensTest {
         GameRepo.tab = 0; shot("15_seasonend")
         GameRepo.startNewSeason()
         GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("16_history")
+        GameRepo.flush()
+        GameRepo.screen = Screen.TITLE; shot("00_title")
     }
 }

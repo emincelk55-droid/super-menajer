@@ -9,6 +9,7 @@ import com.supermenajer.game.model.Game
 import com.supermenajer.game.model.IncomingOffer
 import com.supermenajer.game.model.Player
 import com.supermenajer.game.model.Team
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
 import kotlin.math.roundToLong
@@ -44,6 +45,7 @@ object GameRepo {
     var inboxCat by mutableIntStateOf(0)
     var inboxSel by mutableStateOf<com.supermenajer.game.model.News?>(null)
     var settingsOpen by mutableStateOf(false)
+    var tacticsPanel by mutableIntStateOf(0)
 
     // Ana menü sekmeleri
     const val TAB_HOME = 0
@@ -68,18 +70,63 @@ object GameRepo {
         changed()
     }
 
-    /** CM tarzı "Devam": bugün maç varsa maça çık, yoksa sonraki maça kadar ilerle. */
+    /** Gün gün ilerlerken true; DEVAM düğmesi "DURDUR" olur. */
+    var advancing by mutableStateOf(false)
+    private val scope by lazy { kotlinx.coroutines.MainScope() }
+
+    private val importantWords = listOf("teklif", "sakatl", "talep", "kovul", "kariyer", "inşaat tamamlandı", "altyapı seçmeleri", "sözleşme", "protesto", "ödül", "şampiyon")
+
+    /**
+     * Takvimde bir gün ilerler. Durulması gereken bir şey olduysa true döner:
+     * maç günü, transfer teklifi, basın toplantısı, önemli mesaj, sezon sonu...
+     */
+    fun advanceDay(): Boolean {
+        val g = game ?: return true
+        if (g.fired || g.seasonOver) return true
+        if (g.todayUserFixture() != null) return true
+        val offers = g.offers.size
+        val newsBefore = g.news.firstOrNull()
+        if (!g.isMatchDay) {
+            g.date++
+            Season.freeDay(g)
+        } else {
+            Season.simulateRest(g, g.week)
+            Season.endDay(g)
+            Lineups.validate(g, g.userTeam)
+        }
+        val fresh = g.news.takeWhile { it !== newsBefore }
+        val important = fresh.any { n -> importantWords.any { it in n.title.lowercase() } }
+        return g.offers.size > offers || g.press != null || g.careerOffer || g.fired || g.seasonOver ||
+            important || g.todayUserFixture() != null
+    }
+
+    /** CM tarzı "Devam": maç günü maça çıkar, değilse günleri tek tek geçer ve önemli bir olayda durur. */
     fun continueGame() {
         val g = game ?: return
         when {
+            advancing -> advancing = false
             g.fired -> tab = TAB_HOME
             g.seasonOver -> startNewSeason()
             g.todayUserFixture() != null -> playMatch(live = true)
-            else -> skipToNextMatch()
+            else -> {
+                advancing = true
+                scope.launch {
+                    while (advancing) {
+                        val stop = advanceDay()
+                        bump()
+                        if (stop) break
+                        kotlinx.coroutines.delay(170)
+                    }
+                    advancing = false
+                    save(force = true)
+                    bump()
+                }
+            }
         }
     }
 
     fun continueLabel(g: Game): String = when {
+        advancing -> "⏸ DURDUR"
         g.fired -> "TEKLİFLER"
         g.seasonOver -> "YENİ SEZON ▶"
         g.todayUserFixture() != null -> "MAÇA ÇIK ▶"
@@ -108,8 +155,37 @@ object GameRepo {
         version++
     }
 
-    private val saveFile get() = File(dir, "kariyer.json")
-    fun hasSave(): Boolean = saveFile.exists()
+    /** Aktif kayıt yuvası (1-3). 1. yuva eski tek kayıt dosyasını kullanır. */
+    var slot by mutableIntStateOf(1)
+
+    private fun slotFile(n: Int) = File(dir, if (n == 1) "kariyer.json" else "kariyer$n.json")
+    private fun metaFile(n: Int) = File(dir, "kariyer$n.meta")
+    private val saveFile get() = slotFile(slot)
+    fun hasSave(): Boolean = (1..3).any { slotFile(it).exists() }
+
+    class SlotInfo(val n: Int, val exists: Boolean, val team: String, val manager: String, val detail: String, val color: Long)
+
+    /** Başlık ekranı için kayıt yuvalarının özeti. */
+    fun slots(): List<SlotInfo> = (1..3).map { n ->
+        val f = slotFile(n)
+        if (!f.exists()) return@map SlotInfo(n, false, "", "", "", 0)
+        val m = runCatching { metaFile(n).readText().split("|") }.getOrNull()
+        if (m == null || m.size < 5) SlotInfo(n, true, "Kayıtlı kariyer", "", "", 0xFF2E7D32)
+        else SlotInfo(n, true, m[0], m[1], m[2] + " · " + m[3], m[4].toLongOrNull() ?: 0xFF2E7D32)
+    }
+
+    fun deleteSlot(n: Int) {
+        slotFile(n).delete()
+        metaFile(n).delete()
+        bump()
+    }
+
+    private fun meta(g: Game): String {
+        val t = g.userTeam
+        val date = if (g.date > 0) GameCalendar.format(g.date) else "${g.season}"
+        val pos = if (t.played > 0) " · ${g.position(t.id)}. sıra" else ""
+        return listOf(t.name, g.managerName, "${g.season}-${(g.season + 1) % 100} sezonu$pos", date, t.color1.toString()).joinToString("|") { it.replace("|", " ") }
+    }
 
     private var lastSave = 0L
 
@@ -120,14 +196,18 @@ object GameRepo {
         if (!force && now - lastSave < 4_000) return
         lastSave = now
         val text = runCatching { json.encodeToString(Game.serializer(), g) }.getOrNull() ?: return
+        val target = saveFile
+        val metaText = runCatching { meta(g) }.getOrNull()
+        val n = slot
         writer.execute {
             runCatching {
                 val tmp = File(dir, "kariyer.tmp")
                 tmp.writeText(text)
-                if (!tmp.renameTo(saveFile)) {
-                    saveFile.delete()
-                    tmp.renameTo(saveFile)
+                if (!tmp.renameTo(target)) {
+                    target.delete()
+                    tmp.renameTo(target)
                 }
+                metaText?.let { metaFile(n).writeText(it) }
             }
         }
     }
@@ -137,7 +217,8 @@ object GameRepo {
         runCatching { writer.submit {}.get(3, java.util.concurrent.TimeUnit.SECONDS) }
     }
 
-    fun load(): Boolean = runCatching {
+    fun load(n: Int = slot): Boolean = runCatching {
+        slot = n
         val g = json.decodeFromString(Game.serializer(), saveFile.readText())
         Season.migrate(g)
         game = g
@@ -196,6 +277,7 @@ object GameRepo {
     /** Kullanıcının maçı olmayan günü (ör. kupadan elendiyse) geçer. */
     fun skipDay() {
         val g = game ?: return
+        if (!g.isMatchDay) g.date = GameCalendar.dateOf(g, g.week)
         if (g.fired || g.seasonOver || g.todayUserFixture() != null) return
         Season.simulateRest(g, g.week)
         Season.endDay(g)
@@ -208,6 +290,11 @@ object GameRepo {
         val g = game ?: return
         var guard = 0
         while (!g.fired && !g.seasonOver && g.todayUserFixture() == null && guard++ < 30) {
+            if (!g.isMatchDay) {
+                // Aradaki boş günler de yaşanır (gözlemci raporları, transferler)
+                while (!g.isMatchDay) { g.date++; Season.freeDay(g) }
+                continue
+            }
             val offersBefore = g.offers.size
             Season.simulateRest(g, g.week)
             Season.endDay(g)
@@ -395,6 +482,21 @@ object GameRepo {
         changed()
     }
 
+    /** Takım talimatı: tempo, width, passing, defLine (0-2) veya counter, offside, timewaste (0/1). */
+    fun setInstruction(key: String, v: Int) {
+        val t = game?.userTeam ?: return
+        when (key) {
+            "tempo" -> t.tempo = v
+            "width" -> t.width = v
+            "passing" -> t.passing = v
+            "defLine" -> t.defLine = v
+            "counter" -> t.counter = v == 1
+            "offside" -> t.offsideTrap = v == 1
+            "timewaste" -> t.timeWasting = v == 1
+        }
+        changed()
+    }
+
     fun setPressing(v: Int) {
         game?.userTeam?.pressing = v
         changed()
@@ -474,11 +576,65 @@ object GameRepo {
 
     fun counterFor(p: Player): Long? = talks[p.id]?.second?.takeIf { it > 0 }
 
+    /** Açık transfer görüşmesi (diyalog penceresi). */
+    var negotiation by mutableStateOf<TransferTalks.Negotiation?>(null)
+
+    fun startTalks(p: Player): String? {
+        val g = game ?: return null
+        transferBlock(p)?.let { return it }
+        negotiation = TransferTalks.start(g, p)
+        bump()
+        return null
+    }
+
+    fun talkClub() {
+        val g = game ?: return
+        negotiation?.let { TransferTalks.clubOffer(g, it) }
+        bump()
+    }
+
+    fun talkAgent() {
+        val g = game ?: return
+        negotiation?.let { TransferTalks.agentOffer(g, it) }
+        bump()
+    }
+
+    fun closeTalks() {
+        negotiation = null
+        bump()
+    }
+
+    fun blockTalks(p: Player) {
+        talks[p.id] = 3 to 0L
+    }
+
+    fun afterTransfer() {
+        val g = game ?: return
+        Lineups.validate(g, g.userTeam)
+        selectedPlayer = null
+        changed()
+    }
+
+    fun toggleListed(p: Player): String {
+        p.listed = !p.listed
+        changed()
+        return if (p.listed) "${p.name} satış listesine kondu. Kulüplerden teklif gelince gelen kutuna düşer." else "${p.name} satış listesinden çıkarıldı."
+    }
+
+    /** Transfer bütçesinden maaş bütçesine (veya tersine) aktarım. Mesaj döner. */
+    fun shiftBudget(weekly: Long): String {
+        val g = game ?: return ""
+        val msg = Economy.shiftBudget(g, weekly)
+        changed()
+        return msg
+    }
+
     /** Transfere engel bir durum varsa açıklamasını döner. */
     fun transferBlock(p: Player): String? {
         val g = game ?: return "Oyun yok"
         val us = g.userTeam
         if (p.teamId == us.id) return "Oyuncu zaten senin takımında."
+        if (p.loanFrom >= 0) return "${p.name} şu an kiralık oynuyor."
         if (p.teamId >= 0 && !Season.transferWindowOpen(g)) return "Transfer dönemi kapalı. Şu an sadece serbest oyuncu alabilirsin."
         if (g.squad(us.id).size >= 30) return "Kadro dolu (en fazla 30 oyuncu)."
         if (!Economy.fitsWages(g, us, p.demandWage)) {
@@ -571,6 +727,9 @@ object GameRepo {
         if (p.teamId != us.id) return
         Economy.earn(us, Economy.SALES, price)
         Economy.earn(buyer, Economy.BUYS, -price)
+        TransferTalks.paySellOn(g, p, price, us.id)
+        p.listed = false
+        p.squadRole = -1
         g.movePlayer(p, buyer.id)
         Fans.sold(g, p)
         p.salary = p.demandWage

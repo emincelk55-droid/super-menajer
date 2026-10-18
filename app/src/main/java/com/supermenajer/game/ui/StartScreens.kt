@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,53 +59,66 @@ import com.supermenajer.game.game.money
 
 @Composable
 fun TitleScreen() {
-    val hasSave = remember { GameRepo.hasSave() }
+    GameRepo.version
+    val slots = GameRepo.slots()
     LaunchedEffect(Unit) { GameRepo.prepareWorldAsync() }
     var error by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableIntStateOf(0) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Row(
-        Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFF0F3D2A), Bg, Bg))).padding(horizontal = 32.dp),
+        Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFF0F3D2A), Bg, Bg))).padding(horizontal = 28.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("⚽", fontSize = 64.sp)
-            Text("SÜPER", fontSize = 44.sp, fontWeight = FontWeight.Black, color = TextMain, letterSpacing = 6.sp)
-            Text("MENAJER", fontSize = 44.sp, fontWeight = FontWeight.Black, color = Green, letterSpacing = 6.sp)
+            Text("⚽", fontSize = 60.sp)
+            Text("SÜPER", fontSize = 42.sp, fontWeight = FontWeight.Black, color = TextMain, letterSpacing = 6.sp)
+            Text("MENAJER", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Green, letterSpacing = 6.sp)
             Text("Futbol Menajerlik Oyunu", color = TextDim, fontSize = 15.sp)
-        }
-        Column(Modifier.width(340.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            if (hasSave) {
-                Button(
-                    onClick = {
-                        if (GameRepo.load()) GameRepo.screen = Screen.MAIN else error = true
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(14.dp),
-                ) { Text("KARİYERE DEVAM ET", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-                Spacer(Modifier.height(12.dp))
-            }
-            val newBtn: @Composable () -> Unit = { Text("YENİ KARİYER", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-            if (hasSave) {
-                OutlinedButton(
-                    onClick = { GameRepo.screen = Screen.NEW_GAME },
-                    modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(14.dp),
-                ) { newBtn() }
-            } else {
-                Button(
-                    onClick = { GameRepo.screen = Screen.NEW_GAME },
-                    modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(14.dp),
-                ) { newBtn() }
-            }
             Spacer(Modifier.height(12.dp))
-            val ctx = androidx.compose.ui.platform.LocalContext.current
-            androidx.compose.material3.TextButton(onClick = { (ctx as? android.app.Activity)?.finishAndRemoveTask() }) {
+            Text("v1.2", color = TextDim, fontSize = 12.sp)
+        }
+        Column(Modifier.width(380.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("KAYIT YUVALARI", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            slots.forEach { s ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Surface1)
+                        .border(1.dp, if (s.exists) Color(s.color).copy(alpha = 0.8f) else Line, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(if (s.exists) Color(s.color) else Surface2),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("${s.n}", fontWeight = FontWeight.Black, fontSize = 18.sp, color = if (s.exists) contentOn(Color(s.color)) else TextDim) }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        if (s.exists) {
+                            Text(s.team, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+                            Text(listOf(s.manager, s.detail).filter { it.isNotEmpty() }.joinToString(" · "), color = TextDim, fontSize = 11.sp, maxLines = 2)
+                        } else {
+                            Text("Boş yuva", color = TextDim, fontSize = 15.sp)
+                        }
+                    }
+                    if (s.exists) {
+                        if (confirmDelete == s.n) {
+                            androidx.compose.material3.TextButton(onClick = { GameRepo.deleteSlot(s.n); confirmDelete = 0 }) { Text("Sil?", color = Red, fontWeight = FontWeight.Bold) }
+                        } else {
+                            androidx.compose.material3.TextButton(onClick = { confirmDelete = s.n }) { Text("🗑", fontSize = 16.sp) }
+                        }
+                        Button(onClick = { if (GameRepo.load(s.n)) GameRepo.screen = Screen.MAIN else error = true }, shape = RoundedCornerShape(10.dp)) {
+                            Text("DEVAM", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { GameRepo.slot = s.n; GameRepo.screen = Screen.NEW_GAME }, shape = RoundedCornerShape(10.dp)) {
+                            Text("YENİ KARİYER", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+            if (error) Text("Kayıt dosyası okunamadı.", color = Red)
+            androidx.compose.material3.TextButton(onClick = { (ctx as? android.app.Activity)?.finishAndRemoveTask() }, modifier = Modifier.align(Alignment.End)) {
                 Text("Oyundan çık", color = TextDim)
             }
-            if (error) {
-                Spacer(Modifier.height(12.dp))
-                Text("Kayıt dosyası okunamadı.", color = Red)
-            }
-            Spacer(Modifier.height(20.dp))
-            Text("v1.1", color = TextDim, fontSize = 12.sp)
         }
     }
 }
@@ -124,7 +138,7 @@ fun NewGameScreen() {
     var selected by remember { mutableIntStateOf(-1) }
     var country by remember { mutableStateOf("Türkiye") }
     var div by remember { mutableIntStateOf(0) }
-    val hasSave = remember { GameRepo.hasSave() }
+    val hasSave = remember { GameRepo.slots().getOrNull(GameRepo.slot - 1)?.exists == true }
     BackHandler { GameRepo.screen = Screen.TITLE }
     val w = world
 
@@ -136,7 +150,7 @@ fun NewGameScreen() {
                     androidx.compose.material3.IconButton(onClick = { GameRepo.screen = Screen.TITLE }) {
                         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
                     }
-                    Text("Yeni Kariyer", fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text("Yeni Kariyer · Yuva ${GameRepo.slot}", fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
@@ -165,7 +179,7 @@ fun NewGameScreen() {
                 }
                 if (hasSave) {
                     Spacer(Modifier.height(10.dp))
-                    Text("Not: Yeni kariyer eski kaydının üzerine yazılır.", color = Gold, fontSize = 12.sp)
+                    Text("Not: ${GameRepo.slot}. yuvadaki kayıt silinir.", color = Gold, fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(8.dp))

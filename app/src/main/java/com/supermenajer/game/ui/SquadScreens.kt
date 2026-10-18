@@ -225,8 +225,12 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(if (starting) Green else Color.Transparent))
-        Spacer(Modifier.width(8.dp))
-        PosChip(p.pos)
+        Spacer(Modifier.width(6.dp))
+        val team = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
+        Box {
+            PlayerFace(p, 40.dp, team?.let { Color(it.color1) } ?: Color(0xFF455A64), team?.let { Color(it.color2) } ?: Color.White)
+            Box(Modifier.align(Alignment.BottomEnd)) { PosChip(p.pos, small = true) }
+        }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -287,18 +291,27 @@ fun PlayerDialog(g: Game, p: Player) {
                     Button(onClick = { GameRepo.addToLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("İlk 11'e Al") }
                 }
                 Spacer(Modifier.height(6.dp))
-                ContractBox(g, p) { message = it }
+                if (p.loanFrom < 0) ContractBox(g, p) { message = it }
+                else Text("Kiralık oyuncu · ${g.teamOrNull(p.loanFrom)?.name ?: ""} kulübünden", color = Blue, fontSize = 12.sp)
                 if (p.age <= 23 && p.id !in t.lineup) {
                     Spacer(Modifier.height(6.dp))
                     OutlinedButton(onClick = { GameRepo.loanOut(p)?.let { message = it } }, modifier = Modifier.fillMaxWidth()) { Text("🔁 Kiralık gönder (gelişsin)") }
                 }
                 Spacer(Modifier.height(6.dp))
+                if (p.loanFrom < 0) {
+                    OutlinedButton(onClick = { message = GameRepo.toggleListed(p) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (p.listed) "🏷️ Satış listesinden çıkar" else "🏷️ Satış listesine koy")
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
                 val o = offer
-                if (o == null) {
+                if (p.loanFrom >= 0) {
+                    // Kiralık oyuncu satılamaz
+                } else if (o == null) {
                     OutlinedButton(onClick = {
                         offer = GameRepo.makeOffer(p)
                         if (offer == null) message = if (!Season.transferWindowOpen(g)) "Transfer dönemi kapalı." else "Şu an bu oyuncu için teklif yapan kulüp yok (veya kadro çok dar)."
-                    }, modifier = Modifier.fillMaxWidth()) { Text("Satışa Çıkar") }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("📣 Kulüplere hemen teklif ettir") }
                 } else {
                     Text("${o.buyer.name} teklif yaptı: ${money(o.price)}", fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
@@ -318,38 +331,20 @@ fun PlayerDialog(g: Game, p: Player) {
                     ) { Text(if (requested) "🔍 Gözlemci izliyor, rapor yarın" else "🔍 Gözlemci gönder (${money(com.supermenajer.game.game.Scouting.COST)})") }
                     Spacer(Modifier.height(8.dp))
                 }
-                val asking = GameRepo.askingPrice(p)
-                val step = (asking / 20 / 25_000 * 25_000).coerceAtLeast(25_000)
-                var bid by remember(p.id) {
-                    mutableLongStateOf(GameRepo.counterFor(p) ?: if (p.teamId < 0) asking else (asking * 0.85 / 25_000).roundToLong() * 25_000)
-                }
                 val block = GameRepo.transferBlock(p)
                 if (block != null) {
                     Text(block, color = Red, fontSize = 13.sp)
                 } else {
                     Text(
-                        if (p.teamId < 0) "Serbest oyuncu · imza parası pazarlığı" else "Bonservis pazarlığı · ${team?.name}",
+                        if (p.teamId < 0) "Serbest oyuncu · bonservis yok" else "Tahmini bonservis: ~${money(GameRepo.askingPrice(p))} · ${team?.name}",
                         color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     )
-                    GameRepo.counterFor(p)?.let { Text("Son karşı teklif: ${money(it)}", color = Gold, fontSize = 13.sp) }
-                    Spacer(Modifier.height(6.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = { bid = (bid - step).coerceAtLeast(25_000) }) { Text("−") }
-                        Text(money(bid), fontSize = 20.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                        OutlinedButton(onClick = { bid += step }) { Text("+") }
-                    }
+                    Text("Maaş beklentisi: ~${money(p.demandWage)}/hafta", color = TextDim, fontSize = 12.sp)
                     Spacer(Modifier.height(6.dp))
                     Button(
-                        onClick = {
-                            when (val r = GameRepo.offerFor(p, bid)) {
-                                is GameRepo.Reply.Accepted -> GameRepo.selectedPlayer = null
-                                is GameRepo.Reply.Counter -> { message = "${team?.name ?: "Kulüp"} karşı teklif yaptı: ${money(r.price)}. Kabul edersen teklifini bu rakama çıkar."; bid = r.price }
-                                is GameRepo.Reply.Rejected -> message = r.msg
-                            }
-                        },
-                        enabled = bid <= g.userTeam.budget,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("Teklif Yap", fontWeight = FontWeight.Bold) }
+                        onClick = { GameRepo.startTalks(p)?.let { message = it } },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                    ) { Text("🤝 Transfer görüşmesi başlat", fontWeight = FontWeight.Bold) }
                 }
                 Text("Bütçen: ${money(g.userTeam.budget)}", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
@@ -361,8 +356,16 @@ fun PlayerDialog(g: Game, p: Player) {
                 .verticalScroll(rememberScrollState()).padding(18.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                PlayerOvrBadge(g, p, 52.dp)
-                Spacer(Modifier.width(12.dp))
+                run {
+                    val tm = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
+                    val r = com.supermenajer.game.game.Scouting.range(g, p, p.overall)
+                    PlayerCard(
+                        p, (r.first + r.last) / 2, p.pos.short, 78.dp,
+                        tm?.let { Color(it.color1) } ?: Color(0xFF455A64), tm?.let { Color(it.color2) } ?: Color.White,
+                        known = r.first == r.last,
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(p.name, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -399,6 +402,7 @@ fun PlayerDialog(g: Game, p: Player) {
                     }
                 }
                 Column(Modifier.weight(1f)) {
+                    if (!own && !loaned) { actions(); Spacer(Modifier.height(10.dp)) }
                     Text("ÖZELLİKLER (1-20)", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     val rg = { v: Int -> com.supermenajer.game.game.Scouting.range(g, p, v) }
@@ -410,7 +414,7 @@ fun PlayerDialog(g: Game, p: Player) {
                     Attr("Savunma", p.defending, rg(p.defending))
                     Attr("Fizik", p.physical, rg(p.physical))
                     Spacer(Modifier.height(10.dp))
-                    actions()
+                    if (own || loaned) actions()
                 }
             }
             TextButton(onClick = { GameRepo.selectedPlayer = null }, modifier = Modifier.align(Alignment.End)) { Text("Kapat") }
