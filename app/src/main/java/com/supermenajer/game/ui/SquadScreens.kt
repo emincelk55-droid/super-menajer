@@ -49,6 +49,7 @@ import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Generator
 import com.supermenajer.game.game.Offer
 import com.supermenajer.game.game.Season
+import com.supermenajer.game.game.StaffLogic
 import com.supermenajer.game.game.money
 import com.supermenajer.game.model.Game
 import com.supermenajer.game.model.Player
@@ -58,6 +59,101 @@ import kotlin.math.roundToLong
 
 @Composable
 fun SquadTab(g: Game) {
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("👥 Oyuncular", GameRepo.squadMode == 0) { GameRepo.squadMode = 0 }
+            Chip("👔 Teknik Ekip", GameRepo.squadMode == 1) { GameRepo.squadMode = 1 }
+        }
+        if (GameRepo.squadMode == 0) PlayersList(g) else StaffView(g)
+    }
+}
+
+@Composable
+private fun StaffView(g: Game) {
+    var openRole by remember { mutableIntStateOf(-1) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val us = g.userTeam
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            val wages = com.supermenajer.game.game.Economy.squadWages(g, us.id)
+            Text(
+                "Teknik ekip maaşları: ${money(StaffLogic.wages(g))}/hafta · Toplam maaş yükü ${money(wages)} / ${money(us.wageBudget)}",
+                color = TextDim, fontSize = 12.sp,
+            )
+            message?.let { Text(it, color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
+        }
+        for (role in 0..3) {
+            item(key = "role$role") {
+                val st = StaffLogic.of(g, role)
+                SectionCard("${StaffLogic.roleIcons[role]} ${StaffLogic.roleNames[role]}") {
+                    if (st == null) {
+                        Text("Boş kadro! Kulübün gönüllüleri idare ediyor (kalite 6).", color = Red, fontSize = 13.sp)
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(st.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("${Generator.flag(st.nation)} ${st.age} yaş · ${money(st.wage)}/hafta", color = TextDim, fontSize = 12.sp)
+                            }
+                            QualityBadge(st.quality)
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(StaffLogic.roleInfo[role], color = TextDim, fontSize = 12.sp)
+                    Text(effectText(g, role), color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedButton(onClick = { openRole = if (openRole == role) -1 else role; message = null }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (openRole == role) "Adayları gizle" else "Yeni ${StaffLogic.roleNames[role].lowercase()} ara")
+                    }
+                    if (openRole == role) {
+                        val old = st?.wage ?: 0L
+                        StaffLogic.market(g, role).forEach { c ->
+                            Row(
+                                Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                QualityBadge(c.quality)
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(c.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    val diff = c.wage - old
+                                    Text("${Generator.flag(c.nation)} ${c.age} yaş · ${money(c.wage)}/hf (${if (diff >= 0) "+" else ""}${money(diff)})", color = TextDim, fontSize = 12.sp)
+                                }
+                                Button(onClick = { message = GameRepo.hireStaff(c); openRole = -1 }) { Text("İşe al") }
+                            }
+                        }
+                        if (st != null) Text("Not: Mevcut çalışana 4 haftalık maaşı (${money(st.wage * 4)}) tazminat ödenir.", color = TextDim, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QualityBadge(q: Int) {
+    val col = when {
+        q >= 16 -> Gold
+        q >= 12 -> Green
+        q >= 8 -> Color(0xFF7CC4FA)
+        else -> Color(0xFFB0B8C1)
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(col), contentAlignment = Alignment.Center) {
+            Text("$q", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 17.sp)
+        }
+        Text("/20", color = TextDim, fontSize = 10.sp)
+    }
+}
+
+private fun effectText(g: Game, role: Int): String = when (role) {
+    StaffLogic.ASSISTANT -> "Konuşma etkisi: %${(StaffLogic.talkFactor(g) * 100).toInt()}"
+    StaffLogic.COACH -> "Oyuncu gelişim hızı: %${(StaffLogic.coachFactor(g) * 100).toInt()}"
+    StaffLogic.PHYSIO -> "Sakatlık riski: %${(StaffLogic.physioRisk(g) * 100).toInt()} · Hızlı iyileşme şansı: %${(StaffLogic.physioHeal(g) * 100).toInt()}"
+    else -> "Tahmin aralığı: kendi ligin ±${StaffLogic.scoutUncertainty(g, true)}, diğer ligler ±${StaffLogic.scoutUncertainty(g, false)} · Haftalık öneri: ${StaffLogic.scoutReports(g)}"
+}
+
+@Composable
+private fun PlayersList(g: Game) {
     val t = g.userTeam
     val squad = g.squad(t.id)
     var sort by remember { mutableIntStateOf(0) }

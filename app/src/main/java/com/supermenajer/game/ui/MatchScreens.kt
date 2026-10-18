@@ -62,6 +62,8 @@ import com.supermenajer.game.engine.MatchSim
 import com.supermenajer.game.engine.PIM
 import com.supermenajer.game.engine.Side
 import com.supermenajer.game.game.GameRepo
+import com.supermenajer.game.game.StaffLogic
+import com.supermenajer.game.game.Talks
 import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Player
 import kotlinx.coroutines.delay
@@ -86,14 +88,16 @@ private fun colorDistance(a: Color, b: Color) = abs(a.red - b.red) + abs(a.green
 fun MatchScreen() {
     val sim = GameRepo.match ?: return
     var tick by remember { mutableIntStateOf(0) }
-    var running by remember { mutableStateOf(true) }
+    // Kullanıcı maçında önce maç öncesi konuşma yapılır
+    var running by remember { mutableStateOf(sim.userSide == null || sim.minute > 0) }
+    var preResult by remember { mutableStateOf<Talks.Result?>(null) }
     var speed by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableIntStateOf(sim.events.size) }
     var ticker by remember { mutableStateOf(sim.events.lastOrNull()?.let { Ticker(it.minute, it.text, it.side, 0) }) }
     var tab by remember { mutableIntStateOf(0) }
     var showSubs by remember { mutableStateOf(false) }
     var goalFlash by remember { mutableStateOf<MatchEvent?>(null) }
-    var talkMsg by remember { mutableStateOf<String?>(null) }
+    var halfResult by remember { mutableStateOf<Talks.Result?>(null) }
     val haptic = LocalHapticFeedback.current
     BackHandler { running = false }
 
@@ -177,13 +181,16 @@ fun MatchScreen() {
             }
         }
         if (sim.minute == 45 && !running) {
-            Banner("DEVRE ARASI", if (sim.talkDone) talkMsg ?: "" else "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
+            Banner("DEVRE ARASI", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
                 Button(onClick = { running = true }) { Text("2. YARI") }
+            }
+            halfResult?.let { r ->
+                Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp))
             }
             if (!sim.talkDone && sim.userSide != null) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("👏 Övgü", "🧘 Sakin", "😠 Sert").forEachIndexed { i, n ->
-                        Chip(n, false, Modifier.weight(1f)) { talkMsg = sim.teamTalk(i); tick++ }
+                    Talks.halfOptions.forEachIndexed { i, n ->
+                        Chip(n, false, Modifier.weight(1f)) { halfResult = Talks.talk(sim, Talks.HALF, i); tick++ }
                     }
                 }
             }
@@ -214,6 +221,43 @@ fun MatchScreen() {
     if (showSubs) {
         val us = sim.userSide
         if (us != null) SubDialog(sim, us, onClose = { showSubs = false; tick++ })
+    }
+    if (sim.minute == 0 && !running && sim.userSide != null && !showSubs) {
+        PreMatchDialog(sim, preResult, onTalk = { preResult = Talks.talk(sim, Talks.PRE, it); tick++ }, onStart = { running = true })
+    }
+}
+
+/** Maç öncesi soyunma odası: bağlam, konuşma seçenekleri ve oyuncu tepkileri. */
+@Composable
+private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -> Unit, onStart: () -> Unit) {
+    Dialog(onDismissRequest = {}) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1)
+                .verticalScroll(rememberScrollState()).padding(18.dp),
+        ) {
+            Text("🗣 Soyunma odası", fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Text("${sim.home.team.name} - ${sim.away.team.name}", color = TextDim, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(Talks.contextText(sim), color = Gold, fontSize = 13.sp)
+            Text("Yardımcı antrenör: ${StaffLogic.of(sim.game, StaffLogic.ASSISTANT)?.name ?: "-"} (${StaffLogic.q(sim.game, StaffLogic.ASSISTANT)}/20)", color = TextDim, fontSize = 12.sp)
+            Spacer(Modifier.height(12.dp))
+            if (result == null) {
+                Text("Maçtan önce takıma ne söyleyeceksin?", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                Talks.preOptions.forEachIndexed { i, o ->
+                    OutlinedButton(onClick = { onTalk(i) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), shape = RoundedCornerShape(10.dp)) {
+                        Text(o, fontSize = 13.sp)
+                    }
+                }
+                TextButton(onClick = onStart) { Text("Konuşmadan maça başla", color = TextDim) }
+            } else {
+                Text(result.message, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(6.dp))
+                result.reactions.forEach { Text("• $it", fontSize = 13.sp, color = TextDim) }
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onStart, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("MAÇA BAŞLA ▶", fontWeight = FontWeight.Bold) }
+            }
+        }
     }
 }
 
@@ -260,7 +304,7 @@ private fun ScoreBoard(sim: MatchSim, hg: Int = sim.home.goals, ag: Int = sim.aw
     Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 10.dp)) {
         val f = sim.fixture
         Text(
-            if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
+            (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") + if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
             color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
         )
@@ -570,6 +614,7 @@ fun SummaryScreen() {
     Column(Modifier.fillMaxSize()) {
         ScoreBoard(sim)
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (sim.userSide != null) item { PostTalkCard(sim) }
             item {
                 SectionCard("Goller") {
                     val goals = sim.events.filter { it.type == Ev.GOAL }
@@ -578,11 +623,9 @@ fun SummaryScreen() {
                         val name = (sim.home.used + sim.away.used).firstOrNull { it.p.id == e.playerId }?.p?.name ?: ""
                         Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                             if (e.side == 0) {
-                                Text("⚽ $name ${e.minute}'", modifier = Modifier.weight(1f))
-                                Spacer(Modifier.weight(1f))
+                                Text("⚽ $name ${e.minute}'", modifier = Modifier.weight(1f), maxLines = 1)
                             } else {
-                                Spacer(Modifier.weight(1f))
-                                Text("${e.minute}' $name ⚽", modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                Text("${e.minute}' $name ⚽", modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1)
                             }
                         }
                     }
@@ -627,3 +670,23 @@ fun SummaryScreen() {
     }
 }
 
+
+@Composable
+private fun PostTalkCard(sim: MatchSim) {
+    var result by remember { mutableStateOf<Talks.Result?>(null) }
+    SectionCard("🗣 Maç sonu konuşması") {
+        val r = result
+        if (r == null && !sim.talksDone[Talks.POST]) {
+            Text("Soyunma odasında oyunculara ne diyeceksin?", fontSize = 13.sp, color = TextDim)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Talks.postOptions.forEachIndexed { i, o -> Chip(o, false, Modifier.weight(1f)) { result = Talks.talk(sim, Talks.POST, i); GameRepo.bump() } }
+            }
+        } else if (r != null) {
+            Text(r.message, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            r.reactions.forEach { Text("• $it", fontSize = 12.sp, color = TextDim) }
+        } else {
+            Text("Konuşma yapıldı.", color = TextDim, fontSize = 13.sp)
+        }
+    }
+}

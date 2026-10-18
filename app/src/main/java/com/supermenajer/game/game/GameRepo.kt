@@ -38,6 +38,7 @@ object GameRepo {
     var leagueTab by mutableIntStateOf(-1)
     var leagueSel by mutableIntStateOf(-1)
     var reportOpen by mutableStateOf(false)
+    var squadMode by mutableIntStateOf(0)
 
     fun init(d: File) {
         dir = d
@@ -103,6 +104,7 @@ object GameRepo {
         g.managerName = manager.ifBlank { "Menajer" }
         g.userTeamId = teamId
         Season.start(g)
+        StaffLogic.hireDefaults(g)
         val t = g.userTeam
         g.addNews(
             "Hoş geldin hocam!",
@@ -266,6 +268,13 @@ object GameRepo {
         changed()
     }
 
+    fun hireStaff(st: com.supermenajer.game.model.Staff): String {
+        val g = game ?: return ""
+        val err = StaffLogic.hire(g, st)
+        changed()
+        return err ?: "${st.name} göreve başladı!"
+    }
+
     fun declineCareerOffer() {
         val g = game ?: return
         g.jobOffers.clear()
@@ -278,6 +287,8 @@ object GameRepo {
     fun takeJob(teamId: Int) {
         val g = game ?: return
         Season.takeJob(g, teamId)
+        StaffLogic.hireDefaults(g)
+        g.addNews("Yeni teknik ekip", "${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kadro → Teknik Ekip ekranından değişiklik yapabilirsin.")
         tab = 0
         changed()
     }

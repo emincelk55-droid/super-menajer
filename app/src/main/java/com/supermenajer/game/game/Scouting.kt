@@ -21,7 +21,7 @@ object Scouting {
     fun uncertainty(g: Game, p: Player): Int {
         if (known(g, p)) return 0
         val t = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
-        return if (t != null && t.division == g.userTeam.division) 3 else 6
+        return StaffLogic.scoutUncertainty(g, t != null && t.division == g.userTeam.division)
     }
 
     /** Değeri içeren ama ortalanmamış bir aralık (oyuncuya göre sabit). */
@@ -90,6 +90,10 @@ object Scouting {
             p.teamId != g.userTeamId && p.loanFrom < 0 && p.id !in g.scouted &&
                 (if (p.teamId < 0) true else g.teamOrNull(p.teamId)?.let { g.countryOf(it) == country } == true)
         }
+        repeat(StaffLogic.scoutReports(g)) { weeklyPick(g, country, str, pool.filter { it.id !in g.scouted }, rnd) }
+    }
+
+    private fun weeklyPick(g: Game, country: String, str: Double, pool: List<Player>, rnd: Random) {
         val pick = when (g.scoutFocus) {
             0 -> pool.filter { it.age <= 20 }.sortedByDescending { it.potential }.take(12)
             1 -> pool.filter { it.age in 21..30 && it.overall >= str - 2 }.sortedByDescending { it.overall }.take(15)

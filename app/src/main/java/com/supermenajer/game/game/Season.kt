@@ -123,6 +123,16 @@ object Season {
             )
         }
         if (g.saveVersion < 6) migrateV6(g)
+        if (g.saveVersion < 7) migrateV7(g)
+    }
+
+    private fun migrateV7(g: Game) {
+        g.saveVersion = 7
+        if (g.staff.isEmpty() && g.userTeamId >= 0) StaffLogic.hireDefaults(g)
+        g.addNews(
+            "Güncelleme: v0.7 · Teknik ekip ve takım konuşmaları",
+            "Artık bir teknik ekibin var: yardımcı antrenör, antrenör, fizyoterapist ve gözlemci. Kadro → Teknik Ekip'ten değiştirebilirsin. Maç öncesi, devre arası ve maç sonu takım konuşmaları da geldi!",
+        )
     }
 
     private fun migrateV6(g: Game) {
@@ -322,15 +332,22 @@ object Season {
 
     private fun weeklyUpdate(g: Game, rnd: Random) {
         happiness(g)
+        val coachF = StaffLogic.coachFactor(g)
+        val physioRisk = StaffLogic.physioRisk(g)
+        val physioHeal = StaffLogic.physioHeal(g)
         for (p in g.players) {
+            val mine = p.teamId == g.userTeamId
             p.morale += (70 - p.morale) * 0.08
             if (p.injuredWeeks > 0) p.injuredWeeks--
+            // İyi fizyoterapist iyileşmeyi hızlandırır
+            if (mine && p.injuredWeeks > 0 && rnd.nextDouble() < physioHeal) p.injuredWeeks--
             if (p.suspended > 0) p.suspended--
             val team = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
             val focus = team?.training ?: 0
             val intensity = team?.intensity ?: 1
             val intF = when (intensity) { 0 -> 0.7; 2 -> 1.4; else -> 1.0 }
-            val youthF = (if (focus == 4) (if (p.age <= 21) 1.8 else 0.7) else 1.0) * (if (p.loanFrom >= 0) 1.5 else 1.0)
+            val youthF = (if (focus == 4) (if (p.age <= 21) 1.8 else 0.7) else 1.0) * (if (p.loanFrom >= 0) 1.5 else 1.0) *
+                (if (mine) coachF else 1.0)
             val gap = p.potential - p.overall
             if (p.age <= 24 && gap > 0 && rnd.nextDouble() < (0.14 + gap * 0.01) * intF * youthF) {
                 improve(p, 1, rnd, focus)
@@ -341,7 +358,7 @@ object Season {
             }
             // Antrenman sakatlığı
             if (team != null && p.injuredWeeks == 0) {
-                val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 }
+                val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 } * (if (mine) physioRisk else 1.0)
                 if (rnd.nextDouble() < risk) {
                     p.injuredWeeks = rnd.nextInt(1, 4)
                     if (team.id == g.userTeamId) g.addNews("Antrenmanda sakatlık", "${p.name} antrenmanda sakatlandı (${p.injuredWeeks} hafta).")

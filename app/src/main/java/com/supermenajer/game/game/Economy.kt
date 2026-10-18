@@ -23,6 +23,7 @@ object Economy {
     const val PRIZE = "Lig sıralama ödülü"
     const val BONUS = "Hedef primi"
     const val SCOUTING = "Gözlemci giderleri"
+    const val STAFF = "Teknik ekip tazminatı"
 
     private val superPrize = listOf(
         20_000_000L, 13_000_000L, 9_000_000L, 7_000_000L, 5_500_000L, 4_500_000L, 4_000_000L, 3_500_000L, 3_000_000L,
@@ -44,7 +45,9 @@ object Economy {
         return r5k(base * divF).coerceAtLeast(40_000)
     }
 
-    fun squadWages(g: Game, teamId: Int): Long = g.squad(teamId).sumOf { it.wage }
+    /** Haftalık maaş yükü; kullanıcının takımında teknik ekip maaşları da dahil. */
+    fun squadWages(g: Game, teamId: Int): Long =
+        g.squad(teamId).sumOf { it.wage } + if (teamId == g.userTeamId) StaffLogic.wages(g) else 0L
 
     /** Yeni maaşla birlikte limit aşılıyor mu? */
     fun fitsWages(g: Game, t: Team, extraWage: Long, minusWage: Long = 0): Boolean =

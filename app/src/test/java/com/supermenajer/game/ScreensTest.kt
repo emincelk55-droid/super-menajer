@@ -50,7 +50,9 @@ class ScreensTest {
         shot("02_negotiate")
         GameRepo.selectedPlayer = null
         shot("03_transfer")
-        GameRepo.tab = 1
+        GameRepo.tab = 1; GameRepo.squadMode = 1
+        shot("03a_staff")
+        GameRepo.squadMode = 0
         GameRepo.selectedPlayer = g.squad(g.userTeamId).filter { it.age <= 21 }.minBy { it.overall }
         shot("03b_own_player")
         GameRepo.selectedPlayer = null
@@ -69,6 +71,7 @@ class ScreensTest {
         // canlı maç, devre arası
         while (g.todayUserFixture() == null && !g.seasonOver) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)
+        shot("10b_prematch")
         repeat(30) { GameRepo.match!!.step() }
         shot("11_match_ticker")
         repeat(15) { GameRepo.match!!.step() }

@@ -101,7 +101,7 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 6,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 7,
         )
         for (t in teams) fillSquad(g, t, rnd, "TR")
         addLowerDivision(g, rnd)
@@ -208,6 +208,9 @@ object Generator {
             p.physical = (p.physical + d).coerceIn(15, 97)
         }
     }
+
+    /** Teknik ekip vb. için isim üretir: (isim, uyruk). */
+    fun personName(rnd: Random, nation: String): Pair<String, String> = randomName(rnd, nation)
 
     /** Baskın uyruktan isim (yerli oranı %70-78), kalanı karışık yabancı. */
     private fun randomName(rnd: Random, nation: String): Pair<String, String> {

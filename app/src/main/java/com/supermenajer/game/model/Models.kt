@@ -212,6 +212,18 @@ class SeasonRecord(
     val awards: String = "",
 )
 
+/** Teknik ekip üyesi. role: 0 yardımcı antrenör, 1 antrenör, 2 fizyoterapist, 3 gözlemci. quality 1-20. */
+@Serializable
+class Staff(
+    val id: Int,
+    val name: String,
+    val role: Int,
+    val quality: Int,
+    val age: Int,
+    val wage: Long,
+    val nation: String,
+)
+
 /** Maç sonrası basın toplantısı sorusu. */
 @Serializable
 class PressQuestion(val text: String, val answers: List<String>, val kind: Int)
@@ -260,6 +272,12 @@ class Game(
     var shortlist: MutableList<Int> = mutableListOf(),
     /** jobOffers dolu ve fired=false ise: başarı sonrası gelen teklifler. */
     var careerOffer: Boolean = false,
+    /** Kullanıcının teknik ekibi (rol başına bir kişi). */
+    var staff: MutableList<Staff> = mutableListOf(),
+    /** Teknik ekip piyasası (her sezon yenilenir). */
+    var staffMarket: MutableList<Staff> = mutableListOf(),
+    var staffMarketSeason: Int = 0,
+    var nextStaffId: Int = 1,
 ) {
     private class Index(
         val byId: HashMap<Int, Player>,

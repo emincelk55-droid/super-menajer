@@ -28,6 +28,8 @@ class PIM(val p: Player, var slot: Slot) {
     var injured = false
     var injWeeks = 0
     var subbedOn = false
+    /** Takım konuşmasından gelen maç içi motivasyon (performans çarpanı, ör. 0.03 = %3). */
+    var boost = 0.0
 }
 
 class Side(val team: Team, val index: Int) {
@@ -95,7 +97,7 @@ class MatchSim(
     fun other(s: Side): Side = if (s === home) away else home
 
     private fun eff(m: PIM): Double =
-        m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0)
+        m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0) * (1.0 + m.boost)
 
     class Str(val atk: Double, val mid: Double, val def: Double)
 
@@ -387,31 +389,30 @@ class MatchSim(
         else -> away.team
     }
 
-    var talkDone = false
-        private set
+    /** 0 maç öncesi, 1 devre arası, 2 maç sonu konuşması yapıldı mı. */
+    val talksDone = BooleanArray(3)
+    val talkDone: Boolean get() = talksDone[1]
+    val random: Random get() = rnd
 
-    /** Devre arası konuşması: 0 övgü, 1 sakin, 2 sert. Oyuncuların moralini (dolayısıyla performansını) etkiler. */
-    fun teamTalk(choice: Int): String {
-        val us = userSide ?: return ""
-        if (talkDone) return ""
-        talkDone = true
-        val diff = us.goals - other(us).goals
-        val (delta, text) = when (choice) {
-            0 -> when {
-                diff > 0 -> 6.0 to "Övgülerin oyuncuları coşturdu!"
-                diff == 0 -> 3.0 to "Oyuncular güvenini hissetti."
-                else -> -2.0 to "Geride olmamıza rağmen övgü, oyuncuları fazla rahatlattı."
+    /** Konuşma etkisini uygular; oyuncu başına değişimi döner. */
+    fun applyTalk(kind: Int, base: Double, factor: Double): List<Pair<PIM, Double>> {
+        val us = userSide ?: return emptyList()
+        talksDone[kind] = true
+        val targets = if (kind == 2) us.used else us.onPitch
+        return targets.map { m ->
+            val d = base * factor + rnd.nextDouble(-2.0, 2.0)
+            if (kind == 2) {
+                m.p.morale = (m.p.morale + d).coerceIn(5.0, 100.0)
+            } else {
+                m.boost = (m.boost + d * 0.006).coerceIn(-0.06, 0.06)
+                m.p.morale = (m.p.morale + d * 0.5).coerceIn(5.0, 100.0)
             }
-            1 -> 2.5 to "Sakin konuşman takıma güven verdi."
-            else -> when {
-                diff < 0 -> if (rnd.nextDouble() < 0.7) 9.0 to "Sert çıkışın oyuncuları ateşledi!" else -5.0 to "Sert çıkışın ters tepti, oyuncular gergin."
-                diff == 0 -> if (rnd.nextDouble() < 0.5) 5.0 to "Oyuncular mesajı aldı, daha agresifler." else -3.0 to "Oyuncular sert tavrından rahatsız oldu."
-                else -> -4.0 to "Önde olmamıza rağmen sert çıkışın oyuncuları gerdi."
-            }
+            m to d
         }
-        for (m in us.onPitch) m.p.morale = (m.p.morale + delta).coerceIn(5.0, 100.0)
-        ev(Ev.INFO, us.index, "Devre arası konuşması: $text")
-        return text
+    }
+
+    fun note(text: String) {
+        ev(Ev.INFO, userSide?.index ?: -1, text)
     }
 
     fun manOfTheMatch(): PIM? = (home.used + away.used).maxByOrNull { it.rating }

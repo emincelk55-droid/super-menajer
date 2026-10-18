@@ -633,7 +633,8 @@ private fun OpponentReport(g: Game, opp: Team) {
         }
         val danger = opp.lineup.mapNotNull { g.player(it) }.maxByOrNull { it.overall }
         val scorer = g.squad(opp.id).maxByOrNull { it.goals }?.takeIf { it.goals > 0 }
-        danger?.let { Text("En tehlikeli oyuncu: ${it.name} (${it.pos.short})", fontSize = 12.sp) }
+        val aq = com.supermenajer.game.game.StaffLogic.q(g, com.supermenajer.game.game.StaffLogic.ASSISTANT)
+        if (aq >= 8) danger?.let { Text("En tehlikeli oyuncu: ${it.name} (${it.pos.short})", fontSize = 12.sp) }
         scorer?.let { Text("Golcüsü: ${it.name} (${it.goals} gol)", fontSize = 12.sp) }
         Spacer(Modifier.height(6.dp))
         val advice = mutableListOf<String>()
@@ -646,6 +647,8 @@ private fun OpponentReport(g: Game, opp: Team) {
         val unhappy = us.lineup.mapNotNull { g.player(it) }.filter { it.morale < 30 }
         if (unhappy.isNotEmpty()) advice += "${unhappy.joinToString { it.name }} çok mutsuz, performansı düşük olabilir."
         if (advice.isEmpty()) advice += "Güçler denk. Dengeli oynamak mantıklı hocam."
-        advice.forEach { Text("🗣 $it", fontSize = 12.sp, color = Gold, modifier = Modifier.padding(vertical = 1.dp)) }
+        val shownAdvice = if (aq >= 12) advice else advice.take(1)
+        shownAdvice.forEach { Text("🗣 $it", fontSize = 12.sp, color = Gold, modifier = Modifier.padding(vertical = 1.dp)) }
+        if (aq < 12 && advice.size > 1) Text("Daha detaylı analiz için daha iyi bir yardımcı antrenör gerekli.", color = TextDim, fontSize = 11.sp)
     }
 }
