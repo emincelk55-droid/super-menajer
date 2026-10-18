@@ -64,14 +64,16 @@ fun SquadTab(g: Game) {
             Modifier.horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Chip("👥 Oyuncular", GameRepo.squadMode == 0) { GameRepo.squadMode = 0 }
-            Chip("👔 Teknik Ekip", GameRepo.squadMode == 1) { GameRepo.squadMode = 1 }
-            Chip("🏟️ Tesisler", GameRepo.squadMode == 2) { GameRepo.squadMode = 2 }
+            Chip("👥 Oyuncu", GameRepo.squadMode == 0) { GameRepo.squadMode = 0 }
+            Chip("👔 Ekip", GameRepo.squadMode == 1) { GameRepo.squadMode = 1 }
+            Chip("🏟️ Tesis", GameRepo.squadMode == 2) { GameRepo.squadMode = 2 }
+            Chip("💼 Sponsor", GameRepo.squadMode == 3) { GameRepo.squadMode = 3 }
         }
         when (GameRepo.squadMode) {
             0 -> PlayersList(g)
             1 -> StaffView(g)
-            else -> FacilitiesView(g)
+            2 -> FacilitiesView(g)
+            else -> SponsorsView(g)
         }
     }
 }

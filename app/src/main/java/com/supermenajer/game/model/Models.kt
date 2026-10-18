@@ -242,6 +242,21 @@ class Staff(
 @Serializable
 class Project(val type: Int, val amount: Int, var weeksLeft: Int, val totalWeeks: Int, val cost: Long)
 
+/**
+ * Sponsorluk sözleşmesi. slot: 0 forma, 1 stadyum isim hakkı, 2 malzeme.
+ * style: 0 garantili, 1 dengeli, 2 performans. base sezonluk sabit ödeme (lig haftalarına bölünür).
+ */
+@Serializable
+class Sponsor(
+    val slot: Int,
+    val name: String,
+    val style: Int,
+    val base: Long,
+    val winBonus: Long,
+    val titleBonus: Long,
+    var yearsLeft: Int,
+)
+
 /** Maç sonrası basın toplantısı sorusu. */
 @Serializable
 class PressQuestion(val text: String, val answers: List<String>, val kind: Int)
@@ -298,6 +313,9 @@ class Game(
     var nextStaffId: Int = 1,
     /** Kullanıcının kulübündeki inşaat projeleri. */
     var projects: MutableList<Project> = mutableListOf(),
+    /** Kullanıcının kulübünün sponsorları ve bekleyen teklifler. */
+    var sponsors: MutableList<Sponsor> = mutableListOf(),
+    var sponsorOffers: MutableList<Sponsor> = mutableListOf(),
 ) {
     private class Index(
         val byId: HashMap<Int, Player>,

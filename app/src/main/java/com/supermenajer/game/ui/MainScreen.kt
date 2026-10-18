@@ -158,6 +158,7 @@ private fun HomeTab(g: Game) {
         if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) item { CareerOfferCard(g) }
         g.press?.let { q -> item { PressCard(g, q) } }
         if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
+        if (g.sponsorOffers.isNotEmpty() && !g.fired) item { SponsorOffersCard(g) }
         if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
         item { BoardCard(g) }
         item { FinanceCard(g) }

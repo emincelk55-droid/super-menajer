@@ -282,6 +282,13 @@ object GameRepo {
         return err ?: "İnşaat başladı!"
     }
 
+    fun signSponsor(s: com.supermenajer.game.model.Sponsor): String {
+        val g = game ?: return ""
+        val err = Sponsors.sign(g, s)
+        changed()
+        return err ?: "Anlaşma imzalandı: ${s.name}!"
+    }
+
     fun setTicketPrice(i: Int) {
         val g = game ?: return
         g.userTeam.ticketPrice = i.coerceIn(0, 2)
@@ -301,7 +308,7 @@ object GameRepo {
         val g = game ?: return
         Season.takeJob(g, teamId)
         StaffLogic.hireDefaults(g)
-        g.addNews("Yeni teknik ekip", "${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kadro → Teknik Ekip ekranından değişiklik yapabilirsin.")
+        g.addNews("Yeni teknik ekip", "${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kadro → Ekip ekranından değişiklik yapabilirsin.")
         tab = 0
         changed()
     }

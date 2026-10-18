@@ -75,6 +75,7 @@ object Season {
         Facilities.ensureAll(g)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
+        Sponsors.refreshOffers(g, rnd)
         g.offers.clear()
         computeExpectations(g)
         g.players.forEach { it.startOvr = it.overall }
@@ -127,6 +128,16 @@ object Season {
         if (g.saveVersion < 6) migrateV6(g)
         if (g.saveVersion < 7) migrateV7(g)
         if (g.saveVersion < 8) migrateV8(g)
+        if (g.saveVersion < 9) migrateV9(g)
+    }
+
+    private fun migrateV9(g: Game) {
+        g.saveVersion = 9
+        g.addNews(
+            "Güncelleme: v0.9 · Sponsorluk anlaşmaları",
+            "Forma sponsoru, stadyum isim hakkı ve malzeme sponsoru geldi! Kadro → Sponsor'dan garantili, dengeli ya da performans primli teklifleri seç.",
+        )
+        if (g.sponsors.isEmpty() && !g.fired && g.userTeamId >= 0) Sponsors.refreshOffers(g)
     }
 
     private fun migrateV8(g: Game) {
@@ -134,7 +145,7 @@ object Season {
         Facilities.ensureAll(g)
         g.addNews(
             "Güncelleme: v0.8 · Stadyum ve tesisler",
-            "Kadro → Tesisler'den stadyumunu büyütebilir, bilet fiyatını belirleyebilir; antrenman tesisi, altyapı akademisi ve sağlık merkezini geliştirebilirsin. Seyirci sayısı artık formuna ve maçın önemine göre değişiyor!",
+            "Kadro → Tesis'den stadyumunu büyütebilir, bilet fiyatını belirleyebilir; antrenman tesisi, altyapı akademisi ve sağlık merkezini geliştirebilirsin. Seyirci sayısı artık formuna ve maçın önemine göre değişiyor!",
         )
     }
 
@@ -143,7 +154,7 @@ object Season {
         if (g.staff.isEmpty() && g.userTeamId >= 0) StaffLogic.hireDefaults(g)
         g.addNews(
             "Güncelleme: v0.7 · Teknik ekip ve takım konuşmaları",
-            "Artık bir teknik ekibin var: yardımcı antrenör, antrenör, fizyoterapist ve gözlemci. Kadro → Teknik Ekip'ten değiştirebilirsin. Maç öncesi, devre arası ve maç sonu takım konuşmaları da geldi!",
+            "Artık bir teknik ekibin var: yardımcı antrenör, antrenör, fizyoterapist ve gözlemci. Kadro → Ekip'ten değiştirebilirsin. Maç öncesi, devre arası ve maç sonu takım konuşmaları da geldi!",
         )
     }
 
@@ -308,6 +319,7 @@ object Season {
             Facilities.record(g, f)
             Economy.earn(h, Economy.TICKETS, Facilities.ticketIncome(g, f))
             if (f.comp == Comp.EURO) Economy.earn(h, Economy.EURO, 400_000L)
+            Sponsors.matchResult(g, f)
             if (Comp.isCup(f.comp) && f.winner >= 0) {
                 val prize = listOf(150_000L, 250_000L, 400_000L, 700_000L, 1_500_000L)[f.round]
                 Economy.earn(g.team(f.winner), Economy.CUP, prize)
@@ -318,6 +330,7 @@ object Season {
             0 -> {
                 weeklyUpdate(g, rnd)
                 Facilities.weekly(g)
+                Sponsors.weekly(g)
                 if (d.number % 6 == 0) {
                     val leader = g.table(g.userTeam.division).first()
                     g.addNews("Lig lideri", "${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.")
@@ -561,6 +574,7 @@ object Season {
 
     fun takeJob(g: Game, teamId: Int) {
         val old = g.userTeam.name
+        Sponsors.leaveClub(g, g.userTeam)
         g.userTeamId = teamId
         g.fired = false
         g.careerOffer = false
@@ -570,6 +584,7 @@ object Season {
         g.confidence = 55.0
         g.projects.clear()
         Facilities.ensure(g.userTeam)
+        Sponsors.refreshOffers(g)
         Lineups.validate(g, g.userTeam)
         g.addNews("Yeni görev", "$old macerası bitti. Artık ${g.userTeam.name} teknik direktörüsün! Hedef: ${objectiveText(g.userTeam)}.")
     }
@@ -579,6 +594,10 @@ object Season {
         g.press = null
         val us = g.userTeam
         val budgetBefore = us.budget
+        val cupComp0 = Leagues.of(us.division)?.cupComp ?: Comp.CUP
+        val titles = (if (g.table(us.division).first().id == us.id) 1 else 0) +
+            (if (g.cupWinners[cupComp0] == us.id) 1 else 0) + (if (g.euroWinner == us.id) 1 else 0)
+        Sponsors.seasonTitles(g, titles)
         Economy.seasonPayout(g)
         Facilities.aiUpgrades(g, Random.Default)
         for (id in activeLeagues(g)) {
@@ -657,6 +676,7 @@ object Season {
 
     fun newSeason(g: Game, rnd: Random = Random.Default) {
         val us = g.userTeam
+        Sponsors.newSeason(g)
         // Küme düşme / yükselme (2 ligli ülkelerde)
         for (country in activeCountries(g)) {
             val top = Leagues.top(country)

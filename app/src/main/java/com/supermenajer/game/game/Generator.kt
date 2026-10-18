@@ -101,7 +101,7 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 8,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 9,
         )
         for (t in teams) fillSquad(g, t, rnd, "TR")
         addLowerDivision(g, rnd)

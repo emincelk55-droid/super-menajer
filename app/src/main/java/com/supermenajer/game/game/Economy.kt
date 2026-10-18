@@ -25,6 +25,7 @@ object Economy {
     const val SCOUTING = "Gözlemci giderleri"
     const val STAFF = "Teknik ekip tazminatı"
     const val BUILD = "İnşaat ve tesisler"
+    const val SPONSOR = "Sponsorluk gelirleri"
 
     private val superPrize = listOf(
         20_000_000L, 13_000_000L, 9_000_000L, 7_000_000L, 5_500_000L, 4_500_000L, 4_000_000L, 3_500_000L, 3_000_000L,
@@ -80,6 +81,7 @@ object Economy {
             g.table(div).forEachIndexed { i, t ->
                 val base = (if (top) 4_000_000.0 else 1_500_000.0) * (t.reputation / 70.0).pow(2)
                 earn(t, BOARD, r5k(base))
+                if (t.id != g.userTeamId) earn(t, SPONSOR, Sponsors.aiIncome(g, t))
                 val prize = (if (top) superPrize else firstPrize).getOrElse(i) { 300_000L }
                 earn(t, PRIZE, r5k(prize * lg.wealth))
                 val target = Season.objectiveTarget(t.expected)
