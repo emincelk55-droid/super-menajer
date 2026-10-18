@@ -3,6 +3,7 @@ package com.supermenajer.game.game
 import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Fixture
 import com.supermenajer.game.model.Game
+import com.supermenajer.game.model.Leagues
 import com.supermenajer.game.model.Team
 import kotlin.random.Random
 
@@ -25,47 +26,54 @@ object Europe {
 
     private fun day(g: Game, round: Int): Int = g.calendar.indexOfFirst { it.type == 2 && it.number == round } + 1
 
-    /** Türk temsilcileri: geçen sezonun ilk 4'ü ya da (ilk sezonda) en güçlü 4 takım. */
-    private fun turkishEntrants(g: Game): List<Team> {
-        val q = g.euroQualified.mapNotNull { id -> g.teams.firstOrNull { it.id == id } }
-        return q.ifEmpty { g.divisionTeams(0).sortedBy { it.expected }.take(4) }.take(4)
+    /** Katılımcılar: her büyük ligin ilk 4'ü (geçen sezon sıralaması; ilk sezonda en güçlüler). */
+    private fun entrants(g: Game): List<Team> {
+        val list = mutableListOf<Team>()
+        for (lg in Leagues.topLeagues) {
+            val teams = g.divisionTeams(lg.id)
+            if (teams.isEmpty()) continue
+            val q = g.euroQualified.mapNotNull { g.teamOrNull(it) }.filter { it.division == lg.id }
+            list += if (q.size >= 4) q.take(4) else teams.sortedBy { it.expected }.take(4)
+        }
+        // Eski dünya (yalnızca Türkiye + ülkesiz Avrupa kulüpleri) için yedek.
+        if (list.size < 32) {
+            list += g.teams.filter { it.division == Leagues.LEGACY_EURO && it !in list }
+                .sortedByDescending { it.reputation }.take(32 - list.size)
+        }
+        return list.take(32)
     }
 
     fun start(g: Game, rnd: Random) {
         g.euroWinner = -1
         g.euroTeams = mutableListOf()
         if (g.calendar.none { it.type == 2 }) return
-        val foreign = g.teams.filter { it.division == 2 }.sortedByDescending { it.reputation }
-        if (foreign.size < 28) return
-        val turks = turkishEntrants(g)
-        val all = (turks + foreign.take(32 - turks.size)).sortedByDescending { it.reputation }
-        // 4 torba; aynı gruba iki Türk takımı düşmesin.
+        val all = entrants(g).sortedByDescending { it.reputation }
+        if (all.size < 32) return
+        // 4 torba; aynı gruba aynı ülkeden iki takım düşmesin.
         var groups: List<MutableList<Team>> = emptyList()
-        for (attempt in 0 until 50) {
+        for (attempt in 0 until 300) {
             val gs = List(8) { mutableListOf<Team>() }
             for (pot in 0 until 4) {
                 val potTeams = all.subList(pot * 8, pot * 8 + 8).shuffled(rnd)
                 potTeams.forEachIndexed { i, t -> gs[i] += t }
             }
             groups = gs
-            if (gs.all { grp -> grp.count { it.division != 2 } <= 1 }) break
+            if (gs.all { grp -> grp.map { g.countryOf(it) }.toSet().size == grp.size }) break
         }
         g.euroTeams = groups.flatten().map { it.id }.toMutableList()
-        for (t in turks) {
-            Economy.earn(t, Economy.EURO, 3_000_000L)
-            t.wageBudget += t.wageBudget / 10
-        }
         for ((gi, grp) in groups.withIndex()) {
             groupRounds.forEachIndexed { r, pairs ->
                 for ((a, b) in pairs) g.fixtures += Fixture(day(g, r), grp[a].id, grp[b].id, comp = Comp.EURO, round = r, group = gi)
             }
         }
-        for (t in turks) {
-            val gi = g.euroTeams.indexOf(t.id) / 4
-            val rivals = g.euroTeams.subList(gi * 4, gi * 4 + 4).filter { it != t.id }.map { g.team(it).name }
-            if (t.id == g.userTeamId) {
-                g.addNews("Avrupa Kupası kurası", "Grup ${groupLetter(gi)}'deyiz! Rakiplerimiz: ${rivals.joinToString()}.")
-            }
+        for (t in all) {
+            Economy.earn(t, Economy.EURO, 3_000_000L)
+            t.wageBudget += t.wageBudget / 10
+        }
+        val ug = groupOf(g, g.userTeamId)
+        if (ug >= 0) {
+            val rivals = g.euroTeams.subList(ug * 4, ug * 4 + 4).filter { it != g.userTeamId }.map { g.team(it).name }
+            g.addNews("Avrupa Kupası kurası", "Grup ${groupLetter(ug)}'deyiz! Rakiplerimiz: ${rivals.joinToString()}.")
         }
     }
 

@@ -1,6 +1,11 @@
 package com.supermenajer.game.ui
 
 import androidx.activity.compose.BackHandler
+import com.supermenajer.game.model.Leagues
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +53,7 @@ import com.supermenajer.game.game.money
 @Composable
 fun TitleScreen() {
     val hasSave = remember { GameRepo.hasSave() }
+    LaunchedEffect(Unit) { GameRepo.prepareWorldAsync() }
     var error by remember { mutableStateOf(false) }
     Box(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0F3D2A), Bg, Bg))),
@@ -88,58 +94,86 @@ fun TitleScreen() {
                 Text("Kayıt dosyası okunamadı.", color = Red)
             }
             Spacer(Modifier.height(40.dp))
-            Text("v0.4", color = TextDim, fontSize = 12.sp)
+            Text("v0.5", color = TextDim, fontSize = 12.sp)
         }
     }
 }
 
 @Composable
 fun NewGameScreen() {
-    val world = remember { Generator.newWorld().also { Season.computeExpectations(it) } }
+    var world by remember { mutableStateOf(GameRepo.takePreparedWorld()) }
+    LaunchedEffect(Unit) {
+        if (world == null) {
+            world = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                Generator.newWorld().also { Season.computeExpectations(it) }
+            }
+        }
+    }
     var name by remember { mutableStateOf("") }
     var selected by remember { mutableIntStateOf(-1) }
+    var country by remember { mutableStateOf("Türkiye") }
     var div by remember { mutableIntStateOf(0) }
     val hasSave = remember { GameRepo.hasSave() }
     BackHandler { GameRepo.screen = Screen.TITLE }
 
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
             Text("Yeni Kariyer", fontSize = 26.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = name, onValueChange = { name = it.take(24) },
                 label = { Text("Menajer adın") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(12.dp))
-            Text("Takımını seç", color = TextDim, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+            Text("Ülke", color = TextDim, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Leagues.countries.forEach { c ->
+                    Chip("${Generator.flag(Leagues.flagOf(c))} $c", country == c) {
+                        country = c
+                        div = Leagues.top(c).id
+                        selected = -1
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("Süper Lig", div == 0) { div = 0 }
-                Chip("1. Lig (zor mod)", div == 1) { div = 1 }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Leagues.ofCountry(country).forEach { lg ->
+                    Chip(lg.name + if (lg.tier == 2) " (zor mod)" else "", div == lg.id) { div = lg.id; selected = -1 }
+                }
             }
         }
-        LazyColumn(
-            Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(world.divisionTeams(div).sortedBy { it.expected }, key = { it.id }) { t ->
-                val sel = t.id == selected
-                val stars = when { t.reputation >= 84 -> 5; t.reputation >= 72 -> 4; t.reputation >= 63 -> 3; t.reputation >= 52 -> 2; else -> 1 }
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface1)
-                        .border(2.dp, if (sel) Green else Color.Transparent, RoundedCornerShape(12.dp))
-                        .clickable { selected = t.id }.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TeamBadge(t, 44.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(t.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("★".repeat(stars) + "☆".repeat(5 - stars), color = Gold, fontSize = 13.sp)
-                        Text("Hedef: ${Season.objectiveText(t)} · Bütçe: ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
+        val w = world
+        if (w == null) {
+            Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                CircularProgressIndicator(color = Green)
+                Spacer(Modifier.height(12.dp))
+                Text("Futbol dünyası oluşturuluyor...\n13 lig · 234 takım", color = TextDim, textAlign = TextAlign.Center)
+            }
+        } else {
+            LazyColumn(
+                Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(w.divisionTeams(div).sortedBy { it.expected }, key = { it.id }) { t ->
+                    val sel = t.id == selected
+                    val stars = when { t.reputation >= 84 -> 5; t.reputation >= 72 -> 4; t.reputation >= 63 -> 3; t.reputation >= 52 -> 2; else -> 1 }
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface1)
+                            .border(2.dp, if (sel) Green else Color.Transparent, RoundedCornerShape(12.dp))
+                            .clickable { selected = t.id }.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TeamBadge(t, 44.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(t.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("★".repeat(stars) + "☆".repeat(5 - stars), color = Gold, fontSize = 13.sp)
+                            Text("Hedef: ${Season.objectiveText(t)} · Bütçe: ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
+                        }
+                        OvrBadge(Lineups.strength(w, t).toInt())
                     }
-                    OvrBadge(Lineups.strength(world, t).toInt())
                 }
             }
         }
@@ -149,8 +183,8 @@ fun NewGameScreen() {
                 Spacer(Modifier.height(8.dp))
             }
             Button(
-                onClick = { GameRepo.newCareer(world, name, selected) },
-                enabled = selected >= 0,
+                onClick = { w?.let { GameRepo.newCareer(it, name, selected) } },
+                enabled = selected >= 0 && w != null,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Green),

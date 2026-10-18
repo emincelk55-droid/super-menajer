@@ -29,7 +29,7 @@ class BalanceTest {
             while (!g.seasonOver) playDay(g, rnd)
             val sl = g.table(0)
             val str = g.divisionTeams(0).map { Lineups.strength(g, it) }
-            val eu = g.divisionTeams(2).map { Lineups.strength(g, it) }
+            val eu = g.divisionTeams(10).map { Lineups.strength(g, it) }
             val active = g.players.filter { it.teamId >= 0 }
             println(
                 "BAL ${g.season} SL güç ort=${"%.1f".format(str.average())} max=${"%.1f".format(str.max())} | AVR ort=${"%.1f".format(eu.average())}" +

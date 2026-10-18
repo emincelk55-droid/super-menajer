@@ -20,7 +20,9 @@ class Offer(val player: Player, val buyer: Team, val price: Long)
 
 /** Oyunun tek durum kaynağı. Değişikliklerden sonra [bump] çağrılır ve ekranlar yeniden çizilir. */
 object GameRepo {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
+    /** Kayıt dosyası arka planda, sırayla yazılır (arayüz donmasın). */
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor()
     private lateinit var dir: File
 
     var game by mutableStateOf<Game?>(null)
@@ -34,10 +36,25 @@ object GameRepo {
     var tab by mutableIntStateOf(0)
     var tacticsMode by mutableIntStateOf(0)
     var leagueTab by mutableIntStateOf(-1)
+    var leagueSel by mutableIntStateOf(-1)
 
     fun init(d: File) {
         dir = d
     }
+
+    /** Başlık ekranındayken arka planda hazırlanan yeni dünya. */
+    @Volatile
+    var preparedWorld: Game? = null
+
+    fun prepareWorldAsync() {
+        if (preparedWorld != null) return
+        Thread {
+            val w = Generator.newWorld().also { Season.computeExpectations(it) }
+            if (preparedWorld == null) preparedWorld = w
+        }.start()
+    }
+
+    fun takePreparedWorld(): Game? = preparedWorld.also { preparedWorld = null }
 
     fun bump() {
         version++
@@ -46,20 +63,37 @@ object GameRepo {
     private val saveFile get() = File(dir, "kariyer.json")
     fun hasSave(): Boolean = saveFile.exists()
 
-    fun save() {
+    private var lastSave = 0L
+
+    /** Kaydı yazar. force=false iken sık değişikliklerde en fazla 4 saniyede bir yazar. */
+    fun save(force: Boolean = false) {
         val g = game ?: return
-        runCatching {
-            val tmp = File(dir, "kariyer.tmp")
-            tmp.writeText(json.encodeToString(Game.serializer(), g))
-            tmp.renameTo(saveFile)
+        val now = System.currentTimeMillis()
+        if (!force && now - lastSave < 4_000) return
+        lastSave = now
+        val text = runCatching { json.encodeToString(Game.serializer(), g) }.getOrNull() ?: return
+        writer.execute {
+            runCatching {
+                val tmp = File(dir, "kariyer.tmp")
+                tmp.writeText(text)
+                if (!tmp.renameTo(saveFile)) {
+                    saveFile.delete()
+                    tmp.renameTo(saveFile)
+                }
+            }
         }
+    }
+
+    /** Uygulama kapanırken yazmanın bitmesini bekle. */
+    fun flush() {
+        runCatching { writer.submit {}.get(3, java.util.concurrent.TimeUnit.SECONDS) }
     }
 
     fun load(): Boolean = runCatching {
         val g = json.decodeFromString(Game.serializer(), saveFile.readText())
         Season.migrate(g)
         game = g
-        save()
+        save(force = true)
         bump()
         true
     }.getOrDefault(false)
@@ -75,7 +109,7 @@ object GameRepo {
         )
         game = g
         tab = 0
-        save()
+        save(force = true)
         screen = Screen.MAIN
         bump()
     }
@@ -105,7 +139,7 @@ object GameRepo {
         Season.simulateRest(g, sim.fixture.week)
         Season.endDay(g)
         Lineups.validate(g, g.userTeam)
-        save()
+        save(force = true)
         screen = Screen.SUMMARY
         bump()
     }
@@ -117,6 +151,34 @@ object GameRepo {
         Season.simulateRest(g, g.week)
         Season.endDay(g)
         Lineups.validate(g, g.userTeam)
+        changed()
+    }
+
+    /** Kullanıcının maçı olan güne kadar ilerler (yeni teklif gelirse durur). */
+    fun skipToNextMatch() {
+        val g = game ?: return
+        var guard = 0
+        while (!g.fired && !g.seasonOver && g.todayUserFixture() == null && guard++ < 30) {
+            val offersBefore = g.offers.size
+            Season.simulateRest(g, g.week)
+            Season.endDay(g)
+            if (g.offers.size > offersBefore) break
+        }
+        Lineups.validate(g, g.userTeam)
+        save(force = true)
+        bump()
+    }
+
+    fun answerPress(q: com.supermenajer.game.model.PressQuestion, index: Int): String {
+        val g = game ?: return ""
+        val msg = Press.answer(g, q, index)
+        g.addNews("Basın toplantısı", "\"${q.answers.getOrElse(index) { "" }}\" — $msg")
+        changed()
+        return msg
+    }
+
+    fun skipPress() {
+        game?.press = null
         changed()
     }
 
@@ -146,7 +208,7 @@ object GameRepo {
     fun startNewSeason() {
         val g = game ?: return
         Season.newSeason(g)
-        save()
+        save(force = true)
         bump()
     }
 
@@ -310,7 +372,7 @@ object GameRepo {
             seller.name
         } else "serbest oyuncu"
         Economy.earn(us, Economy.BUYS, -price)
-        p.teamId = us.id
+        g.movePlayer(p, us.id)
         p.morale = 80.0
         p.salary = p.demandWage
         p.contractYears = if (p.age >= 30) 2 else 4
@@ -338,7 +400,7 @@ object GameRepo {
         if (p.teamId != us.id) return
         Economy.earn(us, Economy.SALES, price)
         Economy.earn(buyer, Economy.BUYS, -price)
-        p.teamId = buyer.id
+        g.movePlayer(p, buyer.id)
         p.salary = p.demandWage
         p.contractYears = 4
         g.offers.removeAll { it.playerId == p.id }

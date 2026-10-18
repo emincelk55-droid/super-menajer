@@ -2,14 +2,15 @@
 
 Android için Türkçe futbol menajerlik oyunu (Kotlin + Jetpack Compose).
 
-- 18 takımlı Süper Lig ve 1. Lig, küme düşme / yükselme
-- Türkiye Kupası (tek maç eleme, penaltılar)
-- Avrupa Kupası: 28 kurgusal Avrupa kulübü, 8 grup ve tek maç eleme turları
+- 8 ülke, 13 lig, 234 kurgusal kulüp: Türkiye, İngiltere, İspanya, Almanya, İtalya (2'şer lig), Fransa, Portekiz, Hollanda
+- İstediğin ülkeden, istediğin ligden kariyere başla; ülke kupaları, küme düşme / yükselme
+- Ülke kupaları (tek maç eleme, penaltılar)
+- Avrupa Kupası: 8 büyük ligin ilk 4'ü, 8 grup ve tek maç eleme turları
 - Canlı maç motoru ve Türkçe anlatım, maç içi değişiklik ve taktik
 - Transfer pazarlığı, transfer dönemleri, gelen teklifler
 - Antrenman, oyuncu gelişimi, altyapı
 - Ekonomi: transfer bütçesi + haftalık maaş limiti, başarıya göre sezon sonu ödeneği, sözleşmeler
-- Yönetim güveni ve kovulma
+- Yönetim güveni ve kovulma, basın toplantıları, devre arası konuşması
 
 ## Derleme
 

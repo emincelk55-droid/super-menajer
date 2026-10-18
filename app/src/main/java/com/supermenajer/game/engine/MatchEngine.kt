@@ -70,7 +70,7 @@ class MatchSim(
         private set
     /** Tek maç eleme (Türkiye Kupası veya Avrupa eleme turları): beraberlikte penaltı. */
     val isCup: Boolean get() = Comp.isKnockout(fixture.comp, fixture.round)
-    private val isLeague: Boolean get() = fixture.comp == Comp.SUPER || fixture.comp == Comp.FIRST
+    private val isLeague: Boolean get() = Comp.isLeague(fixture.comp)
     val userSide: Side? get() = sides.firstOrNull { it.team.id == userTeamId }
 
     init {
@@ -383,6 +383,33 @@ class MatchSim(
         away.goals > home.goals -> away.team
         penHome > penAway -> home.team
         else -> away.team
+    }
+
+    var talkDone = false
+        private set
+
+    /** Devre arası konuşması: 0 övgü, 1 sakin, 2 sert. Oyuncuların moralini (dolayısıyla performansını) etkiler. */
+    fun teamTalk(choice: Int): String {
+        val us = userSide ?: return ""
+        if (talkDone) return ""
+        talkDone = true
+        val diff = us.goals - other(us).goals
+        val (delta, text) = when (choice) {
+            0 -> when {
+                diff > 0 -> 6.0 to "Övgülerin oyuncuları coşturdu!"
+                diff == 0 -> 3.0 to "Oyuncular güvenini hissetti."
+                else -> -2.0 to "Geride olmamıza rağmen övgü, oyuncuları fazla rahatlattı."
+            }
+            1 -> 2.5 to "Sakin konuşman takıma güven verdi."
+            else -> when {
+                diff < 0 -> if (rnd.nextDouble() < 0.7) 9.0 to "Sert çıkışın oyuncuları ateşledi!" else -5.0 to "Sert çıkışın ters tepti, oyuncular gergin."
+                diff == 0 -> if (rnd.nextDouble() < 0.5) 5.0 to "Oyuncular mesajı aldı, daha agresifler." else -3.0 to "Oyuncular sert tavrından rahatsız oldu."
+                else -> -4.0 to "Önde olmamıza rağmen sert çıkışın oyuncuları gerdi."
+            }
+        }
+        for (m in us.onPitch) m.p.morale = (m.p.morale + delta).coerceIn(5.0, 100.0)
+        ev(Ev.INFO, us.index, "Devre arası konuşması: $text")
+        return text
     }
 
     fun manOfTheMatch(): PIM? = (home.used + away.used).maxByOrNull { it.rating }

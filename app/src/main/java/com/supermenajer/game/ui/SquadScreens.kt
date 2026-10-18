@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -298,20 +299,36 @@ private fun Stat(label: String, v: String) {
 fun TransferTab(g: Game) {
     var posFilter by remember { mutableStateOf<Pos?>(null) }
     var mode by remember { mutableIntStateOf(0) } // 0 tümü, 1 serbest, 2 bütçeme uygun, 3 genç yetenek
+    var country by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
+    var sort by remember { mutableIntStateOf(0) } // 0 güç, 1 potansiyel, 2 ucuz, 3 genç
     val budget = g.userTeam.budget
-    val list = g.players.asSequence()
-        .filter { it.teamId != g.userTeamId }
-        .filter { posFilter == null || it.pos == posFilter }
-        .filter {
-            when (mode) {
-                1 -> it.teamId < 0
-                2 -> GameRepo.askingPrice(it) <= budget
-                3 -> it.age <= 21 && it.potential >= 70
-                else -> true
+    val version = GameRepo.version
+    val list = remember(version, posFilter, mode, country, query, sort) {
+        val q = query.trim().lowercase()
+        g.players.asSequence()
+            .filter { it.teamId != g.userTeamId }
+            .filter { posFilter == null || it.pos == posFilter }
+            .filter { country == null || (it.teamId >= 0 && g.teamOrNull(it.teamId)?.let { t -> g.countryOf(t) } == country) }
+            .filter { q.isEmpty() || it.name.lowercase().contains(q) }
+            .filter {
+                when (mode) {
+                    1 -> it.teamId < 0
+                    2 -> GameRepo.askingPrice(it) <= budget && com.supermenajer.game.game.Economy.fitsWages(g, g.userTeam, it.demandWage)
+                    3 -> it.age <= 21 && it.potential >= 70
+                    else -> true
+                }
             }
-        }
-        .sortedByDescending { if (mode == 3) it.potential else it.overall }
-        .take(120).toList()
+            .sortedWith(
+                when (sort) {
+                    1 -> compareByDescending<Player> { it.potential }
+                    2 -> compareBy<Player> { GameRepo.askingPrice(it) }.thenByDescending { it.overall }
+                    3 -> compareBy<Player> { it.age }.thenByDescending { it.potential }
+                    else -> compareByDescending<Player> { it.overall }
+                }
+            )
+            .take(150).toList()
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
         item {
             Column(Modifier.padding(12.dp)) {
@@ -319,6 +336,11 @@ fun TransferTab(g: Game) {
                 Text(
                     Season.windowText(g), color = if (open) Green else Gold, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(10.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = query, onValueChange = { query = it.take(30) }, singleLine = true,
+                    placeholder = { Text("🔍 Oyuncu ara") }, modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -329,15 +351,25 @@ fun TransferTab(g: Game) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("🌍 Tüm ülkeler", country == null) { country = null }
+                    Season.activeCountries(g).forEach { c -> Chip("${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(c))} $c", country == c) { country = c } }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("Her mevki", posFilter == null) { posFilter = null }
                     Pos.entries.forEach { p -> Chip(p.label, posFilter == p) { posFilter = p } }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Sırala: Güç", "Potansiyel", "En ucuz", "En genç").forEachIndexed { i, n -> Chip(n, sort == i) { sort = i } }
                 }
             }
         }
         if (list.isEmpty()) item { Text("Uygun oyuncu bulunamadı.", color = TextDim, modifier = Modifier.padding(16.dp)) }
         items(list, key = { it.id }) { p ->
-            val team = if (p.teamId >= 0) g.team(p.teamId).short + if (g.team(p.teamId).division == 1) "¹" else "" else "SRB"
-            PlayerRow(g, p, false, extra = "$team · ${money(GameRepo.askingPrice(p))}" + if (mode == 3) " · P${p.potential}" else "")
+            val t = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
+            val team = t?.let { Generator.flag(g.flagOf(it)) + " " + it.short } ?: "Serbest"
+            PlayerRow(g, p, false, extra = "$team · ${money(GameRepo.askingPrice(p))}" + if (mode == 3 || sort == 1) " · P${p.potential}" else "")
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.supermenajer.game.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -110,7 +111,7 @@ class Team(
     var ga: Int = 0,
     var form: String = "",
     var expected: Int = 9,
-    /** 0 = Süper Lig, 1 = 1. Lig */
+    /** Lig kimliği (bkz. [Leagues]): 0 Süper Lig, 1 1. Lig, 10+ yabancı ligler. */
     var division: Int = 0,
     /** 0 dengeli, 1 hücum, 2 savunma, 3 fizik, 4 gençler */
     var training: Int = 0,
@@ -132,12 +133,22 @@ class Team(
     }
 }
 
+/**
+ * Yarışma kimlikleri: lig maçlarında lig kimliği (0, 1, 10-29), Türkiye Kupası 2, Avrupa 3,
+ * diğer ülke kupaları 30+.
+ */
 object Comp {
     const val SUPER = 0
     const val FIRST = 1
     const val CUP = 2
     const val EURO = 3
-    fun name(c: Int) = when (c) { SUPER -> "Süper Lig"; FIRST -> "1. Lig"; CUP -> "Türkiye Kupası"; else -> "Avrupa Kupası" }
+    fun isLeague(c: Int) = c == SUPER || c == FIRST || c in 10..29
+    fun isCup(c: Int) = c == CUP || c >= 30
+    fun name(c: Int) = when {
+        c == EURO -> "Avrupa Kupası"
+        isCup(c) -> Leagues.cupName(c)
+        else -> Leagues.of(c)?.name ?: "Lig"
+    }
     val cupRounds = listOf("Son 32", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
     /** 0-5 grup maçları, 6 son 16, 7 çeyrek final, 8 yarı final, 9 final */
     val euroRounds = listOf("Grup 1. maç", "Grup 2. maç", "Grup 3. maç", "Grup 4. maç", "Grup 5. maç", "Grup 6. maç", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
@@ -145,7 +156,7 @@ object Comp {
     fun roundName(comp: Int, round: Int) = if (comp == EURO) euroRounds[round] else cupRounds[round]
 
     /** Bir maçın eleme (tek maç, gerekirse penaltı) olup olmadığı. */
-    fun isKnockout(comp: Int, round: Int) = comp == CUP || (comp == EURO && round >= EURO_KO)
+    fun isKnockout(comp: Int, round: Int) = isCup(comp) || (comp == EURO && round >= EURO_KO)
 }
 
 @Serializable
@@ -189,7 +200,12 @@ class SeasonRecord(
     val firstChampion: String = "",
     val userDivision: Int = 0,
     val euroWinner: String = "",
+    val leagueName: String = "Süper Lig",
 )
+
+/** Maç sonrası basın toplantısı sorusu. */
+@Serializable
+class PressQuestion(val text: String, val answers: List<String>, val kind: Int)
 
 @Serializable
 class Game(
@@ -218,11 +234,71 @@ class Game(
     var euroWinner: Int = -1,
     /** Eski (v0.1) kayıtlarda alan yoktur ve 1 okunur. */
     var saveVersion: Int = 1,
+    /** Ülke kupası kimliği -> şampiyon takım. */
+    var cupWinners: MutableMap<Int, Int> = mutableMapOf(),
+    /** v0.4 kayıtlarında yeni ligler bir sonraki sezon başında kurulur. */
+    var worldUpgradePending: Boolean = false,
+    var press: PressQuestion? = null,
 ) {
-    fun player(id: Int): Player? = players.firstOrNull { it.id == id }
-    fun team(id: Int): Team = teams.first { it.id == id }
+    private class Index(
+        val byId: HashMap<Int, Player>,
+        val byTeam: HashMap<Int, MutableList<Player>>,
+        val teamById: HashMap<Int, Team>,
+    )
+
+    @Transient
+    private var idx: Index? = null
+
+    private fun index(): Index {
+        idx?.let { return it }
+        val byTeam = HashMap<Int, MutableList<Player>>()
+        for (p in players) byTeam.getOrPut(p.teamId) { mutableListOf() }.add(p)
+        return Index(HashMap(players.associateBy { it.id }), byTeam, HashMap(teams.associateBy { it.id })).also { idx = it }
+    }
+
+    /** Oyuncu/takım listeleri doğrudan değiştirildiyse indeksi yeniden kur. */
+    fun reindex() {
+        idx = null
+    }
+
+    fun player(id: Int): Player? = index().byId[id]
+    fun team(id: Int): Team = index().teamById[id] ?: teams.first { it.id == id }
+    fun teamOrNull(id: Int): Team? = index().teamById[id]
     val userTeam: Team get() = team(userTeamId)
-    fun squad(teamId: Int): List<Player> = players.filter { it.teamId == teamId }
+    fun squad(teamId: Int): List<Player> = index().byTeam[teamId]?.toList() ?: emptyList()
+
+    /** Oyuncunun takımını değiştirir (indeksi de günceller). */
+    fun movePlayer(p: Player, teamId: Int) {
+        idx?.let {
+            it.byTeam[p.teamId]?.remove(p)
+            it.byTeam.getOrPut(teamId) { mutableListOf() }.add(p)
+        }
+        p.teamId = teamId
+    }
+
+    fun addPlayer(p: Player) {
+        players += p
+        idx?.let {
+            it.byId[p.id] = p
+            it.byTeam.getOrPut(p.teamId) { mutableListOf() }.add(p)
+        }
+    }
+
+    fun removePlayers(list: Collection<Player>) {
+        val set = list.toHashSet()
+        players.removeAll { it in set }
+        reindex()
+    }
+
+    fun addTeam(t: Team) {
+        teams += t
+        reindex()
+    }
+
+    fun league(t: Team): LeagueDef? = Leagues.of(t.division)
+    fun countryOf(t: Team): String = league(t)?.country ?: t.city
+    fun flagOf(t: Team): String = league(t)?.flag ?: Leagues.countryCode(t.city)
+    val userCountry: String get() = countryOf(userTeam)
     val totalDays: Int get() = calendar.size
     val today: Day? get() = calendar.getOrNull(week - 1)
 
@@ -239,9 +315,11 @@ class Game(
         }
     }
 
-    /** Takımın bulunduğu lig ya da (yabancı kulüpse) ülkesi. */
-    fun leagueName(t: Team): String = if (t.division == 2) t.city else Comp.name(t.division)
-    fun isForeign(t: Team) = t.division == 2
+    /** Takımın bulunduğu lig (eski Avrupa kulüplerinde ülkesi). */
+    fun leagueName(t: Team): String = league(t)?.name ?: t.city
+
+    /** Kullanıcının ülkesi dışındaki kulüp mü? */
+    fun isForeign(t: Team) = countryOf(t) != userCountry
 
     fun divisionTeams(div: Int): List<Team> = teams.filter { it.division == div }
 

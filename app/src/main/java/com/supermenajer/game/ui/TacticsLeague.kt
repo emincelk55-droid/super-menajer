@@ -48,7 +48,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.supermenajer.game.game.GameRepo
+import com.supermenajer.game.game.Generator
 import com.supermenajer.game.game.Lineups
+import com.supermenajer.game.game.Season
 import com.supermenajer.game.model.Formations
 import com.supermenajer.game.model.Game
 
@@ -96,6 +98,7 @@ fun TacticsTab(g: Game) {
             Chip("Taktik", mode == 0) { GameRepo.tacticsMode = 0 }
             Chip("Antrenman", mode == 1) { GameRepo.tacticsMode = 1 }
         }
+        Spacer(Modifier.height(4.dp))
         if (mode == 0) TacticsContent(g) else TrainingContent(g)
     }
 }
@@ -251,44 +254,96 @@ private fun LineStat(label: String, v: Int) {
 
 @Composable
 fun LeagueTab(g: Game) {
-    if (GameRepo.leagueTab < 0) GameRepo.leagueTab = g.userTeam.division
-    var tab by remember { mutableIntStateOf(GameRepo.leagueTab) }
-    GameRepo.leagueTab = tab
+    val Comp = com.supermenajer.game.model.Comp
+    val Leagues = com.supermenajer.game.model.Leagues
+    if (GameRepo.leagueTab < 0) GameRepo.leagueTab = 0
+    if (GameRepo.leagueSel < 0 || Leagues.of(GameRepo.leagueSel) == null) GameRepo.leagueSel = g.userTeam.division
+    val view = GameRepo.leagueTab
+    val sel = GameRepo.leagueSel
     var day by remember { mutableIntStateOf(g.week.coerceIn(1, g.totalDays)) }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.padding(12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Süper Lig", tab == 0) { tab = 0 }
-            Chip("1. Lig", tab == 1) { tab = 1 }
-            Chip("Kupa", tab == 2) { tab = 2 }
-            Chip("Avrupa", tab == 5) { tab = 5 }
-            Chip("Fikstür", tab == 3) { tab = 3 }
-            Chip("Krallık", tab == 4) { tab = 4 }
+        Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "Krallık", "Geçmiş").forEachIndexed { i, n ->
+                Chip(n, view == i) { GameRepo.leagueTab = i }
+            }
         }
-        when (tab) {
-            0, 1 -> LeagueTable(g, tab)
-            2 -> CupView(g)
-            5 -> EuroView(g)
+        if (view == 0 || view == 4) {
+            // Lig seçici: önce ülke, sonra lig
+            val country = Leagues.of(sel)?.country ?: g.userCountry
+            Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Season.activeCountries(g).forEach { c ->
+                    Chip(Generator.flag(Leagues.flagOf(c)), c == country) { GameRepo.leagueSel = Leagues.top(c).id }
+                }
+            }
+            Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Leagues.ofCountry(country).filter { it.id in Season.activeLeagues(g) }.forEach { lg ->
+                    Chip(lg.name, lg.id == sel) { GameRepo.leagueSel = lg.id }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+        }
+        when (view) {
+            0 -> LeagueTable(g, sel)
+            1 -> CupView(g, Leagues.of(g.userTeam.division)?.cupComp ?: Comp.CUP)
+            2 -> EuroView(g)
             3 -> Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { if (day > 1) day-- }) { Text("◀", fontSize = 18.sp) }
                     Text(g.dayLabel(day), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     TextButton(onClick = { if (day < g.totalDays) day++ }) { Text("▶", fontSize = 18.sp) }
                 }
+                val myCup = Leagues.of(g.userTeam.division)?.cupComp ?: Comp.CUP
+                val country = g.userCountry
+                val myLeagues = Leagues.ofCountry(country).map { it.id }
                 val list = g.weekFixtures(day)
+                val comps = listOf(Comp.EURO, myCup) + myLeagues
                 LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                    for (comp in listOf(com.supermenajer.game.model.Comp.EURO, com.supermenajer.game.model.Comp.CUP, com.supermenajer.game.model.Comp.SUPER, com.supermenajer.game.model.Comp.FIRST)) {
+                    for (comp in comps) {
                         val fs = list.filter { it.comp == comp }.sortedByDescending { it.involves(g.userTeamId) }
                         if (fs.isEmpty()) continue
-                        item { Text(com.supermenajer.game.model.Comp.name(comp).uppercase(), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) }
+                        item { Text(Comp.name(comp).uppercase(), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) }
                         items(fs) { f ->
                             ResultRow(g, f, g.userTeamId)
                             HorizontalDivider(color = Line)
                         }
                     }
-                    if (list.isEmpty()) item { Text("Bu gün için kura henüz çekilmedi.", color = TextDim) }
+                    if (list.none { it.comp in comps }) item { Text("Bu gün ${country} için maç yok ya da kura henüz çekilmedi.", color = TextDim) }
                 }
             }
-            else -> Scorers(g)
+            4 -> Scorers(g, sel)
+            else -> HistoryView(g)
+        }
+    }
+}
+
+@Composable
+private fun HistoryView(g: Game) {
+    val h = g.history.reversed()
+    LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            val titles = g.history.count { it.userPos == 1 && it.champion == it.userTeam }
+            val cups = g.history.count { it.cupWinner == it.userTeam }
+            val euros = g.history.count { it.euroWinner == it.userTeam }
+            SectionCard("Kariyer · ${g.managerName}") {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                    listOf("Sezon" to g.history.size, "Lig 🏆" to titles, "Kupa 🥇" to cups, "Avrupa 🌍" to euros).forEach { (l, v) ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$v", fontSize = 22.sp, fontWeight = FontWeight.Black)
+                            Text(l, color = TextDim, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+        if (h.isEmpty()) item { Text("İlk sezonun bitince kariyer geçmişin burada görünecek.", color = TextDim) }
+        items(h) { r ->
+            SectionCard("${r.season}-${(r.season + 1) % 100} · ${r.userTeam}") {
+                Text("${r.leagueName.ifEmpty { "Lig" }}: ${r.userPos}. sıra" + if (r.userPos == 1) " 🏆" else "", fontWeight = FontWeight.Bold)
+                Text("Şampiyon: ${r.champion}", color = TextDim, fontSize = 13.sp)
+                if (r.cupWinner.isNotEmpty()) Text("Kupa: ${r.cupWinner}", color = TextDim, fontSize = 13.sp)
+                if (r.euroWinner.isNotEmpty()) Text("Avrupa: ${r.euroWinner}", color = TextDim, fontSize = 13.sp)
+                Text("Gol kralı: ${r.topScorer}", color = TextDim, fontSize = 13.sp)
+            }
         }
     }
 }
@@ -345,21 +400,23 @@ private fun EuroView(g: Game) {
 }
 
 @Composable
-private fun CupView(g: Game) {
-    val cup = g.fixtures.filter { it.comp == com.supermenajer.game.model.Comp.CUP }
+private fun CupView(g: Game, comp: Int) {
+    val cup = g.fixtures.filter { it.comp == comp }
+    val winner = g.cupWinners[comp] ?: -1
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (g.cupWinner >= 0) item {
+        item { Text(com.supermenajer.game.model.Comp.name(comp), fontWeight = FontWeight.Black, fontSize = 18.sp) }
+        if (winner >= 0) item {
             SectionCard("Kupa sahibi") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("🏆", fontSize = 30.sp)
                     Spacer(Modifier.width(10.dp))
-                    TeamBadge(g.team(g.cupWinner), 34.dp)
+                    TeamBadge(g.team(winner), 34.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text(g.team(g.cupWinner).name, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Text(g.team(winner).name, fontWeight = FontWeight.Black, fontSize = 18.sp)
                 }
             }
         }
-        if (cup.isEmpty()) item { Text("Türkiye Kupası yeni sezonda başlayacak.", color = TextDim) }
+        if (cup.isEmpty()) item { Text("Kupa yeni sezonda başlayacak.", color = TextDim) }
         for (r in com.supermenajer.game.model.Comp.cupRounds.indices.reversed()) {
             val fs = cup.filter { it.round == r }.sortedByDescending { it.involves(g.userTeamId) }
             if (fs.isEmpty()) continue
@@ -390,10 +447,12 @@ private fun LeagueTable(g: Game, div: Int) {
         items(table.size) { i ->
             val t = table[i]
             val me = t.id == g.userTeamId
-            val zone = if (div == 0) when {
+            val lgDef = com.supermenajer.game.model.Leagues.of(div)
+            val relegation = lgDef != null && lgDef.tier == 1 && com.supermenajer.game.model.Leagues.second(lgDef.country) != null
+            val zone = if (lgDef?.tier != 2) when {
                 i == 0 -> Gold
                 i < 4 -> Blue
-                i >= table.size - 3 -> Red
+                relegation && i >= table.size - 3 -> Red
                 else -> Color.Transparent
             } else if (i < 3) Green else Color.Transparent
             Row(
@@ -416,8 +475,11 @@ private fun LeagueTable(g: Game, div: Int) {
         }
         item {
             Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (div == 0) { Legend(Gold, "Şampiyon"); Legend(Blue, "Avrupa"); Legend(Red, "Küme düşme") }
-                else Legend(Green, "Süper Lig'e yükselme")
+                val lgDef = com.supermenajer.game.model.Leagues.of(div)
+                if (lgDef?.tier != 2) {
+                    Legend(Gold, "Şampiyon"); Legend(Blue, "Avrupa")
+                    if (lgDef != null && com.supermenajer.game.model.Leagues.second(lgDef.country) != null) Legend(Red, "Küme düşme")
+                } else Legend(Green, "Yükselme")
             }
         }
     }
@@ -432,9 +494,8 @@ private fun Legend(c: Color, s: String) {
 }
 
 @Composable
-private fun Scorers(g: Game) {
-    val div = g.userTeam.division
-    val active = g.players.filter { it.teamId >= 0 && g.team(it.teamId).division == div }
+private fun Scorers(g: Game, div: Int) {
+    val active = g.divisionTeams(div).flatMap { g.squad(it.id) }
     val goals = active.filter { it.goals > 0 }.sortedWith(compareByDescending<com.supermenajer.game.model.Player> { it.goals }.thenBy { it.apps }).take(15)
     val assists = active.filter { it.assists > 0 }.sortedByDescending { it.assists }.take(10)
     val rating = active.filter { it.apps >= 5 }.sortedByDescending { it.avgRating }.take(10)

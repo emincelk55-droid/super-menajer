@@ -8,7 +8,10 @@ import androidx.compose.ui.Modifier
 import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Generator
 import com.supermenajer.game.game.Screen
+import com.supermenajer.game.game.Season
+import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.IncomingOffer
+import com.supermenajer.game.model.PressQuestion
 import com.supermenajer.game.ui.AppTheme
 import com.supermenajer.game.ui.Bg
 import org.junit.Rule
@@ -26,59 +29,54 @@ class ScreensTest {
     private fun advance(days: Int) {
         val g = GameRepo.game!!
         repeat(days) {
-            if (g.todayUserFixture() != null) { GameRepo.playMatch(live = false); GameRepo.closeSummary() } else GameRepo.skipDay()
+            if (g.seasonOver) return
+            if (g.todayUserFixture() != null) { GameRepo.playMatch(live = false); GameRepo.closeSummary() } else GameRepo.skipToNextMatch()
         }
     }
 
     @Test
     fun screens() {
         GameRepo.init(Files.createTempDirectory("sm").toFile())
+        GameRepo.preparedWorld = Generator.newWorld().also { Season.computeExpectations(it) }
         GameRepo.screen = Screen.NEW_GAME
         shot("01_newgame")
-        GameRepo.newCareer(Generator.newWorld(), "Emin Hoca", 0)
+        // İngiltere'den bir takımla başla
+        val world = Generator.newWorld().also { Season.computeExpectations(it) }
+        val eng = world.divisionTeams(10).sortedBy { it.expected }[1]
+        GameRepo.newCareer(world, "Emin Hoca", eng.id)
         val g = GameRepo.game!!
         GameRepo.tab = 4
-        GameRepo.selectedPlayer = g.players.first { it.teamId == 25 && it.overall > 55 }
-        shot("00_negotiate_open")
+        GameRepo.selectedPlayer = g.players.first { it.teamId == g.divisionTeams(14)[3].id && it.overall > 60 }
+        shot("02_negotiate")
         GameRepo.selectedPlayer = null
-        advance(6)
-        g.offers += IncomingOffer(g.squad(0).maxBy { it.overall }.id, 0, 9_000_000, g.week)
-        GameRepo.tab = 0; shot("02_home")
-        GameRepo.tab = 2; GameRepo.tacticsMode = 1; shot("03_training")
-        GameRepo.tab = 3; GameRepo.leagueTab = 2; shot("04_cup")
-        GameRepo.leagueTab = 1; shot("05_firstleague")
-        GameRepo.tab = 4; shot("06_transfer")
-        GameRepo.selectedPlayer = g.squad(5).maxBy { it.overall }
-        shot("07_negotiate")
-        GameRepo.selectedPlayer = g.players.first { it.teamId == 25 }
-        shot("08_negotiate2")
-        GameRepo.selectedPlayer = null
-        while (g.today?.type != 2 || g.todayUserFixture() == null) advance(1)
+        shot("03_transfer")
+        advance(4)
+        g.offers += IncomingOffer(g.squad(g.userTeamId).maxBy { it.overall }.id, g.divisionTeams(12)[0].id, 20_000_000, g.week)
+        g.press = PressQuestion("Rakip karşısında galibiyetin anahtarı neydi?", listOf("Oyuncularımın mücadelesi.", "Taktiğimiz tuttu, plan işledi.", "Henüz iyi oynamıyoruz."), 1)
+        GameRepo.tab = 0; shot("04_home")
+        g.press = null
+        GameRepo.tab = 3; GameRepo.leagueTab = 0; GameRepo.leagueSel = 10; shot("05_league_eng")
+        GameRepo.leagueSel = 0; shot("06_league_tr")
+        GameRepo.leagueTab = 1; shot("07_cup")
+        GameRepo.leagueTab = 2; shot("08_euro")
+        GameRepo.leagueTab = 3; shot("09_fixtures")
+        GameRepo.tab = 2; GameRepo.tacticsMode = 0; shot("10_tactics")
+        // canlı maç, devre arası
+        while (g.todayUserFixture() == null && !g.seasonOver) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)
-        repeat(60) { GameRepo.match!!.step() }
-        shot("13_euro_match")
-        GameRepo.finishMatch(); GameRepo.closeSummary()
-        GameRepo.tab = 0; shot("14_home_euro")
-        GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("15_euro_tab")
-        advance(14)
-        GameRepo.tab = 1; shot("09_squad")
-        GameRepo.tab = 0; shot("10_home_later")
-        // kupa maçı canlı
-        while (g.today?.type != 1 || g.todayUserFixture() == null) {
-            if (g.seasonOver) break
-            advance(1)
-        }
-        if (g.todayUserFixture() != null) {
-            GameRepo.playMatch(live = true)
-            GameRepo.match!!.runToEnd()
-            shot("11_cupmatch")
-            GameRepo.finishMatch()
-        }
-        GameRepo.closeSummary(); GameRepo.tab = 1
-        GameRepo.selectedPlayer = g.squad(0).first { it.overall > 60 }.also { it.contractYears = 1 }
-        shot("16_contract")
-        GameRepo.selectedPlayer = null
+        repeat(45) { GameRepo.match!!.step() }
+        shot("11_halftime")
+        repeat(20) { GameRepo.match!!.step() }
+        shot("12_match")
+        GameRepo.finishMatch()
+        shot("13_summary")
+        GameRepo.closeSummary()
+        // gün atlama kartı
+        while (g.todayUserFixture() != null && !g.seasonOver) advance(1)
+        GameRepo.tab = 0; shot("14_restday")
         while (!g.seasonOver) advance(1)
-        GameRepo.tab = 0; shot("12_seasonend")
+        GameRepo.tab = 0; shot("15_seasonend")
+        GameRepo.startNewSeason()
+        GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("16_history")
     }
 }

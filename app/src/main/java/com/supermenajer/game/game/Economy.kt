@@ -1,6 +1,7 @@
 package com.supermenajer.game.game
 
 import com.supermenajer.game.model.Game
+import com.supermenajer.game.model.Leagues
 import com.supermenajer.game.model.Player
 import com.supermenajer.game.model.Team
 import kotlin.math.pow
@@ -33,7 +34,12 @@ object Economy {
     /** Haftalık maaş limiti: itibara göre büyür. */
     fun wageCap(t: Team): Long {
         val base = 100_000.0 * 1.0349.pow(t.reputation - 56)
-        val divF = when (t.division) { 1 -> 0.55; 2 -> 1.3; else -> 1.0 }
+        val lg = Leagues.of(t.division)
+        val divF = when {
+            lg == null -> 1.3
+            lg.tier == 2 -> 0.55 * kotlin.math.sqrt(lg.wealth)
+            else -> kotlin.math.sqrt(lg.wealth)
+        }
         return r5k(base * divF).coerceAtLeast(40_000)
     }
 
@@ -62,17 +68,20 @@ object Economy {
     fun seasonPayout(g: Game) {
         // Yapay zekâ kulüpleri harcamadığı paranın bir kısmını işletme giderlerine kullanır (sınırsız birikmesin).
         for (t in g.teams) if (t.id != g.userTeamId && t.budget > 0) t.budget = (t.budget * 0.6).toLong()
-        for (t in g.divisionTeams(2)) earn(t, BOARD, r5k(6_000_000.0 * (t.reputation / 70.0).pow(2)))
-        for (div in 0..1) {
+        for (t in g.divisionTeams(Leagues.LEGACY_EURO)) earn(t, BOARD, r5k(6_000_000.0 * (t.reputation / 70.0).pow(2)))
+        for (div in Season.activeLeagues(g)) {
+            val lg = Leagues.of(div) ?: continue
+            val top = lg.tier == 1
             g.table(div).forEachIndexed { i, t ->
-                val base = (if (div == 0) 4_000_000.0 else 1_500_000.0) * (t.reputation / 70.0).pow(2)
+                val base = (if (top) 4_000_000.0 else 1_500_000.0) * (t.reputation / 70.0).pow(2)
                 earn(t, BOARD, r5k(base))
-                earn(t, PRIZE, if (div == 0) superPrize[i] else firstPrize[i])
+                val prize = (if (top) superPrize else firstPrize).getOrElse(i) { 300_000L }
+                earn(t, PRIZE, r5k(prize * lg.wealth))
                 val target = Season.objectiveTarget(t.expected)
                 val pos = i + 1
                 val bonus = when {
-                    pos <= target - 3 || (pos == 1 && target > 1) -> if (div == 0) 6_000_000L else 2_500_000L
-                    pos <= target -> if (div == 0) 3_000_000L else 1_200_000L
+                    pos <= target - 3 || (pos == 1 && target > 1) -> if (top) 6_000_000L else 2_500_000L
+                    pos <= target -> if (top) 3_000_000L else 1_200_000L
                     else -> 0L
                 }
                 if (bonus > 0) earn(t, BONUS, bonus)
@@ -94,11 +103,11 @@ object Economy {
     /** Sezon sonu sözleşmeler: bitenler ayrılır (yapay zekâ çoğunu yeniler). */
     fun processContracts(g: Game, rnd: Random) {
         val left = mutableListOf<String>()
-        for (p in g.players) {
+        for (p in g.players.toList()) {
             if (p.teamId < 0) continue
             p.contractYears--
             if (p.contractYears > 0) continue
-            val t = g.team(p.teamId)
+            val t = g.teamOrNull(p.teamId) ?: continue
             if (t.id != g.userTeamId && p.age <= 31 && p.overall >= Lineups.strength(g, t) - 8 && rnd.nextDouble() < 0.8) {
                 p.contractYears = rnd.nextInt(2, 5)
                 p.salary = p.demandWage
@@ -106,13 +115,13 @@ object Economy {
             }
             if (t.id == g.userTeamId) left += p.name
             t.lineup.replaceAll { if (it == p.id) -1 else it }
-            p.teamId = -1
+            g.movePlayer(p, -1)
             p.salary = 0
             p.contractYears = 0
         }
         if (left.isNotEmpty()) g.addNews("Sözleşmesi bitenler", "Sözleşmesi sona eren oyuncular kulüpten ayrıldı: ${left.joinToString()}.")
         // Serbest oyuncu havuzu çok büyümesin: en yaşlıları emekli olur.
-        val free = g.players.filter { it.teamId < 0 }.sortedByDescending { it.age * 100 - it.overall }
-        if (free.size > 90) g.players.removeAll(free.take(free.size - 90).toSet())
+        val free = g.squad(-1).sortedByDescending { it.age * 100 - it.overall }
+        if (free.size > 150) g.removePlayers(free.take(free.size - 150))
     }
 }

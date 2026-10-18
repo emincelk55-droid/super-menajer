@@ -30,7 +30,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        GameRepo.save()
+        GameRepo.save(force = true)
+        GameRepo.flush()
     }
 }
 

@@ -3,6 +3,8 @@ package com.supermenajer.game.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -64,6 +66,7 @@ import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Player
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private val speeds = listOf(650L, 280L, 90L)
 
@@ -78,6 +81,7 @@ fun MatchScreen() {
     var tab by remember { mutableIntStateOf(0) }
     var showSubs by remember { mutableStateOf(false) }
     var goalFlash by remember { mutableStateOf<MatchEvent?>(null) }
+    var talkMsg by remember { mutableStateOf<String?>(null) }
     val haptic = LocalHapticFeedback.current
     BackHandler { running = false }
 
@@ -105,6 +109,7 @@ fun MatchScreen() {
 
     Column(Modifier.fillMaxSize()) {
         ScoreBoard(sim)
+        LiveStrip(sim, homeC, awayC)
         Box(Modifier.fillMaxWidth()) {
             LivePitch(sim, homeC, awayC, speeds[speed].toInt())
             androidx.compose.animation.AnimatedVisibility(
@@ -141,8 +146,15 @@ fun MatchScreen() {
             }
         }
         if (sim.minute == 45 && !running) {
-            Banner("DEVRE ARASI", "Değişiklik yapabilir veya taktiği ayarlayabilirsin.") {
-                Button(onClick = { running = true }) { Text("2. YARIYI BAŞLAT") }
+            Banner("DEVRE ARASI", if (sim.talkDone) talkMsg ?: "" else "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
+                Button(onClick = { running = true }) { Text("2. YARI") }
+            }
+            if (!sim.talkDone && sim.userSide != null) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("👏 Övgü", "🧘 Sakin", "😠 Sert").forEachIndexed { i, n ->
+                        Chip(n, false, Modifier.weight(1f)) { talkMsg = sim.teamTalk(i); tick++ }
+                    }
+                }
             }
         } else if (sim.finished) {
             Banner("MAÇ BİTTİ", null) {
@@ -193,7 +205,7 @@ private fun ScoreBoard(sim: MatchSim) {
     Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 10.dp)) {
         val f = sim.fixture
         Text(
-            if (f.comp == Comp.CUP || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
+            if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
             color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
         )
@@ -220,31 +232,116 @@ private fun ScoreBoard(sim: MatchSim) {
     }
 }
 
+/** Topa sahip olma ve şutlar: maç sırasında ince bir şerit. */
+@Composable
+private fun LiveStrip(sim: MatchSim, homeC: Color, awayC: Color) {
+    val h = sim.home
+    val a = sim.away
+    val tot = (h.poss + a.poss).coerceAtLeast(1)
+    val hp = h.poss.toFloat() / tot
+    Row(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("${(hp * 100).roundToInt()}%", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(34.dp))
+        Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(awayC)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(if (h.poss + a.poss == 0) 0.5f else hp).background(homeC))
+        }
+        Text("${100 - (hp * 100).roundToInt()}%", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(34.dp), textAlign = TextAlign.End)
+        Spacer(Modifier.width(8.dp))
+        Text("Şut ${h.shots}-${a.shots}", fontSize = 11.sp, color = TextDim)
+    }
+}
+
+/** Oyuncuların her dakika hedef konumu: dizilişe göre, topa ve hücum yönüne göre kayar. */
+private fun targets(sim: MatchSim): Map<Int, Offset> {
+    val res = HashMap<Int, Offset>()
+    val bx = sim.ballX
+    val by = sim.ballY
+    val shift = (bx - 0.5f) * 0.32f
+    val attackingHome = bx >= 0.5f
+    for (s in sim.sides) {
+        val home = s === sim.home
+        val attacking = attackingHome == home
+        s.onPitch.forEachIndexed { i, m ->
+            val depth = m.slot.y * 0.46f
+            val push = if (attacking) 0.05f else -0.02f
+            var x = (if (home) 0.04f + depth + push else 0.96f - depth - push) + shift
+            var y = 0.08f + (if (home) m.slot.x else 1f - m.slot.x) * 0.84f
+            y += (by - 0.5f) * 0.18f * (1f - m.slot.y * 0.3f)
+            // küçük doğal oynama
+            val seed = (m.p.id * 31 + sim.minute * 17) % 97
+            x += ((seed % 11) - 5) * 0.004f
+            y += ((seed % 7) - 3) * 0.006f
+            if (m.slot.pos == com.supermenajer.game.model.Pos.GK) x = if (home) 0.05f + shift * 0.15f else 0.95f + shift * 0.15f
+            res[m.p.id] = Offset(x.coerceIn(0.03f, 0.97f), y.coerceIn(0.06f, 0.94f))
+        }
+        // Topa en yakın oyuncu topa gider
+        if (attacking) {
+            s.onPitch.filter { it.slot.pos != com.supermenajer.game.model.Pos.GK }
+                .minByOrNull { res[it.p.id]?.let { o -> (o.x - bx) * (o.x - bx) + (o.y - by) * (o.y - by) } ?: 9f }
+                ?.let { res[it.p.id] = Offset((bx - if (home) 0.015f else -0.015f).coerceIn(0.03f, 0.97f), by) }
+        }
+    }
+    return res
+}
+
 @Composable
 private fun LivePitch(sim: MatchSim, homeC: Color, awayC: Color, stepMs: Int) {
-    val dur = (stepMs * 0.9f).toInt()
-    val bx by animateFloatAsState(sim.ballX, tween(dur), label = "bx")
-    val by by animateFloatAsState(sim.ballY, tween(dur), label = "by")
-    val shift by animateFloatAsState((sim.ballX - 0.5f) * 0.25f, tween(dur), label = "shift")
-    Canvas(Modifier.fillMaxWidth().aspectRatio(1.7f)) {
-        drawPitch(vertical = false)
-        val w = size.width
-        val h = size.height
-        val r = 6.dp.toPx()
-        fun drawSide(s: Side, c: Color, home: Boolean) {
-            val border = if (home) Color(s.team.color2) else Color.White
-            for (m in s.onPitch) {
-                val depth = m.slot.y * 0.46f
-                val x = ((if (home) 0.04f + depth else 0.96f - depth) + shift).coerceIn(0.03f, 0.97f)
-                val y = 0.08f + (if (home) m.slot.x else 1f - m.slot.x) * 0.84f
-                drawCircle(c, r, Offset(x * w, y * h))
-                drawCircle(border, r, Offset(x * w, y * h), style = Stroke(1.5.dp.toPx()))
+    val dur = (stepMs * 0.9f).toInt().coerceAtLeast(60)
+    var from by remember { mutableStateOf(emptyMap<Int, Offset>()) }
+    var to by remember { mutableStateOf(targets(sim)) }
+    var ballFrom by remember { mutableStateOf(Offset(sim.ballX, sim.ballY)) }
+    var ballTo by remember { mutableStateOf(Offset(sim.ballX, sim.ballY)) }
+    val progress = remember { Animatable(1f) }
+    val minute = sim.minute
+    val evCount = sim.events.size
+    LaunchedEffect(minute, evCount) {
+        from = to
+        to = targets(sim)
+        ballFrom = ballTo
+        ballTo = Offset(sim.ballX, sim.ballY)
+        progress.snapTo(0f)
+        progress.animateTo(1f, tween(dur))
+    }
+    val last = sim.events.lastOrNull()
+    val flash = last?.takeIf { it.minute == sim.minute && it.type in setOf(Ev.SAVE, Ev.POST, Ev.MISS, Ev.YELLOW, Ev.RED, Ev.INJURY, Ev.SUB) }
+    Box {
+        Canvas(Modifier.fillMaxWidth().aspectRatio(1.7f)) {
+            drawPitch(vertical = false)
+            val w = size.width
+            val h = size.height
+            val r = 6.dp.toPx()
+            val t = progress.value
+            fun lerp(a: Offset, b: Offset) = Offset(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+            for (s in sim.sides) {
+                val home = s === sim.home
+                val c = if (home) homeC else awayC
+                val border = if (home) Color(s.team.color2) else Color.White
+                for (m in s.onPitch) {
+                    val end = to[m.p.id] ?: continue
+                    val p = lerp(from[m.p.id] ?: end, end)
+                    drawCircle(c, r, Offset(p.x * w, p.y * h))
+                    drawCircle(border, r, Offset(p.x * w, p.y * h), style = Stroke(1.5.dp.toPx()))
+                }
             }
+            val b = lerp(ballFrom, ballTo)
+            drawCircle(Color.Black.copy(alpha = 0.35f), 4.5.dp.toPx(), Offset(b.x * w + 2, b.y * h + 2))
+            drawCircle(Color.White, 4.dp.toPx(), Offset(b.x * w, b.y * h))
         }
-        drawSide(sim.home, homeC, true)
-        drawSide(sim.away, awayC, false)
-        drawCircle(Color.Black.copy(alpha = 0.35f), 4.5.dp.toPx(), Offset(bx * w + 2, by * h + 2))
-        drawCircle(Color.White, 4.dp.toPx(), Offset(bx * w, by * h))
+        if (flash != null) {
+            val label = when (flash.type) {
+                Ev.SAVE -> "🧤 KURTARIŞ!"
+                Ev.POST -> "🥅 DİREK!"
+                Ev.MISS -> "↗️ AUT"
+                Ev.YELLOW -> "🟨 SARI KART"
+                Ev.RED -> "🟥 KIRMIZI KART!"
+                Ev.INJURY -> "🚑 SAKATLIK"
+                else -> "🔁 DEĞİŞİKLİK"
+            }
+            Text(
+                label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 
@@ -287,12 +384,12 @@ private fun Commentary(sim: MatchSim, homeC: Color, awayC: Color) {
 }
 
 @Composable
-private fun Stats(sim: MatchSim) {
+fun Stats(sim: MatchSim) {
     val h = sim.home
     val a = sim.away
     val totalPoss = (h.poss + a.poss).coerceAtLeast(1)
     val rows = listOf(
-        Triple("Topa sahip olma", "${h.poss * 100 / totalPoss}%", "${a.poss * 100 / totalPoss}%") to (h.poss.toFloat() / totalPoss),
+        Triple("Topa sahip olma", "${(h.poss * 100f / totalPoss).roundToInt()}%", "${100 - (h.poss * 100f / totalPoss).roundToInt()}%") to (h.poss.toFloat() / totalPoss),
         Triple("Şut", "${h.shots}", "${a.shots}") to ratio(h.shots, a.shots),
         Triple("İsabetli şut", "${h.onTarget}", "${a.onTarget}") to ratio(h.onTarget, a.onTarget),
         Triple("Gol beklentisi (xG)", "%.2f".format(h.xg), "%.2f".format(a.xg)) to ratioD(h.xg, a.xg),
@@ -301,8 +398,8 @@ private fun Stats(sim: MatchSim) {
         Triple("Sarı kart", "${h.yellows}", "${a.yellows}") to ratio(h.yellows, a.yellows),
         Triple("Kırmızı kart", "${h.reds}", "${a.reds}") to ratio(h.reds, a.reds),
     )
-    LazyColumn(contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(rows) { (t, frac) ->
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        rows.forEach { (t, frac) ->
             Column {
                 Row {
                     Text(t.second, fontWeight = FontWeight.Bold, modifier = Modifier.width(56.dp))
@@ -435,6 +532,9 @@ fun SummaryScreen() {
                         }
                     }
                 }
+            }
+            item {
+                SectionCard("Maç istatistikleri") { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
             }
             if (motm != null) item {
                 SectionCard("Maçın oyuncusu") {
