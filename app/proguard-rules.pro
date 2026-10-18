@@ -1,0 +1,2 @@
+-keep class com.supermenajer.game.model.** { *; }
+-keepattributes *Annotation*, InnerClasses

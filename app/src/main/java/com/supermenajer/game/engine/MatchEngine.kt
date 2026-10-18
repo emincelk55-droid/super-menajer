@@ -1,0 +1,382 @@
+package com.supermenajer.game.engine
+
+import com.supermenajer.game.game.Lineups
+import com.supermenajer.game.model.Fixture
+import com.supermenajer.game.model.Formations
+import com.supermenajer.game.model.Game
+import com.supermenajer.game.model.Player
+import com.supermenajer.game.model.Pos
+import com.supermenajer.game.model.Slot
+import com.supermenajer.game.model.Team
+import kotlin.math.pow
+import kotlin.random.Random
+
+enum class Ev { KICKOFF, GOAL, SAVE, MISS, POST, CORNER, YELLOW, RED, INJURY, SUB, INFO, HALF, FULL }
+
+class MatchEvent(val minute: Int, val type: Ev, val side: Int, val text: String, val playerId: Int = -1)
+
+/** Maçtaki bir oyuncu. */
+class PIM(val p: Player, var slot: Slot) {
+    var fit = p.fitness
+    var rating = 6.0
+    var yellow = 0
+    var red = false
+    var goals = 0
+    var assists = 0
+    var injured = false
+    var injWeeks = 0
+    var subbedOn = false
+}
+
+class Side(val team: Team, val index: Int) {
+    val onPitch = mutableListOf<PIM>()
+    val bench = mutableListOf<Player>()
+    val used = mutableListOf<PIM>()
+    var subsLeft = 5
+    var goals = 0
+    var shots = 0
+    var onTarget = 0
+    var poss = 0
+    var fouls = 0
+    var corners = 0
+    var yellows = 0
+    var reds = 0
+    var xg = 0.0
+    fun gk(): PIM? = onPitch.firstOrNull { it.slot.pos == Pos.GK }
+}
+
+class MatchSim(
+    val game: Game,
+    val fixture: Fixture,
+    private val userTeamId: Int,
+    private val autoUserSubs: Boolean,
+    private val rnd: Random = Random.Default,
+) {
+    val home = Side(game.team(fixture.home), 0)
+    val away = Side(game.team(fixture.away), 1)
+    val sides: List<Side> get() = listOf(home, away)
+    var minute = 0
+        private set
+    val events = mutableListOf<MatchEvent>()
+    var ballX = 0.5f
+        private set
+    var ballY = 0.5f
+        private set
+    val finished: Boolean get() = minute >= 90
+    val userSide: Side? get() = sides.firstOrNull { it.team.id == userTeamId }
+
+    init {
+        setup(home)
+        setup(away)
+        ev(Ev.KICKOFF, -1, Comms.kickoff(home.team, away.team, rnd))
+    }
+
+    private fun setup(s: Side) {
+        if (s.team.id == userTeamId) Lineups.validate(game, s.team) else Lineups.autoPick(game, s.team)
+        val slots = Formations.slots(s.team.formation)
+        s.team.lineup.forEachIndexed { i, id -> game.player(id)?.let { s.onPitch += PIM(it, slots[i]) } }
+        s.used += s.onPitch
+        s.bench += Lineups.bench(game, s.team)
+    }
+
+    private fun ev(type: Ev, side: Int, text: String, pid: Int = -1) {
+        events += MatchEvent(minute, type, side, text, pid)
+    }
+
+    fun other(s: Side): Side = if (s === home) away else home
+
+    private fun eff(m: PIM): Double =
+        m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0)
+
+    class Str(val atk: Double, val mid: Double, val def: Double)
+
+    fun strength(s: Side): Str {
+        var a = 0.0; var m = 0.0; var d = 0.0
+        for (x in s.onPitch) {
+            val e = eff(x)
+            when (x.slot.pos) {
+                Pos.GK -> { m += e * 0.1; d += e * 0.3 }
+                Pos.DF -> { a += e * 0.12; m += e * 0.3; d += e }
+                Pos.MF -> { a += e * 0.45; m += e; d += e * 0.4 }
+                Pos.FW -> { a += e; m += e * 0.2; d += e * 0.1 }
+            }
+        }
+        a /= 4.3; m /= 5.4; d /= 5.9
+        when (s.team.mentality) { 0 -> { a *= 0.9; d *= 1.07 }; 2 -> { a *= 1.08; d *= 0.94 } }
+        when (s.team.pressing) { 0 -> { m *= 0.96; d *= 1.02 }; 2 -> { m *= 1.05; d *= 0.99 } }
+        if (s === home) { a *= 1.03; m *= 1.03; d *= 1.03 }
+        return Str(a.coerceAtLeast(5.0), m.coerceAtLeast(5.0), d.coerceAtLeast(5.0))
+    }
+
+    fun step() {
+        if (finished) return
+        minute++
+        val sh = strength(home)
+        val sa = strength(away)
+        val mh = sh.mid.pow(2)
+        val ma = sa.mid.pow(2)
+        val atk = if (rnd.nextDouble() < mh / (mh + ma)) home else away
+        val def = other(atk)
+        val sA = if (atk === home) sh else sa
+        val sD = if (atk === home) sa else sh
+        atk.poss++
+        val dir = if (atk === home) 1f else -1f
+        ballX = 0.5f + dir * (0.05f + rnd.nextFloat() * 0.3f)
+        ballY = 0.2f + rnd.nextFloat() * 0.6f
+
+        val pShot = (0.2 * (sA.atk / sD.def).pow(1.6)).coerceIn(0.05, 0.45)
+        val r = rnd.nextDouble()
+        when {
+            r < pShot -> shot(atk, def, sA, sD)
+            r < pShot + 0.2 -> foul(def, atk)
+            r < pShot + 0.3 -> pick(atk.onPitch)?.let { ev(Ev.INFO, atk.index, Comms.filler(atk.team, it.p.name, rnd)) }
+        }
+        fatigue(home); fatigue(away)
+        for (s in sides) if (rnd.nextDouble() < 0.0012) injury(s)
+        if (minute == 58 || minute == 67 || minute == 76 || minute == 84) {
+            for (s in sides) if (s.team.id != userTeamId || autoUserSubs) aiSub(s)
+        }
+        if (minute == 45) ev(Ev.HALF, -1, Comms.half(home, away))
+        if (minute == 90) finish()
+    }
+
+    fun runToEnd() {
+        while (!finished) step()
+    }
+
+    private fun <T> pick(list: List<T>): T? = if (list.isEmpty()) null else list[rnd.nextInt(list.size)]
+
+    private fun pickW(list: List<PIM>, w: (PIM) -> Double): PIM? {
+        if (list.isEmpty()) return null
+        val total = list.sumOf(w)
+        if (total <= 0) return list[rnd.nextInt(list.size)]
+        var x = rnd.nextDouble() * total
+        for (m in list) {
+            x -= w(m)
+            if (x <= 0) return m
+        }
+        return list.last()
+    }
+
+    private fun shotW(p: Pos) = when (p) { Pos.FW -> 6.0; Pos.MF -> 2.5; Pos.DF -> 0.6; Pos.GK -> 0.0 }
+    private fun astW(p: Pos) = when (p) { Pos.FW -> 1.5; Pos.MF -> 3.0; Pos.DF -> 1.0; Pos.GK -> 0.05 }
+
+    private fun shot(atk: Side, def: Side, sA: Str, sD: Str, forcedQ: Double? = null, header: Boolean = false) {
+        val outfield = atk.onPitch.filter { it.slot.pos != Pos.GK }
+        val shooter = pickW(outfield) {
+            shotW(it.slot.pos) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(2)
+        } ?: return
+        val setPiece = forcedQ != null
+        val penalty = !setPiece && rnd.nextDouble() < 0.02
+        val assister = if (!penalty && (header || rnd.nextDouble() < 0.72)) {
+            pickW(outfield.filter { it !== shooter }) { astW(it.slot.pos) * (it.p.passing / 70.0).pow(2) }
+        } else null
+        val q = when {
+            penalty -> 0.76
+            forcedQ != null -> forcedQ
+            else -> (0.015 + rnd.nextDouble().pow(2.6) * 0.38) * (sA.atk / sD.def).pow(0.3)
+        }
+        atk.shots++
+        atk.xg += q
+        val skill = if (header) shooter.p.physical else shooter.p.shooting
+        val shootF = (skill * (0.7 + 0.3 * shooter.fit / 100) / 70.0).pow(1.1)
+        val keeper = def.gk()
+        val gkF = (keeper?.let { it.p.goalkeeping * (0.85 + 0.15 * it.fit / 100) } ?: 20.0) / 70.0
+        val pGoal = (q * shootF / gkF).coerceIn(0.01, 0.92)
+        if (penalty) ev(Ev.INFO, atk.index, Comms.penalty(atk.team, rnd))
+        ballX = if (atk === home) 0.93f else 0.07f
+        ballY = 0.38f + rnd.nextFloat() * 0.24f
+
+        if (rnd.nextDouble() < pGoal) {
+            atk.goals++
+            atk.onTarget++
+            shooter.goals++
+            shooter.rating += 1.1
+            assister?.let { it.assists++; it.rating += 0.7 }
+            def.onPitch.filter { it.slot.pos == Pos.GK || it.slot.pos == Pos.DF }.forEach { it.rating -= 0.25 }
+            ev(
+                Ev.GOAL, atk.index,
+                Comms.goal(shooter.p.name, assister?.p?.name, penalty, header, rnd) + "  (${home.goals}-${away.goals})",
+                shooter.p.id,
+            )
+            ballX = 0.5f; ballY = 0.5f
+            return
+        }
+        val r2 = rnd.nextDouble()
+        when {
+            r2 < 0.42 -> {
+                atk.onTarget++
+                shooter.rating += 0.1
+                keeper?.let { it.rating += 0.3 }
+                ev(Ev.SAVE, atk.index, Comms.save(shooter.p.name, keeper?.p?.name ?: "savunma", penalty, rnd))
+            }
+            r2 < 0.48 -> {
+                shooter.rating += 0.05
+                ev(Ev.POST, atk.index, Comms.post(shooter.p.name, rnd))
+            }
+            else -> {
+                shooter.rating -= 0.05
+                ev(Ev.MISS, atk.index, Comms.miss(shooter.p.name, penalty, rnd))
+            }
+        }
+        if (!setPiece && rnd.nextDouble() < 0.3) {
+            atk.corners++
+            if (rnd.nextDouble() < 0.22) {
+                ev(Ev.CORNER, atk.index, Comms.corner(atk.team, rnd))
+                shot(atk, def, sA, sD, forcedQ = 0.08 + rnd.nextDouble() * 0.1, header = true)
+            }
+        }
+    }
+
+    private fun foul(def: Side, atk: Side) {
+        val fouler = pickW(def.onPitch) {
+            when (it.slot.pos) { Pos.GK -> 0.1; Pos.DF -> 3.0; Pos.MF -> 2.0; Pos.FW -> 1.0 } * (1.4 - it.p.defending / 100.0)
+        } ?: return
+        def.fouls++
+        val r = rnd.nextDouble()
+        when {
+            r < 0.004 -> sendOff(def, fouler, secondYellow = false)
+            r < 0.13 -> {
+                fouler.yellow++
+                def.yellows++
+                fouler.rating -= 0.3
+                if (fouler.yellow >= 2) sendOff(def, fouler, secondYellow = true)
+                else ev(Ev.YELLOW, def.index, Comms.yellow(fouler.p.name, rnd), fouler.p.id)
+            }
+            rnd.nextDouble() < 0.05 -> {
+                ev(Ev.INFO, atk.index, Comms.freeKick(atk.team, rnd))
+                shot(atk, def, strength(atk), strength(def), forcedQ = 0.05 + rnd.nextDouble() * 0.06)
+            }
+        }
+    }
+
+    private fun sendOff(s: Side, m: PIM, secondYellow: Boolean) {
+        m.red = true
+        s.reds++
+        m.rating -= 1.5
+        ev(Ev.RED, s.index, Comms.red(m.p.name, secondYellow), m.p.id)
+        val wasGk = m.slot.pos == Pos.GK
+        val gkSlot = m.slot
+        s.onPitch.remove(m)
+        if (wasGk) {
+            val gkSub = s.bench.firstOrNull { it.pos == Pos.GK }
+            val sacrifice = s.onPitch.filter { it.slot.pos == Pos.FW || it.slot.pos == Pos.MF }.minByOrNull { eff(it) }
+                ?: s.onPitch.minByOrNull { eff(it) }
+            if (gkSub != null && s.subsLeft > 0 && sacrifice != null) {
+                s.onPitch.remove(sacrifice)
+                val nm = PIM(gkSub, gkSlot).apply { subbedOn = true }
+                s.onPitch += nm
+                s.bench.remove(gkSub)
+                s.used += nm
+                s.subsLeft--
+                ev(Ev.SUB, s.index, Comms.sub(s.team, gkSub.name, sacrifice.p.name))
+            } else {
+                s.onPitch.filter { it.slot.pos != Pos.GK }.minByOrNull { eff(it) }?.slot = gkSlot
+            }
+        }
+    }
+
+    private fun injury(s: Side) {
+        val v = pick(s.onPitch) ?: return
+        v.injured = true
+        v.injWeeks = rnd.nextInt(2, 7)
+        v.rating -= 0.2
+        ev(Ev.INJURY, s.index, Comms.injury(v.p.name, rnd), v.p.id)
+        val rep = s.bench.filter { it.pos == v.slot.pos }.maxByOrNull { it.overall }
+            ?: s.bench.filter { it.pos != Pos.GK }.maxByOrNull { it.ovrAt(v.slot.pos) }
+        if (rep == null || !substitute(s, v, rep)) s.onPitch.remove(v)
+    }
+
+    /** Oyuncu değişikliği. Kullanıcı arayüzünden de çağrılır. */
+    fun substitute(s: Side, out: PIM, inP: Player): Boolean {
+        if (s.subsLeft <= 0 || finished) return false
+        val idx = s.onPitch.indexOf(out)
+        if (idx < 0 || inP !in s.bench) return false
+        val m = PIM(inP, out.slot).apply { subbedOn = true }
+        s.onPitch[idx] = m
+        s.bench.remove(inP)
+        s.used += m
+        s.subsLeft--
+        ev(Ev.SUB, s.index, Comms.sub(s.team, inP.name, out.p.name))
+        return true
+    }
+
+    private fun aiSub(s: Side) {
+        if (s.subsLeft <= 0) return
+        val tired = s.onPitch.filter { it.slot.pos != Pos.GK }
+            .minByOrNull { it.fit - if (it.yellow > 0) 8 else 0 } ?: return
+        if (tired.fit > 70 && tired.yellow == 0) return
+        val rep = s.bench.filter { it.pos == tired.slot.pos }.maxByOrNull { it.overall }
+            ?: s.bench.filter { it.pos != Pos.GK }.maxByOrNull { it.ovrAt(tired.slot.pos) } ?: return
+        substitute(s, tired, rep)
+    }
+
+    private fun fatigue(s: Side) {
+        val pressF = when (s.team.pressing) { 0 -> 0.8; 2 -> 1.3; else -> 1.0 }
+        for (m in s.onPitch) {
+            val drop = 0.42 * (1.32 - m.p.physical / 100.0) * pressF * (0.8 + rnd.nextDouble() * 0.4)
+            m.fit = (m.fit - drop).coerceAtLeast(5.0)
+        }
+    }
+
+    private fun finish() {
+        for (s in sides) {
+            val o = other(s)
+            val win = s.goals > o.goals
+            val loss = s.goals < o.goals
+            val cleanSheet = o.goals == 0
+            for (m in s.used) {
+                if (win) m.rating += 0.4 else if (loss) m.rating -= 0.3
+                if (cleanSheet && (m.slot.pos == Pos.GK || m.slot.pos == Pos.DF)) m.rating += 0.5
+                m.rating = m.rating.coerceIn(3.0, 10.0)
+            }
+        }
+        ev(Ev.FULL, -1, Comms.full(home, away))
+    }
+
+    fun manOfTheMatch(): PIM? = (home.used + away.used).maxByOrNull { it.rating }
+
+    /** Maç sonucunu oyun dünyasına işler. */
+    fun applyToGame() {
+        check(finished)
+        fixture.hg = home.goals
+        fixture.ag = away.goals
+        record(home.team, home.goals, away.goals)
+        record(away.team, away.goals, home.goals)
+        for (s in sides) {
+            val res = s.goals.compareTo(other(s).goals)
+            for (m in s.used) {
+                val p = m.p
+                p.apps++
+                p.goals += m.goals
+                p.assists += m.assists
+                p.ratingSum += m.rating
+                p.fitness = m.fit
+                val perf = when { m.rating >= 7.5 -> 3; m.rating < 5.5 -> -3; else -> 0 }
+                p.morale = (p.morale + res * 4 + perf).coerceIn(5.0, 100.0)
+                if (m.red) {
+                    p.suspended = rnd.nextInt(2, 4)
+                } else if (m.yellow > 0) {
+                    p.yellowCards++
+                    if (p.yellowCards >= 4) { p.yellowCards = 0; p.suspended = 2 }
+                }
+                if (m.injured) p.injuredWeeks = m.injWeeks
+            }
+            val playedIds = s.used.map { it.p.id }.toSet()
+            game.squad(s.team.id).filter { it.id !in playedIds }.forEach {
+                it.morale = (it.morale + res * 1.5 - if (it.overall >= 70 && it.age >= 22) 1.0 else 0.0).coerceIn(5.0, 100.0)
+            }
+        }
+    }
+
+    private fun record(t: Team, f: Int, a: Int) {
+        t.gf += f
+        t.ga += a
+        val c = when {
+            f > a -> { t.won++; 'G' }
+            f == a -> { t.drawn++; 'B' }
+            else -> { t.lost++; 'M' }
+        }
+        t.form = (t.form + c).takeLast(5)
+    }
+}
