@@ -63,6 +63,7 @@ object Season {
         g.week = 1
         g.seasonOver = false
         g.cupWinner = -1
+        Economy.startSeason(g)
         g.offers.clear()
         computeExpectations(g)
         g.players.forEach { it.startOvr = it.overall }
@@ -81,6 +82,23 @@ object Season {
             if (g.teams.none { it.division == 2 }) Generator.addEuropeanTeams(g, rnd)
             g.saveVersion = 3
             g.addNews("Güncelleme: v0.3", "Avrupa Kupası geldi! Süper Lig'i ilk 4'te bitiren takımlar gelecek sezon Avrupa'da 28 dev kulüple yarışacak.")
+        }
+        if (g.saveVersion < 4) {
+            for (p in g.players) {
+                if (p.teamId >= 0 && p.contractYears <= 0) {
+                    p.contractYears = rnd.nextInt(1, 5)
+                    p.salary = p.demandWage
+                }
+            }
+            for (t in g.teams) {
+                // Geçiş sezonunda kimse kilitlenmesin: limit en az mevcut maaşlar kadar.
+                t.wageBudget = maxOf(Economy.wageCap(t), Economy.squadWages(g, t.id))
+            }
+            g.saveVersion = 4
+            g.addNews(
+                "Güncelleme: v0.4",
+                "Yeni ekonomi: maaşlar artık transfer bütçesinden düşmüyor, her kulübün haftalık maaş limiti var. Sezon sonunda yönetim başarına göre bütçe veriyor: şampiyonluk €20M+! Oyuncuların sözleşmeleri var; bitenleri uzatmayı unutma.",
+            )
         }
     }
 
@@ -229,11 +247,11 @@ object Season {
         val dayFixtures = g.weekFixtures(g.week)
         for (f in dayFixtures) {
             val h = g.team(f.home)
-            h.budget += 50_000L + h.reputation * 2_500L
-            if (f.comp == Comp.EURO) h.budget += 400_000L
+            Economy.earn(h, Economy.TICKETS, Economy.ticketIncome(h))
+            if (f.comp == Comp.EURO) Economy.earn(h, Economy.EURO, 400_000L)
             if (f.comp == Comp.CUP) {
                 val prize = listOf(150_000L, 250_000L, 400_000L, 700_000L, 1_500_000L)[f.round]
-                g.team(f.winner).budget += prize
+                Economy.earn(g.team(f.winner), Economy.CUP, prize)
             }
         }
         if (d.type == 2) {
@@ -264,7 +282,6 @@ object Season {
     }
 
     private fun weeklyUpdate(g: Game, rnd: Random) {
-        for (t in g.teams) t.budget += 30_000L - g.squad(t.id).sumOf { it.wage }
         for (p in g.players) {
             p.morale += (70 - p.morale) * 0.08
             if (p.injuredWeeks > 0) p.injuredWeeks--
@@ -299,7 +316,7 @@ object Season {
             val w = winners.firstOrNull() ?: return
             g.cupWinner = w
             val t = g.team(w)
-            t.budget += 3_000_000L
+            Economy.earn(t, Economy.CUP, 3_000_000L)
             t.reputation = (t.reputation + 2).coerceAtMost(95)
             g.addNews("Türkiye Kupası sahibini buldu!", "${t.name} kupayı müzesine götürdü! 🏆")
             if (w == g.userTeamId) {
@@ -370,14 +387,17 @@ object Season {
             val candidates = g.players.filter { p ->
                 p.pos == weakest && p.teamId != buyer.id && p.teamId != g.userTeamId && p.overall >= bar + 2 && p.age <= 31 &&
                     (p.teamId < 0 || (g.team(p.teamId).reputation <= buyer.reputation + 4 && g.squad(p.teamId).size > 19)) &&
-                    p.value * (if (p.teamId < 0) 0.15 else 1.15) <= maxPrice
+                    p.value * (if (p.teamId < 0) 0.15 else 1.15) <= maxPrice &&
+                    Economy.fitsWages(g, buyer, p.demandWage)
             }.sortedByDescending { it.overall }.take(5)
             val p = candidates.randomOrNull(rnd) ?: return@repeat
             val price = r25k(p.value * if (p.teamId < 0) 0.15 else rnd.nextDouble(1.0, 1.3))
             val from = if (p.teamId >= 0) g.team(p.teamId) else null
-            from?.let { it.budget += price; it.lineup.replaceAll { id -> if (id == p.id) -1 else id } }
-            buyer.budget -= price
+            from?.let { Economy.earn(it, Economy.SALES, price); it.lineup.replaceAll { id -> if (id == p.id) -1 else id } }
+            Economy.earn(buyer, Economy.BUYS, -price)
             p.teamId = buyer.id
+            p.salary = p.demandWage
+            p.contractYears = rnd.nextInt(2, 6)
             if (p.overall >= 66 || price >= 1_000_000) {
                 g.addNews("Transfer", "${p.name} (${p.overall}) → ${buyer.name}" + (from?.let { " · ${it.name} kasasına ${money(price)} girdi" } ?: " · serbest oyuncu olarak imzaladı"))
             }
@@ -420,13 +440,18 @@ object Season {
     private fun seasonEnd(g: Game) {
         g.seasonOver = true
         val us = g.userTeam
+        val budgetBefore = us.budget
+        Economy.seasonPayout(g)
         for (div in 0..1) {
-            val table = g.table(div)
-            table.forEachIndexed { i, t ->
-                t.budget += (if (div == 0) 250_000L else 100_000L) * (table.size - i) + if (i == 0) (if (div == 0) 3_000_000L else 1_000_000L) else 0L
-                t.reputation = (t.reputation + (t.expected - (i + 1)) / 3).coerceIn(30, 95)
+            g.table(div).forEachIndexed { i, t ->
+                val champ = if (i == 0) 2 else 0
+                t.reputation = (t.reputation + (t.expected - (i + 1)) / 2 + champ).coerceIn(30, 95)
             }
         }
+        g.addNews(
+            "Yeni sezon bütçesi",
+            "Yönetim sezon sonu ödeneği olarak ${money(us.budget - budgetBefore)} ayırdı. Transfer bütçen: ${money(us.budget)}. Ayrıntılar ana sayfadaki mali raporda.",
+        )
         val sl = g.table(0)
         val fl = g.table(1)
         val userPos = g.position(us.id)
@@ -459,6 +484,7 @@ object Season {
         up.forEach { it.division = 0; it.reputation = (it.reputation + 4).coerceAtMost(95) }
         if (us in down) g.addNews("Küme düştük", "${us.name} gelecek sezon 1. Lig'de mücadele edecek. Hemen geri dönmeliyiz!")
         if (us in up) g.addNews("SÜPER LİG'E YÜKSELDİK!", "${us.name} artık Süper Lig'de! Tarihi bir başarı hocam!")
+        Economy.processContracts(g, rnd)
 
         val retired = mutableListOf<Player>()
         for (p in g.players.toList()) {

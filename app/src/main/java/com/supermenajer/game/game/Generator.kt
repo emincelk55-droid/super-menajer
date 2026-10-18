@@ -188,7 +188,11 @@ object Generator {
     fun youth(g: Game, t: Team, pos: Pos, rnd: Random): Player {
         val target = (teamLevel(t.reputation) - rnd.nextInt(10, 20)).roundToInt()
         val p = makePlayer(g.nextPlayerId++, pos, target, rnd.nextInt(17, 19), t.id, rnd, foreign = t.division == 2)
-        p.potential = (p.overall + rnd.nextInt(10, 29)).coerceAtMost(92)
+        // Potansiyel takım seviyesinin etrafında; çok yüksek potansiyel nadir.
+        val pot = teamLevel(t.reputation) - 3 + gauss(rnd) * 6
+        p.potential = pot.roundToInt().coerceIn(p.overall + 4, 91)
+        p.contractYears = 3
+        p.salary = p.demandWage
         return p
     }
 
@@ -210,11 +214,15 @@ object Generator {
             if (diff != 0) shift(p, diff)
         }
         p.potential = when {
-            age <= 20 -> p.overall + rnd.nextInt(8, 24)
-            age <= 23 -> p.overall + rnd.nextInt(3, 14)
-            age <= 26 -> p.overall + rnd.nextInt(0, 6)
+            age <= 20 -> p.overall + rnd.nextInt(4, 19)
+            age <= 23 -> p.overall + rnd.nextInt(2, 10)
+            age <= 26 -> p.overall + rnd.nextInt(0, 5)
             else -> p.overall
-        }.coerceIn(p.overall, 94)
+        }.coerceIn(p.overall, 92)
+        if (teamId >= 0) {
+            p.contractYears = rnd.nextInt(1, 6)
+            p.salary = p.demandWage
+        }
         p.morale = rnd.nextInt(60, 80).toDouble()
         return p
     }
@@ -239,6 +247,13 @@ object Generator {
             val s = foreignNames.random(rnd)
             "${s.first.random(rnd)} ${s.last.random(rnd)}" to s.nation
         }
+    }
+
+    /** Standart normal dağılım (Box-Muller). */
+    fun gauss(rnd: Random): Double {
+        val u = rnd.nextDouble().coerceAtLeast(1e-9)
+        val v = rnd.nextDouble()
+        return kotlin.math.sqrt(-2 * kotlin.math.ln(u)) * kotlin.math.cos(2 * Math.PI * v)
     }
 
     fun flag(code: String): String =

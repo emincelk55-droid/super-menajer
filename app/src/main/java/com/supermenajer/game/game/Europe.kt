@@ -51,6 +51,10 @@ object Europe {
             if (gs.all { grp -> grp.count { it.division != 2 } <= 1 }) break
         }
         g.euroTeams = groups.flatten().map { it.id }.toMutableList()
+        for (t in turks) {
+            Economy.earn(t, Economy.EURO, 3_000_000L)
+            t.wageBudget += t.wageBudget / 10
+        }
         for ((gi, grp) in groups.withIndex()) {
             groupRounds.forEachIndexed { r, pairs ->
                 for ((a, b) in pairs) g.fixtures += Fixture(day(g, r), grp[a].id, grp[b].id, comp = Comp.EURO, round = r, group = gi)
@@ -93,12 +97,12 @@ object Europe {
         for (f in fs) {
             if (round < Comp.EURO_KO) {
                 when {
-                    f.hg > f.ag -> g.team(f.home).budget += 600_000
-                    f.hg < f.ag -> g.team(f.away).budget += 600_000
-                    else -> { g.team(f.home).budget += 200_000; g.team(f.away).budget += 200_000 }
+                    f.hg > f.ag -> Economy.earn(g.team(f.home), Economy.EURO, 600_000)
+                    f.hg < f.ag -> Economy.earn(g.team(f.away), Economy.EURO, 600_000)
+                    else -> { Economy.earn(g.team(f.home), Economy.EURO, 200_000); Economy.earn(g.team(f.away), Economy.EURO, 200_000) }
                 }
             } else if (f.winner >= 0) {
-                g.team(f.winner).budget += listOf(1_500_000L, 2_500_000L, 4_000_000L, 10_000_000L)[round - Comp.EURO_KO]
+                Economy.earn(g.team(f.winner), Economy.EURO, listOf(1_500_000L, 2_500_000L, 4_000_000L, 10_000_000L)[round - Comp.EURO_KO])
             }
         }
         val us = g.userTeamId

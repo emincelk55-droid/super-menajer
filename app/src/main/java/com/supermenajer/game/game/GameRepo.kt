@@ -249,6 +249,9 @@ object GameRepo {
         if (p.teamId == us.id) return "Oyuncu zaten senin takımında."
         if (p.teamId >= 0 && !Season.transferWindowOpen(g)) return "Transfer dönemi kapalı. Şu an sadece serbest oyuncu alabilirsin."
         if (g.squad(us.id).size >= 30) return "Kadro dolu (en fazla 30 oyuncu)."
+        if (!Economy.fitsWages(g, us, p.demandWage)) {
+            return "Maaş bütçesi yetersiz: ${money(Economy.squadWages(g, us.id))} + ${money(p.demandWage)} > ${money(us.wageBudget)}/hafta. Önce oyuncu satmalısın."
+        }
         if (p.teamId >= 0 && g.squad(p.teamId).size <= 18) return "${g.team(p.teamId).name} kadrosu dar olduğu için satmıyor."
         val level = Lineups.strength(g, us)
         if (p.teamId >= 0) {
@@ -302,13 +305,15 @@ object GameRepo {
         val us = g.userTeam
         val sellerName = if (p.teamId >= 0) {
             val seller = g.team(p.teamId)
-            seller.budget += price
+            Economy.earn(seller, Economy.SALES, price)
             seller.lineup.replaceAll { if (it == p.id) -1 else it }
             seller.name
         } else "serbest oyuncu"
-        us.budget -= price
+        Economy.earn(us, Economy.BUYS, -price)
         p.teamId = us.id
         p.morale = 80.0
+        p.salary = p.demandWage
+        p.contractYears = if (p.age >= 30) 2 else 4
         g.addNews("Transfer!", "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${money(price)} karşılığında $sellerName → ${us.name}.")
         changed()
     }
@@ -331,14 +336,33 @@ object GameRepo {
         val g = game ?: return
         val us = g.userTeam
         if (p.teamId != us.id) return
-        us.budget += price
-        buyer.budget -= price
+        Economy.earn(us, Economy.SALES, price)
+        Economy.earn(buyer, Economy.BUYS, -price)
         p.teamId = buyer.id
+        p.salary = p.demandWage
+        p.contractYears = 4
         g.offers.removeAll { it.playerId == p.id }
         Lineups.validate(g, us)
         g.addNews("Satış", "${p.name}, ${money(price)} karşılığında ${buyer.name} takımına satıldı.")
         selectedPlayer = null
         changed()
+    }
+
+    /** Sözleşme uzatma. Hata mesajı döner; başarılıysa null. */
+    fun renewContract(p: Player, years: Int): String? {
+        val g = game ?: return "Oyun yok"
+        val us = g.userTeam
+        if (p.teamId != us.id) return "Oyuncu takımında değil."
+        val demand = Economy.renewalDemand(g, p) ?: return "${p.name} kulüpte mutlu değil ve sözleşme uzatmak istemiyor."
+        if (!Economy.fitsWages(g, us, demand, minusWage = p.wage)) {
+            return "Maaş bütçesi yetmiyor (${money(us.wageBudget)}/hafta). Önce başka bir oyuncu satmalısın."
+        }
+        p.salary = demand
+        p.contractYears = years + 1
+        p.morale = (p.morale + 8).coerceAtMost(100.0)
+        g.addNews("Sözleşme uzatıldı", "${p.name} ile $years yıllık yeni sözleşme imzalandı (${money(demand)}/hafta).")
+        changed()
+        return null
     }
 
     fun acceptIncoming(o: IncomingOffer) {

@@ -8,6 +8,7 @@ Android için Türkçe futbol menajerlik oyunu (Kotlin + Jetpack Compose).
 - Canlı maç motoru ve Türkçe anlatım, maç içi değişiklik ve taktik
 - Transfer pazarlığı, transfer dönemleri, gelen teklifler
 - Antrenman, oyuncu gelişimi, altyapı
+- Ekonomi: transfer bütçesi + haftalık maaş limiti, başarıya göre sezon sonu ödeneği, sözleşmeler
 - Yönetim güveni ve kovulma
 
 ## Derleme

@@ -82,7 +82,7 @@ class SimTest {
         Season.migrate(g, rnd)
         assertEquals(64, g.teams.size)
         assertEquals(9 * 9, g.fixtures.count { it.comp == Comp.FIRST && it.played })
-        assertEquals(3, g.saveVersion)
+        assertEquals(4, g.saveVersion)
         assertTrue(g.euroTeams.isEmpty())
         while (!g.seasonOver) playDay(g, rnd)
         Season.newSeason(g, rnd)

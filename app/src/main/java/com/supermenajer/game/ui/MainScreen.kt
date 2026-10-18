@@ -2,6 +2,7 @@ package com.supermenajer.game.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.supermenajer.game.game.Economy
 import com.supermenajer.game.game.Europe
 import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Generator
@@ -127,7 +129,10 @@ private fun TopBar(g: Game) {
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(money(t.budget), color = if (t.budget >= 0) Gold else Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text("Bütçe", color = TextDim, fontSize = 11.sp)
+            Text(
+                "Maaş ${money(Economy.squadWages(g, t.id)).removePrefix("€")}/${money(t.wageBudget).removePrefix("€")}",
+                color = if (Economy.squadWages(g, t.id) > t.wageBudget) Red else TextDim, fontSize = 11.sp,
+            )
         }
     }
 }
@@ -150,6 +155,7 @@ private fun HomeTab(g: Game) {
         if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
         if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
         item { BoardCard(g) }
+        item { FinanceCard(g) }
         item { MiniTable(g) }
         item { RecentResults(g) }
         item { NewsCard(g) }
@@ -299,6 +305,18 @@ private fun SeasonEndCard(g: Game) {
         Spacer(Modifier.height(6.dp))
         Text(msg, color = col)
         Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(10.dp))
+        ReportLines(t.lastReport)
+        val expiring = g.squad(t.id).filter { it.contractYears == 1 }
+        if (expiring.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text("📝 Sözleşmesi biten ve yeni sezonda ayrılacak oyuncular:", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            expiring.forEach { p ->
+                Text("• ${p.name} (${p.pos.short}, ${p.overall}) · uzatmak için dokun", fontSize = 13.sp,
+                    modifier = Modifier.clickable { GameRepo.selectedPlayer = p }.padding(vertical = 3.dp))
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         Text("Sezon arası transfer dönemi açık: yeni sezondan önce kadronu güçlendirebilirsin.", color = TextDim, fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
         Button(
@@ -488,5 +506,63 @@ fun EuroGroupCard(g: Game, group: Int) {
                 Text("${r.pts}", Modifier.width(26.dp), fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
         }
+    }
+}
+
+/** Gelir/gider kalemleri. */
+@Composable
+fun ReportLines(report: Map<String, Long>) {
+    if (report.isEmpty()) return
+    val order = listOf(Economy.PRIZE, Economy.BONUS, Economy.BOARD, Economy.EURO, Economy.CUP, Economy.TICKETS, Economy.SALES, Economy.BUYS)
+    report.entries.sortedBy { order.indexOf(it.key).let { i -> if (i < 0) 99 else i } }.forEach { (k, v) ->
+        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+            Text(k, color = TextDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text((if (v > 0) "+" else "") + money(v), color = if (v >= 0) Green else Red, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+    HorizontalDivider(color = Line, modifier = Modifier.padding(vertical = 4.dp))
+    val total = report.values.sum()
+    Row(Modifier.fillMaxWidth()) {
+        Text("Net", fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text((if (total > 0) "+" else "") + money(total), color = if (total >= 0) Green else Red, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun FinanceCard(g: Game) {
+    val t = g.userTeam
+    val wages = Economy.squadWages(g, t.id)
+    var showLast by remember { mutableStateOf(false) }
+    SectionCard("Finans") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Transfer bütçesi", color = TextDim, fontSize = 12.sp)
+                Text(money(t.budget), color = Gold, fontWeight = FontWeight.Black, fontSize = 22.sp)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Haftalık maaş", color = TextDim, fontSize = 12.sp)
+                Text("${money(wages)} / ${money(t.wageBudget)}", color = if (wages > t.wageBudget) Red else TextMain, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Bar((wages.toFloat() / t.wageBudget.coerceAtLeast(1)).coerceIn(0f, 1f), if (wages > t.wageBudget) Red else if (wages > t.wageBudget * 0.9) Gold else Green, Modifier.fillMaxWidth(), 8.dp)
+        if (wages > t.wageBudget) Text("Maaş limiti aşıldı! Yeni oyuncu alamazsın; önce satış yap ya da sözleşmesi bitenleri bırak.", color = Red, fontSize = 12.sp)
+        val expiring = g.squad(t.id).count { it.contractYears == 1 }
+        if (expiring > 0) {
+            Spacer(Modifier.height(6.dp))
+            Text("📝 $expiring oyuncunun sözleşmesi sezon sonunda bitiyor. Kadro ekranından uzatabilirsin.", color = Gold, fontSize = 12.sp,
+                modifier = Modifier.clickable { GameRepo.tab = 1 })
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(if (showLast) "GEÇEN SEZON MALİ RAPOR" else "BU SEZON", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        val rep = if (showLast) t.lastReport else t.income
+        if (rep.isEmpty()) Text("Henüz kayıt yok.", color = TextDim, fontSize = 12.sp) else ReportLines(rep)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Sezon sonunda yönetim; lig sıranıza (şampiyona €20M), hedef primine ve kulüp itibarına göre bütçe ayırır. Başarı itibarı ve maaş limitini de büyütür.",
+            color = TextDim, fontSize = 11.sp,
+        )
+        if (t.lastReport.isNotEmpty()) TextButton(onClick = { showLast = !showLast }) { Text(if (showLast) "Bu sezonu göster" else "Geçen sezonun raporu →") }
     }
 }

@@ -72,7 +72,8 @@ fun SquadTab(g: Game) {
                 Chip("Puan", sort == 4) { sort = 4 }
             }
             Text(
-                "${squad.size} oyuncu · Haftalık maaş: ${money(squad.sumOf { it.wage })}",
+                "${squad.size} oyuncu · Maaşlar: ${money(squad.sumOf { it.wage })} / ${money(t.wageBudget)} haftalık limit" +
+                    squad.count { it.contractYears == 1 }.let { if (it > 0) " · $it sözleşme bitiyor" else "" },
                 color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp),
             )
         }
@@ -115,6 +116,7 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
                 val dev = p.overall - p.startOvr
                 if (p.startOvr > 0 && dev != 0) Text(if (dev > 0) "  ▲$dev" else "  ▼${-dev}", fontSize = 12.sp, color = if (dev > 0) Green else Red, fontWeight = FontWeight.Bold)
                 if (p.injuredWeeks > 0) Text("  🚑${p.injuredWeeks}h", fontSize = 12.sp, color = Red)
+                if (p.teamId == g.userTeamId && p.contractYears == 1) Text("  📝", fontSize = 12.sp)
                 if (p.suspended > 0) Text("  🟥", fontSize = 12.sp)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,6 +151,8 @@ fun PlayerDialog(g: Game, p: Player) {
                 } else if (p.available) {
                     Button(onClick = { GameRepo.addToLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("İlk 11'e Al") }
                 }
+                Spacer(Modifier.height(6.dp))
+                ContractBox(g, p) { message = it }
                 Spacer(Modifier.height(6.dp))
                 val o = offer
                 if (o == null) {
@@ -230,7 +234,11 @@ fun PlayerDialog(g: Game, p: Player) {
             val potText = if (own || p.age >= 27) "${p.potential}" else "${(p.potential - 4).coerceAtLeast(p.overall)}-${(p.potential + 4).coerceAtMost(99)}"
             InfoLine("Potansiyel", potText)
             InfoLine("Değer", money(p.value))
-            InfoLine("Maaş", "${money(p.wage)}/hafta")
+            if (p.teamId >= 0) {
+                InfoLine("Maaş", "${money(p.wage)}/hafta")
+                InfoLine("Sözleşme", if (p.contractYears == 1) "Sezon sonunda bitiyor" else "${p.contractYears} sezon", if (p.contractYears == 1) Red else TextMain)
+            }
+            if (!own) InfoLine("Maaş talebi", "${money(p.demandWage)}/hafta")
             InfoLine("Kondisyon", "${p.fitness.toInt()}%")
             InfoLine("Moral", moraleText(p.morale))
             if (p.injuredWeeks > 0) InfoLine("Sakatlık", "${p.injuredWeeks} hafta", Red)
@@ -331,5 +339,34 @@ fun TransferTab(g: Game) {
             val team = if (p.teamId >= 0) g.team(p.teamId).short + if (g.team(p.teamId).division == 1) "¹" else "" else "SRB"
             PlayerRow(g, p, false, extra = "$team · ${money(GameRepo.askingPrice(p))}" + if (mode == 3) " · P${p.potential}" else "")
         }
+    }
+}
+
+/** Sözleşme uzatma kutusu. */
+@Composable
+private fun ContractBox(g: Game, p: Player, onMessage: (String) -> Unit) {
+    var years by remember(p.id) { mutableIntStateOf(3) }
+    var open by remember(p.id) { mutableStateOf(p.contractYears == 1) }
+    if (!open) {
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text("📝 Sözleşme Uzat") }
+        return
+    }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp)) {
+        val demand = com.supermenajer.game.game.Economy.renewalDemand(g, p)
+        Text("Sözleşme yenileme", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        if (demand == null) {
+            Text("${p.name} kulüpte mutlu değil, şu an uzatmak istemiyor. Moralini yükseltmeyi dene.", color = Red, fontSize = 12.sp)
+            return@Column
+        }
+        Text("İstediği maaş: ${money(demand)}/hafta (şu an ${money(p.wage)})", color = TextDim, fontSize = 12.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            (1..5).forEach { y -> Chip("$y yıl", years == y, Modifier.weight(1f)) { years = y } }
+        }
+        Spacer(Modifier.height(6.dp))
+        Button(onClick = {
+            val err = GameRepo.renewContract(p, years)
+            onMessage(err ?: "${p.name} ile $years yıllık sözleşme imzalandı! ✍️")
+        }, modifier = Modifier.fillMaxWidth()) { Text("İmzala", fontWeight = FontWeight.Bold) }
     }
 }

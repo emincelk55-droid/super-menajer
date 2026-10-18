@@ -74,6 +74,10 @@ class ScreensTest {
             shot("11_cupmatch")
             GameRepo.finishMatch()
         }
+        GameRepo.closeSummary(); GameRepo.tab = 1
+        GameRepo.selectedPlayer = g.squad(0).first { it.overall > 60 }.also { it.contractYears = 1 }
+        shot("16_contract")
+        GameRepo.selectedPlayer = null
         while (!g.seasonOver) advance(1)
         GameRepo.tab = 0; shot("12_seasonend")
     }

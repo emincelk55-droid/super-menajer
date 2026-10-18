@@ -40,6 +40,10 @@ class Player(
     var ratingSum: Double = 0.0,
     /** Sezon başındaki genel güç; gelişimi göstermek için. */
     var startOvr: Int = 0,
+    /** Kalan sözleşme süresi (sezon). 1 = bu sezon sonunda bitiyor. 0 = sözleşmesiz. */
+    var contractYears: Int = 0,
+    /** Sözleşmedeki haftalık maaş (0 ise talep edilen maaş kullanılır). */
+    var salary: Long = 0,
 ) {
     val overall: Int get() = ovrAt(pos)
 
@@ -56,7 +60,8 @@ class Player(
     val avgRating: Double get() = if (apps > 0) ratingSum / apps else 0.0
     val available: Boolean get() = injuredWeeks == 0 && suspended == 0
 
-    val value: Long
+    /** Sözleşme durumu dikkate alınmadan piyasa değeri. */
+    val marketValue: Long
         get() {
             val gap = (potential - overall).coerceAtLeast(0)
             val ageF = when {
@@ -71,8 +76,15 @@ class Player(
             return ((base / 25_000).roundToLong() * 25_000).coerceAtLeast(25_000)
         }
 
+    /** Sözleşmesi bitmek üzere olan oyuncu daha ucuza satılır. */
+    val value: Long
+        get() = if (contractYears == 1) ((marketValue * 0.7 / 25_000).roundToLong() * 25_000).coerceAtLeast(25_000) else marketValue
+
+    /** Oyuncunun yeni sözleşmede istediği haftalık maaş. */
+    val demandWage: Long get() = ((1_500 + marketValue * 0.0017) / 500).roundToLong() * 500
+
     /** Haftalık maaş. */
-    val wage: Long get() = ((value * 0.0022 / 500).roundToLong() * 500).coerceAtLeast(1_500)
+    val wage: Long get() = if (salary > 0) salary else demandWage
 }
 
 @Serializable
@@ -104,6 +116,12 @@ class Team(
     var training: Int = 0,
     /** 0 hafif, 1 normal, 2 yoğun */
     var intensity: Int = 1,
+    /** Haftalık maaş bütçesi (her sezon başında yönetim belirler). */
+    var wageBudget: Long = 0,
+    /** Bu sezonun gelir/gider kalemleri. */
+    var income: MutableMap<String, Long> = mutableMapOf(),
+    /** Geçen sezonun mali raporu. */
+    var lastReport: MutableMap<String, Long> = mutableMapOf(),
 ) {
     val played: Int get() = won + drawn + lost
     val points: Int get() = won * 3 + drawn
