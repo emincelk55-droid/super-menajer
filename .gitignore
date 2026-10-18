@@ -8,3 +8,4 @@ ekran-*.png
 keystore.properties
 yedek/
 *.zip
+.kotlin/
