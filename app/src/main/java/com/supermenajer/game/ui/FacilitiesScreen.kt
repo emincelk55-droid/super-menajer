@@ -1,5 +1,8 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,8 +42,8 @@ fun FacilitiesView(g: Game) {
     var message by remember { mutableStateOf<String?>(null) }
     val us = g.userTeam
     Facilities.ensure(us)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
+    LazyVerticalStaggeredGrid(StaggeredGridCells.Adaptive(330.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(10.dp), verticalItemSpacing = 10.dp, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        item(span = StaggeredGridItemSpan.FullLine) {
             Text("Transfer bütçesi: ${money(us.budget)}", color = TextDim, fontSize = 12.sp)
             message?.let { Text(it, color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
         }

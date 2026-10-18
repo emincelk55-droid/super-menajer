@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -141,80 +142,85 @@ fun MatchScreen() {
     val homeC = Color(sim.home.team.color1)
     val awayC = Color(sim.away.team.color1).let { if (colorDistance(it, homeC) < 0.5f) Color(sim.away.team.color2) else it }
 
-    Column(Modifier.fillMaxSize()) {
-        ScoreBoard(sim, scoreH, scoreA, shown >= sim.events.size)
-        LiveStrip(sim, homeC, awayC)
-        Box(Modifier.fillMaxWidth()) {
-            LivePitch(sim, homeC, awayC, paces[speed].minute.toInt().coerceAtLeast(250))
-            androidx.compose.animation.AnimatedVisibility(
-                visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
-                modifier = Modifier.align(Alignment.Center),
-            ) {
-                val side = goalFlash?.side ?: 0
-                val c = if (side == 0) homeC else awayC
-                Text(
-                    "GOOOL!", fontSize = 46.sp, fontWeight = FontWeight.Black, color = contentOn(c),
-                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(c.copy(alpha = 0.92f)).padding(horizontal = 24.dp, vertical = 8.dp),
+    Row(Modifier.fillMaxSize()) {
+        // Sol: skor, saha ve son olay
+        Column(Modifier.weight(1.1f).fillMaxHeight()) {
+            ScoreBoard(sim, scoreH, scoreA, shown >= sim.events.size)
+            LiveStrip(sim, homeC, awayC)
+            Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF1F7A3A)), contentAlignment = Alignment.Center) {
+                LivePitch(
+                    sim, homeC, awayC, paces[speed].minute.toInt().coerceAtLeast(250),
+                    Modifier.fillMaxHeight().aspectRatio(1.7f, matchHeightConstraintsFirst = true),
                 )
-            }
-        }
-        TickerBox(ticker, homeC, awayC)
-        // Kontroller
-        Row(
-            Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            if (!sim.finished) {
-                Chip(if (running) "⏸" else "▶", false) { running = !running }
-                paces.forEachIndexed { i, pc -> Chip(pc.label, speed == i) { speed = i } }
-                Spacer(Modifier.weight(1f))
-                val us = sim.userSide
-                Chip("🔁 ${us?.subsLeft ?: 0}", false) { running = false; showSubs = true }
-            }
-        }
-        if (!sim.finished) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                val t = sim.userSide?.team
-                listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s ->
-                    Chip(s, t?.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i); tick++ }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.Center),
+                ) {
+                    val side = goalFlash?.side ?: 0
+                    val c = if (side == 0) homeC else awayC
+                    Text(
+                        "GOOOL!", fontSize = 46.sp, fontWeight = FontWeight.Black, color = contentOn(c),
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(c.copy(alpha = 0.92f)).padding(horizontal = 24.dp, vertical = 8.dp),
+                    )
                 }
             }
+            TickerBox(ticker, homeC, awayC)
         }
-        if (sim.minute == 45 && !running) {
-            Banner("DEVRE ARASI", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
-                Button(onClick = { running = true }) { Text("2. YARI") }
-            }
-            halfResult?.let { r ->
-                Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp))
-            }
-            if (!sim.talkDone && sim.userSide != null) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Talks.halfOptions.forEachIndexed { i, n ->
-                        Chip(n, false, Modifier.weight(1f)) { halfResult = Talks.talk(sim, Talks.HALF, i); tick++ }
+        // Sağ: kontroller, devre arası ve anlatım
+        Column(Modifier.weight(1f).fillMaxHeight().background(Bg)) {
+            if (!sim.finished) {
+                Row(
+                    Modifier.fillMaxWidth().background(Surface1).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Chip(if (running) "⏸" else "▶", false) { running = !running }
+                    paces.forEachIndexed { i, pc -> Chip(pc.label, speed == i) { speed = i } }
+                    val us = sim.userSide
+                    Chip("🔁 ${us?.subsLeft ?: 0}", false) { running = false; showSubs = true }
+                }
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val t = sim.userSide?.team
+                    listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s ->
+                        Chip(s, t?.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i); tick++ }
                     }
                 }
             }
-        } else if (sim.finished) {
-            Banner("MAÇ BİTTİ", null) {
-                Button(onClick = { GameRepo.finishMatch() }, colors = ButtonDefaults.buttonColors(containerColor = Gold)) {
-                    Text("MAÇ SONUCU ▶", fontWeight = FontWeight.Bold)
+            if (sim.minute == 45 && !running) {
+                Banner("DEVRE ARASI", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
+                    Button(onClick = { running = true }) { Text("2. YARI") }
+                }
+                halfResult?.let { r ->
+                    Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp))
+                }
+                if (!sim.talkDone && sim.userSide != null) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Talks.halfOptions.forEachIndexed { i, n ->
+                            Chip(n, false, Modifier.weight(1f)) { halfResult = Talks.talk(sim, Talks.HALF, i); tick++ }
+                        }
+                    }
+                }
+            } else if (sim.finished) {
+                Banner("MAÇ BİTTİ", null) {
+                    Button(onClick = { GameRepo.finishMatch() }, colors = ButtonDefaults.buttonColors(containerColor = Gold)) {
+                        Text("MAÇ SONUCU ▶", fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else if (!running) {
+                TextButton(onClick = { sim.runToEnd(); revealed = sim.events.size; tick++ }, modifier = Modifier.padding(horizontal = 4.dp)) {
+                    Text("⏭ Sonuca git", color = TextDim)
                 }
             }
-        } else if (!running) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
-                TextButton(onClick = { sim.runToEnd(); revealed = sim.events.size; tick++ }) { Text("⏭ Sonuca git", color = TextDim) }
+            Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Chip("Anlatım", tab == 0) { tab = 0 }
+                Chip("İstatistik", tab == 1) { tab = 1 }
+                Chip("Oyuncular", tab == 2) { tab = 2 }
             }
-        }
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Chip("Anlatım", tab == 0) { tab = 0 }
-            Chip("İstatistik", tab == 1) { tab = 1 }
-            Chip("Oyuncular", tab == 2) { tab = 2 }
-        }
-        Box(Modifier.weight(1f)) {
-            when (tab) {
-                0 -> Commentary(sim, homeC, awayC, shown)
-                1 -> Stats(sim)
-                else -> Ratings(sim)
+            Box(Modifier.weight(1f)) {
+                when (tab) {
+                    0 -> Commentary(sim, homeC, awayC, shown)
+                    1 -> Stats(sim)
+                    else -> Ratings(sim)
+                }
             }
         }
     }
@@ -230,7 +236,7 @@ fun MatchScreen() {
 /** Maç öncesi soyunma odası: bağlam, konuşma seçenekleri ve oyuncu tepkileri. */
 @Composable
 private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -> Unit, onStart: () -> Unit) {
-    Dialog(onDismissRequest = {}) {
+    WideDialog(onDismissRequest = {}) {
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1)
                 .verticalScroll(rememberScrollState()).padding(18.dp),
@@ -244,9 +250,14 @@ private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -
             if (result == null) {
                 Text("Maçtan önce takıma ne söyleyeceksin?", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(6.dp))
-                Talks.preOptions.forEachIndexed { i, o ->
-                    OutlinedButton(onClick = { onTalk(i) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), shape = RoundedCornerShape(10.dp)) {
-                        Text(o, fontSize = 13.sp)
+                Talks.preOptions.withIndex().chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (i, o) ->
+                            OutlinedButton(onClick = { onTalk(i) }, modifier = Modifier.weight(1f).padding(vertical = 3.dp), shape = RoundedCornerShape(10.dp)) {
+                                Text(o, fontSize = 13.sp, textAlign = TextAlign.Center)
+                            }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
                 TextButton(onClick = onStart) { Text("Konuşmadan maça başla", color = TextDim) }
@@ -265,7 +276,7 @@ private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -
 private fun TickerBox(t: Ticker?, homeC: Color, awayC: Color) {
     val c = when (t?.side) { 0 -> homeC; 1 -> awayC; else -> TextDim }
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp)
+        Modifier.fillMaxWidth().heightIn(min = 52.dp)
             .background(if (t?.kind == 2) c.copy(alpha = 0.35f) else Surface2)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -276,11 +287,11 @@ private fun TickerBox(t: Ticker?, homeC: Color, awayC: Color) {
         Spacer(Modifier.width(10.dp))
         Text(
             if (t.kind == 1) "⚡ ${t.text}" else t.text,
-            fontSize = if (t.kind == 2) 18.sp else 16.sp,
+            fontSize = if (t.kind == 2) 16.sp else 14.sp,
             fontWeight = if (t.kind == 0) FontWeight.Medium else FontWeight.Bold,
             fontStyle = if (t.kind == 1) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
             color = if (t.kind == 1) Gold else TextMain,
-            maxLines = 3,
+            maxLines = 2,
         )
     }
 }
@@ -301,32 +312,31 @@ private fun Banner(title: String, sub: String?, action: @Composable () -> Unit) 
 
 @Composable
 private fun ScoreBoard(sim: MatchSim, hg: Int = sim.home.goals, ag: Int = sim.away.goals, revealedAll: Boolean = true) {
-    Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 10.dp)) {
+    Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 6.dp)) {
         val f = sim.fixture
         Text(
             (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") + if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
             color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                TeamBadge(sim.home.team, 34.dp)
+                TeamBadge(sim.home.team, 30.dp)
                 Spacer(Modifier.width(6.dp))
                 Text(sim.home.team.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text("$hg - $ag", fontSize = 30.sp, fontWeight = FontWeight.Black)
+                Text("$hg - $ag", fontSize = 26.sp, fontWeight = FontWeight.Black)
                 Text(if (sim.finished && revealedAll) "MS" else "${sim.minute}'", color = Green, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 if (sim.penHome >= 0 && revealedAll) Text("Pen. ${sim.penHome}-${sim.penAway}", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                 Text(sim.away.team.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
                 Spacer(Modifier.width(6.dp))
-                TeamBadge(sim.away.team, 34.dp)
+                TeamBadge(sim.away.team, 30.dp)
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         Bar(sim.minute / 90f, Green, Modifier.fillMaxWidth(), 3.dp)
     }
 }
@@ -383,7 +393,7 @@ private fun targets(sim: MatchSim): Map<Int, Offset> {
 }
 
 @Composable
-private fun LivePitch(sim: MatchSim, homeC: Color, awayC: Color, stepMs: Int) {
+private fun LivePitch(sim: MatchSim, homeC: Color, awayC: Color, stepMs: Int, modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(1.7f)) {
     val dur = (stepMs * 0.9f).toInt().coerceAtLeast(60)
     var from by remember { mutableStateOf(emptyMap<Int, Offset>()) }
     var to by remember { mutableStateOf(targets(sim)) }
@@ -402,8 +412,8 @@ private fun LivePitch(sim: MatchSim, homeC: Color, awayC: Color, stepMs: Int) {
     }
     val last = sim.events.lastOrNull()
     val flash = last?.takeIf { it.minute == sim.minute && it.type in setOf(Ev.SAVE, Ev.POST, Ev.MISS, Ev.YELLOW, Ev.RED, Ev.INJURY, Ev.SUB) }
-    Box {
-        Canvas(Modifier.fillMaxWidth().aspectRatio(1.7f)) {
+    Box(modifier) {
+        Canvas(Modifier.fillMaxSize()) {
             drawPitch(vertical = false)
             val w = size.width
             val h = size.height
@@ -560,7 +570,7 @@ private fun SubDialog(sim: MatchSim, side: Side, onClose: () -> Unit) {
     var out by remember { mutableStateOf<PIM?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
     refresh
-    Dialog(onDismissRequest = onClose) {
+    WideDialog(onDismissRequest = onClose) {
         Column(
             Modifier.fillMaxWidth().heightIn(max = 620.dp).clip(RoundedCornerShape(18.dp)).background(Surface1)
                 .verticalScroll(rememberScrollState()).padding(16.dp),
@@ -611,48 +621,56 @@ fun SummaryScreen() {
     }
     BackHandler { GameRepo.closeSummary() }
     val motm = sim.manOfTheMatch()
-    Column(Modifier.fillMaxSize()) {
-        ScoreBoard(sim)
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (sim.userSide != null) item { PostTalkCard(sim) }
-            item {
-                SectionCard("Goller") {
-                    val goals = sim.events.filter { it.type == Ev.GOAL }
-                    if (goals.isEmpty()) Text("Gol yok.", color = TextDim)
-                    goals.forEach { e ->
-                        val name = (sim.home.used + sim.away.used).firstOrNull { it.p.id == e.playerId }?.p?.name ?: ""
-                        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                            if (e.side == 0) {
-                                Text("⚽ $name ${e.minute}'", modifier = Modifier.weight(1f), maxLines = 1)
-                            } else {
-                                Text("${e.minute}' $name ⚽", modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1)
+    Row(Modifier.fillMaxSize()) {
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            ScoreBoard(sim)
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (sim.userSide != null) item { PostTalkCard(sim) }
+                item {
+                    SectionCard("Goller") {
+                        val goals = sim.events.filter { it.type == Ev.GOAL }
+                        if (goals.isEmpty()) Text("Gol yok.", color = TextDim)
+                        goals.forEach { e ->
+                            val name = (sim.home.used + sim.away.used).firstOrNull { it.p.id == e.playerId }?.p?.name ?: ""
+                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                if (e.side == 0) {
+                                    Text("⚽ $name ${e.minute}'", modifier = Modifier.weight(1f), maxLines = 1)
+                                } else {
+                                    Text("${e.minute}' $name ⚽", modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1)
+                                }
                             }
                         }
                     }
                 }
-            }
-            com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
-                item {
-                    val us = sim.home.team.id == g.userTeamId
-                    val income = if (us) " · Bilet geliri ${com.supermenajer.game.game.money(com.supermenajer.game.game.Facilities.ticketIncome(g, sim.fixture))}" else ""
-                    Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
-                }
-            }
-            item {
-                SectionCard("Maç istatistikleri") { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
-            }
-            if (motm != null) item {
-                SectionCard("Maçın oyuncusu") {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("⭐", fontSize = 28.sp)
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(motm.p.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            Text(g.team(if (motm in sim.home.used) sim.home.team.id else sim.away.team.id).name, color = TextDim, fontSize = 13.sp)
-                        }
-                        Text("%.1f".format(motm.rating), color = ratingColor(motm.rating), fontWeight = FontWeight.Black, fontSize = 24.sp)
+                com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
+                    item {
+                        val us = sim.home.team.id == g.userTeamId
+                        val income = if (us) " · Bilet geliri ${com.supermenajer.game.game.money(com.supermenajer.game.game.Facilities.ticketIncome(g, sim.fixture))}" else ""
+                        Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
                     }
                 }
+                if (motm != null) item {
+                    SectionCard("Maçın oyuncusu") {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⭐", fontSize = 28.sp)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(motm.p.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                Text(g.team(if (motm in sim.home.used) sim.home.team.id else sim.away.team.id).name, color = TextDim, fontSize = 13.sp)
+                            }
+                            Text("%.1f".format(motm.rating), color = ratingColor(motm.rating), fontWeight = FontWeight.Black, fontSize = 24.sp)
+                        }
+                    }
+                }
+            }
+            Button(
+                onClick = { GameRepo.closeSummary() },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).height(48.dp), shape = RoundedCornerShape(12.dp),
+            ) { Text("DEVAM", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        }
+        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item {
+                SectionCard("Maç istatistikleri") { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
             }
             sim.userSide?.let { us ->
                 item {
@@ -670,10 +688,6 @@ fun SummaryScreen() {
                 }
             }
         }
-        Button(
-            onClick = { GameRepo.closeSummary() },
-            modifier = Modifier.fillMaxWidth().padding(12.dp).height(52.dp), shape = RoundedCornerShape(12.dp),
-        ) { Text("DEVAM", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
     }
 }
 

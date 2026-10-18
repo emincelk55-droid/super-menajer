@@ -316,6 +316,9 @@ class Game(
     /** Kullanıcının kulübünün sponsorları ve bekleyen teklifler. */
     var sponsors: MutableList<Sponsor> = mutableListOf(),
     var sponsorOffers: MutableList<Sponsor> = mutableListOf(),
+    /** Taraftar memnuniyeti (0-100) ve son değişikliklerin nedenleri. */
+    var fans: Double = 60.0,
+    var fanLog: MutableList<String> = mutableListOf(),
 ) {
     private class Index(
         val byId: HashMap<Int, Player>,

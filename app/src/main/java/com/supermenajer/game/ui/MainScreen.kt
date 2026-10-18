@@ -39,6 +39,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -69,18 +75,8 @@ fun MainScreen() {
     BackHandler {
         if (GameRepo.tab != 0) GameRepo.tab = 0 else confirmExit = true
     }
-    Column(Modifier.fillMaxSize()) {
-        TopBar(g)
-        Box(Modifier.weight(1f)) {
-            when (GameRepo.tab) {
-                0 -> HomeTab(g)
-                1 -> SquadTab(g)
-                2 -> TacticsTab(g)
-                3 -> LeagueTab(g)
-                4 -> TransferTab(g)
-            }
-        }
-        NavigationBar(containerColor = Surface1) {
+    Row(Modifier.fillMaxSize()) {
+        NavigationRail(containerColor = Surface1, modifier = Modifier.fillMaxHeight().width(76.dp)) {
             val items = listOf(
                 "Ana Sayfa" to Icons.Filled.Home,
                 "Kadro" to Icons.Filled.Groups,
@@ -88,17 +84,31 @@ fun MainScreen() {
                 "Lig" to Icons.Filled.EmojiEvents,
                 "Transfer" to Icons.Filled.SwapHoriz,
             )
-            items.forEachIndexed { i, (label, icon) ->
-                NavigationBarItem(
-                    selected = GameRepo.tab == i,
-                    onClick = { GameRepo.tab = i },
-                    icon = { Icon(icon, contentDescription = label) },
-                    label = { Text(label, fontSize = 11.sp, maxLines = 1) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black, indicatorColor = Green,
-                        selectedTextColor = Green, unselectedIconColor = TextDim, unselectedTextColor = TextDim,
-                    ),
-                )
+            Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
+                items.forEachIndexed { i, (label, icon) ->
+                    NavigationRailItem(
+                        selected = GameRepo.tab == i,
+                        onClick = { GameRepo.tab = i },
+                        icon = { Icon(icon, contentDescription = label) },
+                        label = { Text(label, fontSize = 10.sp, maxLines = 1) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = Color.Black, indicatorColor = Green,
+                            selectedTextColor = Green, unselectedIconColor = TextDim, unselectedTextColor = TextDim,
+                        ),
+                    )
+                }
+            }
+        }
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            TopBar(g)
+            Box(Modifier.weight(1f)) {
+                when (GameRepo.tab) {
+                    0 -> HomeTab(g)
+                    1 -> SquadTab(g)
+                    2 -> TacticsTab(g)
+                    3 -> LeagueTab(g)
+                    4 -> TransferTab(g)
+                }
             }
         }
     }
@@ -120,10 +130,10 @@ fun MainScreen() {
 private fun TopBar(g: Game) {
     val t = g.userTeam
     Row(
-        Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TeamBadge(t, 40.dp)
+        TeamBadge(t, 34.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(t.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -142,10 +152,12 @@ private fun TopBar(g: Game) {
 
 @Composable
 private fun HomeTab(g: Game) {
-    LazyColumn(
+    LazyVerticalStaggeredGrid(
+        StaggeredGridCells.Adaptive(330.dp),
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(10.dp),
+        verticalItemSpacing = 10.dp,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         when {
             g.fired -> item { FiredCard(g) }
@@ -161,6 +173,7 @@ private fun HomeTab(g: Game) {
         if (g.sponsorOffers.isNotEmpty() && !g.fired) item { SponsorOffersCard(g) }
         if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
         item { BoardCard(g) }
+        item { FansCard(g) }
         item { FinanceCard(g) }
         item { MiniTable(g) }
         item { RecentResults(g) }
@@ -338,6 +351,33 @@ private fun SeasonEndCard(g: Game) {
             onClick = { GameRepo.startNewSeason() },
             modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
         ) { Text("YENİ SEZONA BAŞLA (${g.season + 1})", fontWeight = FontWeight.Bold) }
+    }
+}
+
+@Composable
+private fun FansCard(g: Game) {
+    val f = g.fans
+    val col = when { f >= 70 -> Green; f >= 40 -> Gold; else -> Red }
+    SectionCard("📣 Taraftar") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(com.supermenajer.game.game.Fans.mood(f), fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text("${f.toInt()}%", color = col, fontWeight = FontWeight.Black, fontSize = 22.sp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Bar((f / 100).toFloat(), col, Modifier.fillMaxWidth(), 8.dp)
+        Spacer(Modifier.height(6.dp))
+        val effect = when {
+            f >= 75 -> "Tribünler dolu, evde 12. adam desteği var! Sponsorlar ilgili."
+            f >= 40 -> "Taraftar sonuçları izliyor. Galibiyetler ve derbiler moralini yükseltir."
+            else -> "Seyirci azalıyor, yönetim baskı altında. Derbi kazanmak iyi gelir!"
+        }
+        Text(effect, color = TextDim, fontSize = 12.sp)
+        if (g.fanLog.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            g.fanLog.take(4).forEach { line ->
+                Text(line, fontSize = 12.sp, color = if (line.startsWith("+")) Green else Red, maxLines = 1)
+            }
+        }
     }
 }
 

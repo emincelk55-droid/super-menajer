@@ -129,6 +129,13 @@ object Season {
         if (g.saveVersion < 7) migrateV7(g)
         if (g.saveVersion < 8) migrateV8(g)
         if (g.saveVersion < 9) migrateV9(g)
+        if (g.saveVersion < 10) {
+            g.saveVersion = 10
+            g.addNews(
+                "Güncelleme: v1.0 · Taraftar ve yatay ekran",
+                "Oyun artık yatay ekranda! Ana sayfadaki Taraftar kartından taraftar memnuniyetini takip et: galibiyetler, derbiler, yıldız transferleri ve kupalar taraftarı coşturur; yıldız satışı, ağır yenilgiler ve pahalı bilet kızdırır. Coşkulu taraftar evde 12. adam olur!",
+            )
+        }
     }
 
     private fun migrateV9(g: Game) {
@@ -320,6 +327,7 @@ object Season {
             Economy.earn(h, Economy.TICKETS, Facilities.ticketIncome(g, f))
             if (f.comp == Comp.EURO) Economy.earn(h, Economy.EURO, 400_000L)
             Sponsors.matchResult(g, f)
+            Fans.afterMatch(g, f)
             if (Comp.isCup(f.comp) && f.winner >= 0) {
                 val prize = listOf(150_000L, 250_000L, 400_000L, 700_000L, 1_500_000L)[f.round]
                 Economy.earn(g.team(f.winner), Economy.CUP, prize)
@@ -331,6 +339,7 @@ object Season {
                 weeklyUpdate(g, rnd)
                 Facilities.weekly(g)
                 Sponsors.weekly(g)
+                Fans.weekly(g, rnd)
                 if (d.number % 6 == 0) {
                     val leader = g.table(g.userTeam.division).first()
                     g.addNews("Lig lideri", "${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.")
@@ -583,6 +592,7 @@ object Season {
         g.press = null
         g.confidence = 55.0
         g.projects.clear()
+        Fans.reset(g)
         Facilities.ensure(g.userTeam)
         Sponsors.refreshOffers(g)
         Lineups.validate(g, g.userTeam)
@@ -643,6 +653,7 @@ object Season {
             userPos <= target + 3 -> -10.0
             else -> -30.0
         }).coerceIn(0.0, 100.0)
+        Fans.seasonEnd(g, titles, userPos <= target, userPos > target + 3)
         careerOffers(g, userPos, target)
     }
 
@@ -685,6 +696,8 @@ object Season {
             val up = g.table(second.id).take(3)
             down.forEach { it.division = second.id; it.reputation = (it.reputation - 4).coerceAtLeast(30) }
             up.forEach { it.division = top.id; it.reputation = (it.reputation + 4).coerceAtMost(95) }
+            if (us in down) Fans.change(g, -15.0, "Küme düşme")
+            if (us in up) Fans.change(g, 15.0, "Şampiyonluk yükselişi")
             if (us in down) g.addNews("Küme düştük", "${us.name} gelecek sezon ${second.name}'nde mücadele edecek. Hemen geri dönmeliyiz!")
             if (us in up) g.addNews("YÜKSELDİK!", "${us.name} artık ${top.name}'nde! Tarihi bir başarı hocam!")
         }

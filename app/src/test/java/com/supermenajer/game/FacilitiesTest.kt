@@ -21,6 +21,7 @@ class FacilitiesTest {
         val world = Generator.newWorld(Random(3)).also { Season.computeExpectations(it) }
         GameRepo.newCareer(world, "Test", world.divisionTeams(0)[4].id)
         val g = GameRepo.game!!
+        g.confidence = 100.0
         val us = g.userTeam
         assertTrue(g.teams.all { it.stadium in 5_000..80_000 && it.trainingFac in 1..9 })
         println("STAT: ${us.name} ${us.stadiumName} ${us.stadium} · tesis ${us.trainingFac}/${us.youthFac}/${us.medicalFac}")
@@ -36,7 +37,7 @@ class FacilitiesTest {
         val seats = us.stadium
 
         // Sezonu oyna: seyirci kapasiteyi aşmamalı, bilet geliri makul olmalı
-        while (!g.seasonOver) {
+        while (!g.seasonOver && !g.fired) {
             if (g.todayUserFixture() != null) { GameRepo.playMatch(live = false); GameRepo.closeSummary() } else GameRepo.skipToNextMatch()
         }
         val played = g.fixtures.filter { it.played }

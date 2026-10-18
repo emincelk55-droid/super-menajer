@@ -2,6 +2,7 @@ package com.supermenajer.game
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.android.resources.ScreenOrientation
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -20,7 +21,10 @@ import java.nio.file.Files
 
 class ScreensTest {
     @get:Rule
-    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5, maxPercentDifference = 100.0)
+    val paparazzi = Paparazzi(
+        deviceConfig = DeviceConfig.PIXEL_5.copy(screenWidth = 2340, screenHeight = 1080, orientation = ScreenOrientation.LANDSCAPE),
+        maxPercentDifference = 100.0,
+    )
 
     private fun shot(name: String) {
         paparazzi.snapshot(name) { AppTheme { Surface(Modifier.fillMaxSize(), color = Bg) { AppRoot() } } }
@@ -77,7 +81,7 @@ class ScreensTest {
         GameRepo.leagueTab = 3; shot("09_fixtures")
         GameRepo.tab = 2; GameRepo.tacticsMode = 0; shot("10_tactics")
         // canlı maç, devre arası
-        while (g.todayUserFixture() == null && !g.seasonOver) GameRepo.skipToNextMatch()
+        while (g.todayUserFixture() == null && !g.seasonOver && !g.fired) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)
         shot("10b_prematch")
         repeat(30) { GameRepo.match!!.step() }
@@ -89,9 +93,9 @@ class ScreensTest {
         shot("13_summary")
         GameRepo.closeSummary()
         // gün atlama kartı
-        while (g.todayUserFixture() != null && !g.seasonOver) advance(1)
+        while (g.todayUserFixture() != null && !g.seasonOver && !g.fired) advance(1)
         GameRepo.tab = 0; shot("14_restday")
-        while (!g.seasonOver) advance(1)
+        while (!g.seasonOver && !g.fired) advance(1)
         GameRepo.tab = 0; shot("15_seasonend")
         GameRepo.startNewSeason()
         GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("16_history")

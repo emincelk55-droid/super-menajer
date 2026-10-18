@@ -51,7 +51,7 @@ object Facilities {
         val wins = h.form.count { it == 'G' }
         val formF = 0.88 + wins * 0.05
         val bigF = if (Talks.bigMatch(g, f)) 1.2 else 1.0
-        val demand = baseFans(h) * formF * bigF * priceDemand[h.ticketPrice] * rnd.nextDouble(0.93, 1.07)
+        val demand = baseFans(h) * formF * bigF * Fans.attendanceFactor(g, h) * priceDemand[h.ticketPrice] * rnd.nextDouble(0.93, 1.07)
         return demand.roundToInt().coerceIn(500, h.stadium)
     }
 
@@ -138,7 +138,7 @@ object Facilities {
         val done = g.projects.filter { --it.weeksLeft <= 0 }
         for (p in done) {
             when (p.type) {
-                STADIUM -> us.stadium += p.amount
+                STADIUM -> { us.stadium += p.amount; Fans.change(g, 4.0, "Stadyum büyüdü") }
                 TRAINING -> us.trainingFac = p.amount
                 YOUTH -> us.youthFac = p.amount
                 else -> us.medicalFac = p.amount

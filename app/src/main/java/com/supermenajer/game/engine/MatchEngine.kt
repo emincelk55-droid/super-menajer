@@ -83,6 +83,11 @@ class MatchSim(
         ev(Ev.KICKOFF, -1, Comms.kickoff(home.team, away.team, rnd))
         if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
         Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
+        val fanBoost = com.supermenajer.game.game.Fans.homeBoost(game, fixture)
+        if (fanBoost > 0) {
+            home.onPitch.forEach { it.boost += fanBoost }
+            ev(Ev.INFO, 0, "📣 Tribünler coşkulu! Taraftar takımını 12. adam gibi destekliyor.")
+        }
     }
 
     private fun setup(s: Side) {

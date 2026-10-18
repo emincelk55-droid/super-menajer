@@ -52,7 +52,7 @@ object Sponsors {
     /** Sezonluk beklenen değer (alan bazında). */
     fun slotValue(g: Game, t: Team, slot: Int): Double {
         val stadF = if (slot == STADIUM) sqrt((t.stadium.coerceAtLeast(5_000) / 35_000.0)).coerceIn(0.5, 1.6) else 1.0
-        return slotBase[slot] * clubValue(g, t) * stadF
+        return slotBase[slot] * clubValue(g, t) * stadF * Fans.sponsorFactor(g, t)
     }
 
     fun current(g: Game, slot: Int) = g.sponsors.firstOrNull { it.slot == slot }

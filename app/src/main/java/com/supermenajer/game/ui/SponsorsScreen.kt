@@ -1,5 +1,8 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,8 +45,8 @@ fun SponsorsView(g: Game) {
     @Suppress("UNUSED_VARIABLE") val v = GameRepo.version
     var message by remember { mutableStateOf<String?>(null) }
     val us = g.userTeam
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
+    LazyVerticalStaggeredGrid(StaggeredGridCells.Adaptive(330.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(10.dp), verticalItemSpacing = 10.dp, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        item(span = StaggeredGridItemSpan.FullLine) {
             SectionCard("💼 Sponsorluk özeti") {
                 Row(Modifier.fillMaxWidth()) {
                     Column(Modifier.weight(1f)) {

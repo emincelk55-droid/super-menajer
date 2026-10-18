@@ -497,6 +497,7 @@ object GameRepo {
         } else "serbest oyuncu"
         Economy.earn(us, Economy.BUYS, -price)
         g.movePlayer(p, us.id)
+        Fans.bought(g, p)
         p.morale = 80.0
         p.salary = p.demandWage
         p.contractYears = if (p.age >= 30) 2 else 4
@@ -525,6 +526,7 @@ object GameRepo {
         Economy.earn(us, Economy.SALES, price)
         Economy.earn(buyer, Economy.BUYS, -price)
         g.movePlayer(p, buyer.id)
+        Fans.sold(g, p)
         p.salary = p.demandWage
         p.contractYears = 4
         g.offers.removeAll { it.playerId == p.id }

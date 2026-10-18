@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -154,91 +155,96 @@ private fun TacticsContent(g: Game) {
     var sel by remember { mutableIntStateOf(-1) }
     val slots = Formations.slots(t.formation)
     val (atk, mid, def) = Lineups.lineStrength(g, t)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Formations.names.forEach { f -> Chip(f, t.formation == f) { sel = -1; GameRepo.setFormation(f) } }
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                LineStat("Hücum", atk); LineStat("Orta Saha", mid); LineStat("Savunma", def)
-            }
-        }
-        item {
-            BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(0.78f).clip(RoundedCornerShape(12.dp))) {
-                val bw = maxWidth
-                val bh = maxHeight
-                Canvas(Modifier.fillMaxSize()) { drawPitch(vertical = true) }
-                slots.forEachIndexed { i, s ->
-                    val p = g.player(t.lineup.getOrNull(i) ?: -1)
-                    val cx = bw * s.x
-                    val cy = bh * (1f - s.y) - bh * 0.02f
-                    val selected = sel == i
-                    Column(
-                        Modifier.offset(x = cx - 36.dp, y = cy - 26.dp).width(72.dp)
-                            .clickable {
-                                when {
-                                    sel == -1 -> sel = i
-                                    sel == i -> sel = -1
-                                    else -> { GameRepo.swapSlots(sel, i); sel = -1 }
-                                }
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally,
+    Row(Modifier.fillMaxSize().padding(start = 10.dp, bottom = 10.dp)) {
+        // Sol: yatay saha (hücum yönü sağa)
+        BoxWithConstraints(
+            Modifier.fillMaxHeight().aspectRatio(1.45f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(12.dp)),
+        ) {
+            val bw = maxWidth
+            val bh = maxHeight
+            val maxDepth = slots.maxOf { it.y }.coerceAtLeast(0.1f)
+            Canvas(Modifier.fillMaxSize()) { drawPitch(vertical = false) }
+            slots.forEachIndexed { i, s ->
+                val p = g.player(t.lineup.getOrNull(i) ?: -1)
+                val cx = bw * (0.07f + s.y / maxDepth * 0.82f)
+                val cy = bh * (0.08f + s.x * 0.84f)
+                val selected = sel == i
+                Column(
+                    Modifier.offset(x = cx - 36.dp, y = cy - 24.dp).width(72.dp)
+                        .clickable {
+                            when {
+                                sel == -1 -> sel = i
+                                sel == i -> sel = -1
+                                else -> { GameRepo.swapSlots(sel, i); sel = -1 }
+                            }
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    val mismatch = p != null && p.pos != s.pos
+                    Box(
+                        Modifier.size(34.dp).clip(CircleShape)
+                            .background(if (p == null) Color.DarkGray else ovrColor(p.ovrAt(s.pos)))
+                            .border(3.dp, if (selected) Color.White else if (mismatch) Red else Color.Transparent, CircleShape),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        val mismatch = p != null && p.pos != s.pos
-                        Box(
-                            Modifier.size(38.dp).clip(CircleShape)
-                                .background(if (p == null) Color.DarkGray else ovrColor(p.ovrAt(s.pos)))
-                                .border(3.dp, if (selected) Color.White else if (mismatch) Red else Color.Transparent, CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(p?.ovrAt(s.pos)?.toString() ?: "?", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                        }
-                        Text(
-                            p?.name?.substringAfterLast(' ') ?: "Boş", fontSize = 11.sp, color = Color.White, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
-                        )
+                        Text(p?.ovrAt(s.pos)?.toString() ?: "?", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
+                    Text(
+                        p?.name?.substringAfterLast(' ') ?: "Boş", fontSize = 10.sp, color = Color.White, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
+                    )
                 }
             }
         }
-        item {
-            Text(
-                if (sel >= 0) "Seçili mevki: ${slots[sel].pos.label}. Aşağıdan bir oyuncuya ya da sahada başka bir oyuncuya dokun."
-                else "Değiştirmek için sahadaki bir oyuncuya dokun. Kırmızı çerçeve: oyuncu kendi mevkisinde değil.",
-                color = if (sel >= 0) Gold else TextDim, fontSize = 12.sp,
-            )
-        }
-        item {
-            SectionCard("Oyun anlayışı") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s -> Chip(s, t.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i) } }
+        // Sağ: diziliş, oyun anlayışı ve yedekler
+        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Formations.names.forEach { f -> Chip(f, t.formation == f) { sel = -1; GameRepo.setFormation(f) } }
                 }
-                Spacer(Modifier.height(10.dp))
-                Text("Pres", color = TextDim, fontSize = 12.sp)
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Düşük", "Orta", "Yüksek").forEachIndexed { i, s -> Chip(s, t.pressing == i, Modifier.weight(1f)) { GameRepo.setPressing(i) } }
-                }
-                Spacer(Modifier.height(6.dp))
-                Text("Yüksek pres topu kazanmayı kolaylaştırır ama oyuncular daha çabuk yorulur.", color = TextDim, fontSize = 11.sp)
             }
-        }
-        item {
-            OutlinedButton(onClick = { sel = -1; GameRepo.autoLineup() }, modifier = Modifier.fillMaxWidth()) { Text("🪄 Otomatik En İyi 11") }
-        }
-        item {
-            Text(if (sel >= 0) "MEVKİYE OYUNCU SEÇ" else "YEDEKLER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-        val pos = if (sel >= 0) slots[sel].pos else null
-        val pool = g.squad(t.id).filter { it.id !in t.lineup }
-            .sortedWith(compareByDescending<com.supermenajer.game.model.Player> { pos != null && it.pos == pos }.thenByDescending { if (pos != null) it.ovrAt(pos) else it.overall })
-        items(pool, key = { it.id }) { p ->
-            val extra = if (pos != null) "Bu mevkide: ${p.ovrAt(pos)}" else null
-            PlayerRow(g, p, false, extra) {
-                if (sel >= 0 && p.available) { GameRepo.putInSlot(sel, p.id); sel = -1 } else GameRepo.selectedPlayer = p
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    LineStat("Hücum", atk); LineStat("Orta Saha", mid); LineStat("Savunma", def)
+                }
+            }
+            item {
+                Text(
+                    if (sel >= 0) "Seçili mevki: ${slots[sel].pos.label}. Aşağıdan bir oyuncuya ya da sahada başka bir oyuncuya dokun."
+                    else "Değiştirmek için sahadaki bir oyuncuya dokun. Kırmızı çerçeve: oyuncu kendi mevkisinde değil.",
+                    color = if (sel >= 0) Gold else TextDim, fontSize = 12.sp,
+                )
+            }
+            item {
+                SectionCard("Oyun anlayışı") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s -> Chip(s, t.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i) } }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("Pres", color = TextDim, fontSize = 12.sp)
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Düşük", "Orta", "Yüksek").forEachIndexed { i, s -> Chip(s, t.pressing == i, Modifier.weight(1f)) { GameRepo.setPressing(i) } }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("Yüksek pres topu kazanmayı kolaylaştırır ama oyuncular daha çabuk yorulur.", color = TextDim, fontSize = 11.sp)
+                }
+            }
+            item {
+                OutlinedButton(onClick = { sel = -1; GameRepo.autoLineup() }, modifier = Modifier.fillMaxWidth()) { Text("🪄 Otomatik En İyi 11") }
+            }
+            item {
+                Text(if (sel >= 0) "MEVKİYE OYUNCU SEÇ" else "YEDEKLER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            val pos = if (sel >= 0) slots[sel].pos else null
+            val pool = g.squad(t.id).filter { it.id !in t.lineup }
+                .sortedWith(compareByDescending<com.supermenajer.game.model.Player> { pos != null && it.pos == pos }.thenByDescending { if (pos != null) it.ovrAt(pos) else it.overall })
+            items(pool, key = { it.id }) { p ->
+                val extra = if (pos != null) "Bu mevkide: ${p.ovrAt(pos)}" else null
+                PlayerRow(g, p, false, extra) {
+                    if (sel >= 0 && p.available) { GameRepo.putInSlot(sel, p.id); sel = -1 } else GameRepo.selectedPlayer = p
+                }
             }
         }
     }
@@ -270,12 +276,14 @@ fun LeagueTab(g: Game) {
         if (view == 0 || view == 4) {
             // Lig seçici: önce ülke, sonra lig
             val country = Leagues.of(sel)?.country ?: g.userCountry
-            Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Season.activeCountries(g).forEach { c ->
                     Chip(Generator.flag(Leagues.flagOf(c)), c == country) { GameRepo.leagueSel = Leagues.top(c).id }
                 }
-            }
-            Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(28.dp).background(Line))
                 Leagues.ofCountry(country).filter { it.id in Season.activeLeagues(g) }.forEach { lg ->
                     Chip(lg.name, lg.id == sel) { GameRepo.leagueSel = lg.id }
                 }

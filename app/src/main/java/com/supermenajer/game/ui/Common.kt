@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -184,4 +186,24 @@ fun moraleText(m: Double): String = when {
     m >= 45 -> "Normal 😐"
     m >= 25 -> "Mutsuz 🙁"
     else -> "Çok mutsuz 😠"
+}
+
+/**
+ * Yatay ekrana uygun geniş pencere. Platform diyaloğu yerine ekranın üstüne çizilen bir katmandır;
+ * böylece genişliği her cihazda aynı olur. Dışına dokunmak ya da geri tuşu kapatır.
+ */
+@Composable
+fun WideDialog(onDismissRequest: () -> Unit, maxWidth: Dp = 600.dp, content: @Composable () -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onDismissRequest)
+    val none = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+            .clickable(interactionSource = none, indication = null, onClick = onDismissRequest),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier.fillMaxWidth(0.92f).widthIn(max = maxWidth).padding(vertical = 10.dp)
+                .clickable(interactionSource = none, indication = null) {},
+        ) { content() }
+    }
 }

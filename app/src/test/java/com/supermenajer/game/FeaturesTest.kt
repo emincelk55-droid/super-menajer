@@ -63,7 +63,7 @@ class FeaturesTest {
         assertTrue(g.shortlist.isNotEmpty())
 
         // Sezonu bitir: ödüller ve kiralık dönüşü
-        while (!g.seasonOver) {
+        while (!g.seasonOver && !g.fired) {
             if (g.todayUserFixture() != null) { GameRepo.playMatch(false); GameRepo.closeSummary() } else GameRepo.skipToNextMatch()
         }
         val rec = g.history.last()

@@ -21,6 +21,7 @@ class SponsorTest {
         val world = Generator.newWorld(Random(5)).also { Season.computeExpectations(it) }
         GameRepo.newCareer(world, "Test", world.divisionTeams(0)[1].id)
         val g = GameRepo.game!!
+        g.confidence = 100.0
         val us = g.userTeam
         assertEquals(9, g.sponsorOffers.size)
         for (slot in 0..2) {
@@ -43,7 +44,7 @@ class SponsorTest {
         assertEquals("${stadium.name} Arena", us.stadiumName)
         assertEquals(3, g.sponsorOffers.size)
 
-        while (!g.seasonOver) {
+        while (!g.seasonOver && !g.fired) {
             if (g.todayUserFixture() != null) { GameRepo.playMatch(live = false); GameRepo.closeSummary() } else GameRepo.skipToNextMatch()
         }
         val wins = g.fixtures.count { Comp.isLeague(it.comp) && ((it.home == us.id && it.hg > it.ag) || (it.away == us.id && it.ag > it.hg)) }

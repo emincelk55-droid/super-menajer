@@ -21,6 +21,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         GameRepo.init(filesDir)
+        // Tam ekran oyun: sistem çubukları gizli, kaydırınca geçici olarak görünür
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
         setContent {
             AppTheme {
                 Surface(Modifier.fillMaxSize(), color = Bg) { AppRoot() }
