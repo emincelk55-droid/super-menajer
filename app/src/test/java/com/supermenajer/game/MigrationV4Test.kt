@@ -49,7 +49,7 @@ class MigrationV4Test {
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
         val loaded = json.decodeFromString(Game.serializer(), json.encodeToString(Game.serializer(), g))
         Season.migrate(loaded, rnd)
-        assertEquals(10, loaded.saveVersion)
+        assertEquals(11, loaded.saveVersion)
         assertTrue(loaded.worldUpgradePending)
         while (!loaded.seasonOver) playDay(loaded, rnd)
         assertTrue(loaded.fixtures.all { it.played })

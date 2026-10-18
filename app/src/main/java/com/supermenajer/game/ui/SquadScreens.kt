@@ -64,27 +64,11 @@ import kotlin.math.roundToLong
 
 @Composable
 fun SquadTab(g: Game) {
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, top = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Chip("👥 Oyuncu", GameRepo.squadMode == 0) { GameRepo.squadMode = 0 }
-            Chip("👔 Ekip", GameRepo.squadMode == 1) { GameRepo.squadMode = 1 }
-            Chip("🏟️ Tesis", GameRepo.squadMode == 2) { GameRepo.squadMode = 2 }
-            Chip("💼 Sponsor", GameRepo.squadMode == 3) { GameRepo.squadMode = 3 }
-        }
-        when (GameRepo.squadMode) {
-            0 -> PlayersList(g)
-            1 -> StaffView(g)
-            2 -> FacilitiesView(g)
-            else -> SponsorsView(g)
-        }
-    }
+    PlayersList(g)
 }
 
 @Composable
-private fun StaffView(g: Game) {
+fun StaffView(g: Game) {
     var openRole by remember { mutableIntStateOf(-1) }
     var message by remember { mutableStateOf<String?>(null) }
     val us = g.userTeam

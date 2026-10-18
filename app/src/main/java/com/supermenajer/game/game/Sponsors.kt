@@ -93,7 +93,7 @@ object Sponsors {
             }
             any = true
         }
-        if (any) g.addNews("💼 Sponsor teklifleri", "Boş sponsorluk alanların için yeni teklifler geldi. Kadro → Sponsor'dan değerlendirebilirsin.")
+        if (any) g.addNews("💼 Sponsor teklifleri", "Boş sponsorluk alanların için yeni teklifler geldi. Kulüp → Sponsorlar'dan değerlendirebilirsin.")
     }
 
     fun defaultStadiumName(t: Team) = t.name.substringBefore(" ") + " Arena"

@@ -129,11 +129,22 @@ object Season {
         if (g.saveVersion < 7) migrateV7(g)
         if (g.saveVersion < 8) migrateV8(g)
         if (g.saveVersion < 9) migrateV9(g)
+        if (g.saveVersion < 11) {
+            // Eski haberler okunmuş sayılır; kategoriler başlıktan çıkarılır
+            g.news.forEachIndexed { i, n -> n.read = i >= 3 }
+        }
         if (g.saveVersion < 10) {
             g.saveVersion = 10
             g.addNews(
                 "Güncelleme: v1.0 · Taraftar ve yatay ekran",
                 "Oyun artık yatay ekranda! Ana sayfadaki Taraftar kartından taraftar memnuniyetini takip et: galibiyetler, derbiler, yıldız transferleri ve kupalar taraftarı coşturur; yıldız satışı, ağır yenilgiler ve pahalı bilet kızdırır. Coşkulu taraftar evde 12. adam olur!",
+            )
+        }
+        if (g.saveVersion < 11) {
+            g.saveVersion = 11
+            g.addNews(
+                "Güncelleme: v1.1 · Gelen kutusu ve yeni ana sayfa",
+                "Haberler artık Gelen Kutusu'nda; okunmamışlar kırmızı noktayla görünür. Üstteki DEVAM düğmesiyle oyunu ilerlet, ⚙️ ile ayarlara ulaş. Teknik ekip, tesisler, sponsorlar, finans ve taraftar yeni Kulüp menüsünde. Yardımcı antrenörün de birkaç haftada bir rapor gönderecek.",
             )
         }
     }
@@ -142,7 +153,7 @@ object Season {
         g.saveVersion = 9
         g.addNews(
             "Güncelleme: v0.9 · Sponsorluk anlaşmaları",
-            "Forma sponsoru, stadyum isim hakkı ve malzeme sponsoru geldi! Kadro → Sponsor'dan garantili, dengeli ya da performans primli teklifleri seç.",
+            "Forma sponsoru, stadyum isim hakkı ve malzeme sponsoru geldi! Kulüp → Sponsorlar'dan garantili, dengeli ya da performans primli teklifleri seç.",
         )
         if (g.sponsors.isEmpty() && !g.fired && g.userTeamId >= 0) Sponsors.refreshOffers(g)
     }
@@ -152,7 +163,7 @@ object Season {
         Facilities.ensureAll(g)
         g.addNews(
             "Güncelleme: v0.8 · Stadyum ve tesisler",
-            "Kadro → Tesis'den stadyumunu büyütebilir, bilet fiyatını belirleyebilir; antrenman tesisi, altyapı akademisi ve sağlık merkezini geliştirebilirsin. Seyirci sayısı artık formuna ve maçın önemine göre değişiyor!",
+            "Kulüp → Tesisler'den stadyumunu büyütebilir, bilet fiyatını belirleyebilir; antrenman tesisi, altyapı akademisi ve sağlık merkezini geliştirebilirsin. Seyirci sayısı artık formuna ve maçın önemine göre değişiyor!",
         )
     }
 
@@ -161,7 +172,7 @@ object Season {
         if (g.staff.isEmpty() && g.userTeamId >= 0) StaffLogic.hireDefaults(g)
         g.addNews(
             "Güncelleme: v0.7 · Teknik ekip ve takım konuşmaları",
-            "Artık bir teknik ekibin var: yardımcı antrenör, antrenör, fizyoterapist ve gözlemci. Kadro → Ekip'ten değiştirebilirsin. Maç öncesi, devre arası ve maç sonu takım konuşmaları da geldi!",
+            "Artık bir teknik ekibin var: yardımcı antrenör, antrenör, fizyoterapist ve gözlemci. Kulüp → Teknik Ekip'ten değiştirebilirsin. Maç öncesi, devre arası ve maç sonu takım konuşmaları da geldi!",
         )
     }
 
@@ -340,6 +351,7 @@ object Season {
                 Facilities.weekly(g)
                 Sponsors.weekly(g)
                 Fans.weekly(g, rnd)
+                Assistant.weekly(g, d.number, rnd)
                 if (d.number % 6 == 0) {
                     val leader = g.table(g.userTeam.division).first()
                     g.addNews("Lig lideri", "${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.")

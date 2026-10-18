@@ -135,6 +135,6 @@ fun SponsorOffersCard(g: Game) {
             color = TextDim, fontSize = 13.sp,
         )
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { GameRepo.tab = 1; GameRepo.squadMode = 3 }, modifier = Modifier.fillMaxWidth()) { Text("Teklifleri incele") }
+        Button(onClick = { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 2 }, modifier = Modifier.fillMaxWidth()) { Text("Teklifleri incele") }
     }
 }

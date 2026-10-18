@@ -39,6 +39,52 @@ object GameRepo {
     var leagueSel by mutableIntStateOf(-1)
     var reportOpen by mutableStateOf(false)
     var squadMode by mutableIntStateOf(0)
+    /** Kulüp sekmesi: 0 teknik ekip, 1 tesisler, 2 sponsorlar, 3 finans, 4 taraftar. */
+    var clubMode by mutableIntStateOf(0)
+    var inboxCat by mutableIntStateOf(0)
+    var inboxSel by mutableStateOf<com.supermenajer.game.model.News?>(null)
+    var settingsOpen by mutableStateOf(false)
+
+    // Ana menü sekmeleri
+    const val TAB_HOME = 0
+    const val TAB_SQUAD = 1
+    const val TAB_TACTICS = 2
+    const val TAB_LEAGUE = 3
+    const val TAB_TRANSFER = 4
+    const val TAB_INBOX = 5
+    const val TAB_CLUB = 6
+
+    fun openNews(n: com.supermenajer.game.model.News) {
+        inboxSel = n
+        if (!n.read) {
+            n.read = true
+            changed()
+        }
+    }
+
+    fun readAll() {
+        val g = game ?: return
+        g.news.forEach { it.read = true }
+        changed()
+    }
+
+    /** CM tarzı "Devam": bugün maç varsa maça çık, yoksa sonraki maça kadar ilerle. */
+    fun continueGame() {
+        val g = game ?: return
+        when {
+            g.fired -> tab = TAB_HOME
+            g.seasonOver -> startNewSeason()
+            g.todayUserFixture() != null -> playMatch(live = true)
+            else -> skipToNextMatch()
+        }
+    }
+
+    fun continueLabel(g: Game): String = when {
+        g.fired -> "TEKLİFLER"
+        g.seasonOver -> "YENİ SEZON ▶"
+        g.todayUserFixture() != null -> "MAÇA ÇIK ▶"
+        else -> "DEVAM ▶"
+    }
 
     fun init(d: File) {
         dir = d
@@ -308,7 +354,7 @@ object GameRepo {
         val g = game ?: return
         Season.takeJob(g, teamId)
         StaffLogic.hireDefaults(g)
-        g.addNews("Yeni teknik ekip", "${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kadro → Ekip ekranından değişiklik yapabilirsin.")
+        g.addNews("Yeni teknik ekip", "${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kulüp → Teknik Ekip ekranından değişiklik yapabilirsin.")
         tab = 0
         changed()
     }

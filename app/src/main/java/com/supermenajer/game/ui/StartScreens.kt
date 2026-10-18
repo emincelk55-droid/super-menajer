@@ -1,6 +1,7 @@
 package com.supermenajer.game.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import com.supermenajer.game.model.Leagues
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,12 +94,17 @@ fun TitleScreen() {
                     modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(14.dp),
                 ) { newBtn() }
             }
+            Spacer(Modifier.height(12.dp))
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            androidx.compose.material3.TextButton(onClick = { (ctx as? android.app.Activity)?.finishAndRemoveTask() }) {
+                Text("Oyundan çık", color = TextDim)
+            }
             if (error) {
                 Spacer(Modifier.height(12.dp))
                 Text("Kayıt dosyası okunamadı.", color = Red)
             }
             Spacer(Modifier.height(20.dp))
-            Text("v1.0", color = TextDim, fontSize = 12.sp)
+            Text("v1.1", color = TextDim, fontSize = 12.sp)
         }
     }
 }
@@ -126,7 +132,12 @@ fun NewGameScreen() {
         // Sol panel: ad, ülke, lig ve başla düğmesi
         Column(Modifier.width(330.dp).fillMaxHeight().background(Surface1).padding(14.dp)) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                Text("Yeni Kariyer", fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.IconButton(onClick = { GameRepo.screen = Screen.TITLE }) {
+                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
+                    }
+                    Text("Yeni Kariyer", fontSize = 24.sp, fontWeight = FontWeight.Black)
+                }
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
                     value = name, onValueChange = { name = it.take(24) },

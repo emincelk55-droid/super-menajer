@@ -18,6 +18,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -67,117 +75,261 @@ import com.supermenajer.game.model.Fixture
 import com.supermenajer.game.model.IncomingOffer
 import com.supermenajer.game.model.Game
 
+private class NavItem(val tab: Int, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+
+private val navItems = listOf(
+    NavItem(GameRepo.TAB_HOME, "Ana Sayfa", Icons.Filled.Home),
+    NavItem(GameRepo.TAB_INBOX, "Mesajlar", Icons.Filled.Email),
+    NavItem(GameRepo.TAB_SQUAD, "Kadro", Icons.Filled.Groups),
+    NavItem(GameRepo.TAB_TACTICS, "Taktik", Icons.Filled.SportsSoccer),
+    NavItem(GameRepo.TAB_CLUB, "Kulüp", Icons.Filled.AccountBalance),
+    NavItem(GameRepo.TAB_LEAGUE, "Lig", Icons.Filled.EmojiEvents),
+    NavItem(GameRepo.TAB_TRANSFER, "Transfer", Icons.Filled.SwapHoriz),
+)
+
 @Composable
 fun MainScreen() {
     GameRepo.version
     val g = GameRepo.game ?: return
-    var confirmExit by remember { mutableStateOf(false) }
     BackHandler {
-        if (GameRepo.tab != 0) GameRepo.tab = 0 else confirmExit = true
+        if (GameRepo.tab != GameRepo.TAB_HOME) GameRepo.tab = GameRepo.TAB_HOME else GameRepo.settingsOpen = true
     }
     Row(Modifier.fillMaxSize()) {
-        NavigationRail(containerColor = Surface1, modifier = Modifier.fillMaxHeight().width(76.dp)) {
-            val items = listOf(
-                "Ana Sayfa" to Icons.Filled.Home,
-                "Kadro" to Icons.Filled.Groups,
-                "Taktik" to Icons.Filled.SportsSoccer,
-                "Lig" to Icons.Filled.EmojiEvents,
-                "Transfer" to Icons.Filled.SwapHoriz,
-            )
-            Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
-                items.forEachIndexed { i, (label, icon) ->
-                    NavigationRailItem(
-                        selected = GameRepo.tab == i,
-                        onClick = { GameRepo.tab = i },
-                        icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label, fontSize = 10.sp, maxLines = 1) },
-                        colors = NavigationRailItemDefaults.colors(
-                            selectedIconColor = Color.Black, indicatorColor = Green,
-                            selectedTextColor = Green, unselectedIconColor = TextDim, unselectedTextColor = TextDim,
-                        ),
-                    )
-                }
-            }
-        }
+        NavRail(g)
         Column(Modifier.weight(1f).fillMaxHeight()) {
             TopBar(g)
             Box(Modifier.weight(1f)) {
                 when (GameRepo.tab) {
-                    0 -> HomeTab(g)
-                    1 -> SquadTab(g)
-                    2 -> TacticsTab(g)
-                    3 -> LeagueTab(g)
-                    4 -> TransferTab(g)
+                    GameRepo.TAB_HOME -> HomeTab(g)
+                    GameRepo.TAB_SQUAD -> SquadTab(g)
+                    GameRepo.TAB_TACTICS -> TacticsTab(g)
+                    GameRepo.TAB_LEAGUE -> LeagueTab(g)
+                    GameRepo.TAB_TRANSFER -> TransferTab(g)
+                    GameRepo.TAB_INBOX -> InboxTab(g)
+                    GameRepo.TAB_CLUB -> ClubTab(g)
                 }
             }
         }
     }
     GameRepo.selectedPlayer?.let { PlayerDialog(g, it) }
-    if (confirmExit) {
-        AlertDialog(
-            onDismissRequest = { confirmExit = false },
-            title = { Text("Ana menüye dön?") },
-            text = { Text("İlerlemen otomatik olarak kaydedildi.") },
-            confirmButton = {
-                TextButton(onClick = { GameRepo.save(force = true); confirmExit = false; GameRepo.screen = Screen.TITLE }) { Text("Ana Menü") }
-            },
-            dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Vazgeç") } },
-        )
+    if (GameRepo.settingsOpen) SettingsDialog()
+}
+
+/** Sol menü: sade, ikon + kısa etiket; mesajlarda okunmamış rozeti. */
+@Composable
+private fun NavRail(g: Game) {
+    Column(
+        Modifier.fillMaxHeight().width(68.dp).background(Surface1).padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        navItems.forEach { item ->
+            val sel = GameRepo.tab == item.tab
+            Column(
+                Modifier.clip(RoundedCornerShape(12.dp)).clickable { GameRepo.tab = item.tab }.padding(horizontal = 4.dp, vertical = 1.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(14.dp)).background(if (sel) Green else Color.Transparent)
+                            .padding(horizontal = 12.dp, vertical = 2.dp),
+                    ) {
+                        Icon(item.icon, contentDescription = item.label, tint = if (sel) Color.Black else TextDim, modifier = Modifier.size(20.dp))
+                    }
+                    val badge = if (item.tab == GameRepo.TAB_INBOX) g.unread else 0
+                    if (badge > 0) {
+                        Box(
+                            Modifier.align(Alignment.TopEnd).size(17.dp).clip(CircleShape).background(Red),
+                            contentAlignment = Alignment.Center,
+                        ) { Text(if (badge > 9) "9+" else "$badge", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+                Text(item.label, fontSize = 9.sp, lineHeight = 11.sp, color = if (sel) Green else TextDim, maxLines = 1)
+            }
+        }
     }
 }
 
+/** Üst çubuk: geri, kulüp, tarih, para, ayarlar ve CM tarzı büyük DEVAM düğmesi. */
 @Composable
 private fun TopBar(g: Game) {
     val t = g.userTeam
     Row(
-        Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 14.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TeamBadge(t, 34.dp)
-        Spacer(Modifier.width(10.dp))
+        if (GameRepo.tab != GameRepo.TAB_HOME) {
+            IconButton(onClick = { GameRepo.tab = GameRepo.TAB_HOME }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = TextMain)
+            }
+            Spacer(Modifier.width(4.dp))
+        }
+        TeamBadge(t, 30.dp)
+        Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
-            Text(t.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(t.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val wk = if (g.seasonOver) "Sezon bitti" else g.dayLabel(g.week)
-            Text("${Comp.name(t.division)} · $wk", color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${g.season} · $wk", color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(money(t.budget), color = if (t.budget >= 0) Gold else Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(money(t.budget), color = if (t.budget >= 0) Gold else Red, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            val wages = Economy.squadWages(g, t.id)
             Text(
-                "Maaş ${money(Economy.squadWages(g, t.id)).removePrefix("€")}/${money(t.wageBudget).removePrefix("€")}",
-                color = if (Economy.squadWages(g, t.id) > t.wageBudget) Red else TextDim, fontSize = 11.sp,
+                "Maaş ${money(wages).removePrefix("€")}/${money(t.wageBudget).removePrefix("€")}",
+                color = if (wages > t.wageBudget) Red else TextDim, fontSize = 10.sp,
             )
+        }
+        Spacer(Modifier.width(6.dp))
+        IconButton(onClick = { GameRepo.settingsOpen = true }, modifier = Modifier.size(40.dp)) {
+            Icon(Icons.Filled.Settings, contentDescription = "Ayarlar", tint = TextDim)
+        }
+        Spacer(Modifier.width(4.dp))
+        Button(
+            onClick = { GameRepo.continueGame() },
+            enabled = !g.fired,
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Color.Black),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+        ) { Text(GameRepo.continueLabel(g), fontWeight = FontWeight.Black, fontSize = 14.sp) }
+    }
+}
+
+/** Ayarlar: kaydet, ana menü, oyundan çık. */
+@Composable
+private fun SettingsDialog() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var confirm by remember { mutableStateOf(0) } // 1 ana menü, 2 çıkış
+    var saved by remember { mutableStateOf(false) }
+    WideDialog(onDismissRequest = { GameRepo.settingsOpen = false }, maxWidth = 420.dp) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1).padding(18.dp)) {
+            Text("⚙️ Ayarlar", fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Spacer(Modifier.height(12.dp))
+            when (confirm) {
+                0 -> {
+                    OutlinedButton(onClick = { GameRepo.save(force = true); saved = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (saved) "✓ Kaydedildi" else "💾 Oyunu kaydet")
+                    }
+                    OutlinedButton(onClick = { confirm = 1 }, modifier = Modifier.fillMaxWidth()) { Text("🏠 Ana menüye dön") }
+                    OutlinedButton(onClick = { confirm = 2 }, modifier = Modifier.fillMaxWidth()) { Text("🚪 Oyundan çık", color = Red) }
+                    Spacer(Modifier.height(6.dp))
+                    Button(onClick = { GameRepo.settingsOpen = false }, modifier = Modifier.fillMaxWidth()) { Text("Oyuna dön") }
+                    Text("İlerlemen her gün sonunda otomatik kaydedilir.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+                else -> {
+                    Text(if (confirm == 1) "Ana menüye dönülsün mü?" else "Oyundan çıkılsın mı?", fontWeight = FontWeight.Bold)
+                    Text("Oyun kaydedilecek.", color = TextDim, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { confirm = 0 }, modifier = Modifier.weight(1f)) { Text("Vazgeç") }
+                        Button(
+                            onClick = {
+                                GameRepo.save(force = true)
+                                GameRepo.settingsOpen = false
+                                if (confirm == 1) GameRepo.screen = Screen.TITLE
+                                else { GameRepo.flush(); (ctx as? android.app.Activity)?.finishAndRemoveTask() }
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("Evet") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Ana sayfa: solda bugünün işi ve yapılacaklar, sağda kulübün durumu. */
+@Composable
+private fun HomeTab(g: Game) {
+    Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.weight(1.1f).fillMaxHeight(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            when {
+                g.fired -> item { FiredCard(g) }
+                g.seasonOver -> item { SeasonEndCard(g) }
+                else -> {
+                    val f = g.todayUserFixture()
+                    item { if (f != null) NextMatchCard(g, f) else RestDayCard(g) }
+                }
+            }
+            if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) item { CareerOfferCard(g) }
+            g.press?.let { q -> item { PressCard(g, q) } }
+            if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
+            if (g.sponsorOffers.isNotEmpty() && !g.fired) item { SponsorOffersCard(g) }
+            if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
+        }
+        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item { ClubStatusCard(g) }
+            item { LatestMessagesCard(g) }
+            item { MiniTable(g) }
+            item { RecentResults(g) }
+        }
+    }
+}
+
+/** Kulübün durumu tek bakışta: hedef, yönetim, taraftar, soyunma odası, form. */
+@Composable
+private fun ClubStatusCard(g: Game) {
+    val t = g.userTeam
+    val pos = g.position(t.id)
+    val target = Season.objectiveTarget(t.expected)
+    val (status, col) = when {
+        t.played < 4 -> "Sezon yeni başladı" to TextDim
+        pos <= target -> "Hedef yolunda ✓" to Green
+        pos <= target + 3 -> "Hedefin biraz gerisinde" to Gold
+        else -> "Yönetim endişeli!" to Red
+    }
+    SectionCard("Kulübün durumu") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Hedef: ${Season.objectiveText(t)}", fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(status, color = col, fontSize = 12.sp)
+            }
+            Text(if (t.played == 0) "–" else "$pos.", fontSize = 26.sp, fontWeight = FontWeight.Black, color = col)
+        }
+        Spacer(Modifier.height(8.dp))
+        val c = g.confidence
+        StatusBar("Yönetim", c / 100, "${c.toInt()}%", when { c >= 60 -> Green; c >= 30 -> Gold; else -> Red })
+        StatusBar("Taraftar", g.fans / 100, com.supermenajer.game.game.Fans.mood(g.fans), when { g.fans >= 70 -> Green; g.fans >= 40 -> Gold; else -> Red })
+        val squad = g.squad(t.id)
+        val morale = if (squad.isEmpty()) 60.0 else squad.sumOf { it.morale } / squad.size
+        StatusBar("Soyunma odası", morale / 100, moraleText(morale), when { morale >= 65 -> Green; morale >= 45 -> Gold; else -> Red })
+        if (c < 25 && !g.fired) Text("⚠️ Koltuğun sallanıyor!", color = Red, fontSize = 12.sp)
+        if (t.form.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Form", color = TextDim, fontSize = 12.sp, modifier = Modifier.width(96.dp))
+                FormDots(t.form)
+            }
         }
     }
 }
 
 @Composable
-private fun HomeTab(g: Game) {
-    LazyVerticalStaggeredGrid(
-        StaggeredGridCells.Adaptive(330.dp),
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(10.dp),
-        verticalItemSpacing = 10.dp,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        when {
-            g.fired -> item { FiredCard(g) }
-            g.seasonOver -> item { SeasonEndCard(g) }
-            else -> {
-                val f = g.todayUserFixture()
-                item { if (f != null) NextMatchCard(g, f) else RestDayCard(g) }
+private fun StatusBar(label: String, value: Double, text: String, color: Color) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = TextDim, fontSize = 12.sp, modifier = Modifier.width(96.dp), maxLines = 1)
+        Bar(value.toFloat(), color, Modifier.weight(1f), 7.dp)
+        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, modifier = Modifier.width(92.dp).padding(start = 8.dp))
+    }
+}
+
+/** Son mesajlar: başlıklar, okunmamışlar kırmızı nokta ile; dokununca gelen kutusu. */
+@Composable
+private fun LatestMessagesCard(g: Game) {
+    SectionCard("Son mesajlar" + if (g.unread > 0) " · ${g.unread} okunmamış" else "") {
+        g.news.take(4).forEach { n ->
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                    .clickable { GameRepo.openNews(n); GameRepo.inboxCat = 0; GameRepo.tab = GameRepo.TAB_INBOX }
+                    .padding(vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(if (n.read) Color.Transparent else Red))
+                Spacer(Modifier.width(8.dp))
+                Text(n.title, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                    fontWeight = if (n.read) FontWeight.Normal else FontWeight.Bold, color = if (n.read) TextDim else TextMain)
             }
         }
-        if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) item { CareerOfferCard(g) }
-        g.press?.let { q -> item { PressCard(g, q) } }
-        if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
-        if (g.sponsorOffers.isNotEmpty() && !g.fired) item { SponsorOffersCard(g) }
-        if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
-        item { BoardCard(g) }
-        item { FansCard(g) }
-        item { FinanceCard(g) }
-        item { MiniTable(g) }
-        item { RecentResults(g) }
-        item { NewsCard(g) }
+        TextButton(onClick = { GameRepo.tab = GameRepo.TAB_INBOX }) { Text("Gelen kutusu →") }
     }
 }
 
@@ -191,44 +343,43 @@ private fun NextMatchCard(g: Game, f: Fixture) {
     } else {
         "${Comp.name(f.comp)} · ${g.dayLabel(f.week)}"
     }
-    SectionCard("Sıradaki maç · $title") {
+    SectionCard("Bugün · $title") {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             for ((i, t) in listOf(h, a).withIndex()) {
-                if (i == 1) Text("VS", fontSize = 22.sp, fontWeight = FontWeight.Black, color = TextDim)
+                if (i == 1) Text("VS", fontSize = 18.sp, fontWeight = FontWeight.Black, color = TextDim, modifier = Modifier.padding(horizontal = 6.dp))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    TeamBadge(t, 56.dp)
-                    Spacer(Modifier.height(6.dp))
-                    Text(t.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp)
-                    Text(teamSubtitle(g, t), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center)
+                    TeamBadge(t, 44.dp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(t.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(teamSubtitle(g, t), color = TextDim, fontSize = 11.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
-        if (Comp.isKnockout(f.comp, f.round)) {
-            Spacer(Modifier.height(8.dp))
-            Text("Tek maç eleme. Beraberlikte penaltılar!", color = Gold, fontSize = 12.sp)
-        } else if (f.comp == Comp.EURO) {
-            Spacer(Modifier.height(8.dp))
-            Text("Avrupa Kupası grup maçı · Gruptan ilk 2 çıkar. Galibiyet primi: €600K", color = Gold, fontSize = 12.sp)
+        val note = when {
+            Comp.isKnockout(f.comp, f.round) -> "Tek maç eleme · beraberlikte penaltılar!"
+            f.comp == Comp.EURO -> "Grup maçı · ilk 2 çıkar · galibiyet primi €600K"
+            else -> null
         }
+        if (note != null) Text(note, color = Gold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         if (issues.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
             Text(
-                "⚠️ İlk 11'de oynayamayacak oyuncu var (${issues.joinToString { it.name }}). Maçta otomatik değiştirilecek.",
-                color = Gold, fontSize = 12.sp,
+                "⚠️ İlk 11'de oynayamayan: ${issues.joinToString { it.name }} (maçta otomatik değişir)",
+                color = Gold, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
             )
         }
-        Spacer(Modifier.height(10.dp))
-        OpponentReport(g, if (f.home == g.userTeamId) a else h)
-        Spacer(Modifier.height(10.dp))
-        Button(
-            onClick = { GameRepo.playMatch(live = true) },
-            modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
-        ) { Text("▶  MAÇA ÇIK", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(
-            onClick = { GameRepo.playMatch(live = false) },
-            modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-        ) { Text("Hızlı Sonuç") }
+        OpponentReport(g, if (f.home == g.userTeamId) a else h)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { GameRepo.playMatch(live = true) },
+                modifier = Modifier.weight(1.4f).height(46.dp), shape = RoundedCornerShape(12.dp),
+            ) { Text("▶  MAÇA ÇIK", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+            OutlinedButton(
+                onClick = { GameRepo.playMatch(live = false) },
+                modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp),
+            ) { Text("Hızlı sonuç", maxLines = 1) }
+        }
     }
 }
 
@@ -239,18 +390,18 @@ private fun RestDayCard(g: Game) {
         Text(
             when (d?.type) {
                 1 -> "Bu kupa turunda maçımız yok."
-                2 -> "Bu Avrupa gecesinde maçımız yok. Diğer maçları Lig → Avrupa sekmesinden takip edebilirsin."
+                2 -> "Bu Avrupa gecesinde maçımız yok."
                 else -> "Bugün maçımız yok."
             },
             fontSize = 15.sp,
         )
         g.nextUserFixture()?.let { nf ->
             val opp = g.team(if (nf.home == g.userTeamId) nf.away else nf.home)
-            Spacer(Modifier.height(6.dp))
-            Text("Sıradaki maç: ${opp.name} · ${g.dayLabel(nf.week)}", color = TextDim, fontSize = 13.sp)
+            Spacer(Modifier.height(4.dp))
+            Text("Sıradaki maç: ${opp.name} · ${g.dayLabel(nf.week)}", color = TextDim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = { GameRepo.skipToNextMatch() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp)) {
+        Spacer(Modifier.height(10.dp))
+        Button(onClick = { GameRepo.skipToNextMatch() }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp)) {
             Text("⏩  SONRAKİ MAÇA GİT", fontWeight = FontWeight.Bold)
         }
     }
@@ -355,7 +506,7 @@ private fun SeasonEndCard(g: Game) {
 }
 
 @Composable
-private fun FansCard(g: Game) {
+fun FansCard(g: Game) {
     val f = g.fans
     val col = when { f >= 70 -> Green; f >= 40 -> Gold; else -> Red }
     SectionCard("📣 Taraftar") {
@@ -382,7 +533,7 @@ private fun FansCard(g: Game) {
 }
 
 @Composable
-private fun BoardCard(g: Game) {
+fun BoardCard(g: Game) {
     val t = g.userTeam
     val pos = g.position(t.id)
     val target = Season.objectiveTarget(t.expected)
@@ -564,7 +715,7 @@ fun ReportLines(report: Map<String, Long>) {
 }
 
 @Composable
-private fun FinanceCard(g: Game) {
+fun FinanceCard(g: Game) {
     val t = g.userTeam
     val wages = Economy.squadWages(g, t.id)
     var showLast by remember { mutableStateOf(false) }

@@ -209,7 +209,36 @@ class Day(val type: Int, val number: Int)
 class IncomingOffer(val playerId: Int, val teamId: Int, var price: Long, val day: Int)
 
 @Serializable
-class News(val season: Int, val week: Int, val title: String, val body: String)
+class News(
+    val season: Int,
+    val week: Int,
+    val title: String,
+    val body: String,
+    /** Gelen kutusu: okundu mu, kategori (1 maç, 2 transfer, 3 kulüp; -1 eski kayıt). */
+    var read: Boolean = false,
+    val cat: Int = -1,
+) {
+    val category: Int get() = if (cat >= 0) cat else Inbox.categorize(title)
+}
+
+/** Gelen kutusu kategorileri. */
+object Inbox {
+    const val ALL = 0
+    const val MATCH = 1
+    const val TRANSFER = 2
+    const val CLUB = 3
+    val names = listOf("Tümü", "Maç", "Transfer", "Kulüp")
+    private val clubWords = listOf("sponsor", "inşaat", "taraftar", "yönetim", "bütçe", "teknik ekip", "altyapı", "güncelleme", "kovul", "kariyer", "görev", "stad", "yardımcı antrenör", "hoş geldin", "avrupa'dayız", "ödül", "tesis")
+    private val transferWords = listOf("transfer", "satış", "teklif", "kiralık", "gözlemci", "sözleşme", "serbest", "jübile", "ayrıl")
+    fun categorize(title: String): Int {
+        val t = title.lowercase()
+        return when {
+            clubWords.any { it in t } -> CLUB
+            transferWords.any { it in t } -> TRANSFER
+            else -> MATCH
+        }
+    }
+}
 
 @Serializable
 class SeasonRecord(
@@ -424,9 +453,11 @@ class Game(
     fun nextUserFixture(): Fixture? =
         fixtures.filter { !it.played && it.involves(userTeamId) }.minByOrNull { it.week }
 
+    val unread: Int get() = news.count { !it.read }
+
     fun addNews(title: String, body: String) {
-        news.add(0, News(season, week, title, body))
-        while (news.size > 60) news.removeAt(news.size - 1)
+        news.add(0, News(season, week, title, body, cat = Inbox.categorize(title)))
+        while (news.size > 80) news.removeAt(news.size - 1)
     }
 }
 
