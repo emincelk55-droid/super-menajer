@@ -68,7 +68,17 @@ import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private val speeds = listOf(650L, 280L, 90L)
+/** Hız modları: dakika süresi, gerilim süresi, önemli olay sonrası bekleme (ms). */
+private class Pace(val label: String, val minute: Long, val suspense: Long, val pause: Long)
+
+private val paces = listOf(
+    Pace("▶ Normal", 650, 1500, 900),
+    Pace("⏩ Hızlı", 220, 750, 350),
+    Pace("⚡ Özet", 60, 1400, 900),
+)
+
+/** CM tarzı büyük anlatım satırı. kind: 0 normal, 1 gerilim, 2 gol */
+private class Ticker(val minute: Int, val text: String, val side: Int, val kind: Int)
 
 private fun colorDistance(a: Color, b: Color) = abs(a.red - b.red) + abs(a.green - b.green) + abs(a.blue - b.blue)
 
@@ -78,6 +88,8 @@ fun MatchScreen() {
     var tick by remember { mutableIntStateOf(0) }
     var running by remember { mutableStateOf(true) }
     var speed by remember { mutableIntStateOf(0) }
+    var revealed by remember { mutableIntStateOf(sim.events.size) }
+    var ticker by remember { mutableStateOf(sim.events.lastOrNull()?.let { Ticker(it.minute, it.text, it.side, 0) }) }
     var tab by remember { mutableIntStateOf(0) }
     var showSubs by remember { mutableStateOf(false) }
     var goalFlash by remember { mutableStateOf<MatchEvent?>(null) }
@@ -86,32 +98,50 @@ fun MatchScreen() {
     BackHandler { running = false }
 
     LaunchedEffect(running, speed) {
+        val pace = paces[speed]
+        // Duraklatılınca bekleyen olayları göster
+        if (!running) { revealed = sim.events.size; return@LaunchedEffect }
         while (running && !sim.finished) {
-            delay(speeds[speed])
+            delay(pace.minute)
             val before = sim.events.size
             sim.step()
             tick++
-            val goal = sim.events.drop(before).lastOrNull { it.type == Ev.GOAL }
-            if (goal != null) {
-                goalFlash = goal
-                if (goal.side == sim.userSide?.index) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            val new = sim.events.subList(before, sim.events.size).toList()
+            for ((k, e) in new.withIndex()) {
+                if (e.buildUp.isNotEmpty()) {
+                    ticker = Ticker(e.minute, e.buildUp, e.side, 1)
+                    delay(pace.suspense)
+                }
+                revealed = before + k + 1
+                val isGoal = e.type == Ev.GOAL
+                ticker = Ticker(e.minute, e.text, e.side, if (isGoal) 2 else 0)
+                if (isGoal) {
+                    goalFlash = e
+                    if (e.side == sim.userSide?.index) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+                if (isGoal || e.buildUp.isNotEmpty() || e.type == Ev.RED || e.type == Ev.HALF || e.type == Ev.FULL) delay(pace.pause)
             }
             if (sim.minute == 45) running = false
         }
+        revealed = sim.events.size
     }
     LaunchedEffect(goalFlash) {
         if (goalFlash != null) { delay(1800); goalFlash = null }
     }
     tick // yeniden çizim tetikleyicisi
+    val shown = revealed.coerceAtMost(sim.events.size)
+    val shownGoals = sim.events.take(shown).filter { it.type == Ev.GOAL }
+    val scoreH = shownGoals.count { it.side == 0 }
+    val scoreA = shownGoals.count { it.side == 1 }
 
     val homeC = Color(sim.home.team.color1)
     val awayC = Color(sim.away.team.color1).let { if (colorDistance(it, homeC) < 0.5f) Color(sim.away.team.color2) else it }
 
     Column(Modifier.fillMaxSize()) {
-        ScoreBoard(sim)
+        ScoreBoard(sim, scoreH, scoreA, shown >= sim.events.size)
         LiveStrip(sim, homeC, awayC)
         Box(Modifier.fillMaxWidth()) {
-            LivePitch(sim, homeC, awayC, speeds[speed].toInt())
+            LivePitch(sim, homeC, awayC, paces[speed].minute.toInt().coerceAtLeast(250))
             androidx.compose.animation.AnimatedVisibility(
                 visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
                 modifier = Modifier.align(Alignment.Center),
@@ -124,6 +154,7 @@ fun MatchScreen() {
                 )
             }
         }
+        TickerBox(ticker, homeC, awayC)
         // Kontroller
         Row(
             Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 10.dp, vertical = 8.dp),
@@ -131,7 +162,7 @@ fun MatchScreen() {
         ) {
             if (!sim.finished) {
                 Chip(if (running) "⏸" else "▶", false) { running = !running }
-                listOf("1x", "2x", "4x").forEachIndexed { i, s -> Chip(s, speed == i) { speed = i } }
+                paces.forEachIndexed { i, pc -> Chip(pc.label, speed == i) { speed = i } }
                 Spacer(Modifier.weight(1f))
                 val us = sim.userSide
                 Chip("🔁 ${us?.subsLeft ?: 0}", false) { running = false; showSubs = true }
@@ -164,7 +195,7 @@ fun MatchScreen() {
             }
         } else if (!running) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
-                TextButton(onClick = { sim.runToEnd(); tick++ }) { Text("⏭ Sonuca git", color = TextDim) }
+                TextButton(onClick = { sim.runToEnd(); revealed = sim.events.size; tick++ }) { Text("⏭ Sonuca git", color = TextDim) }
             }
         }
         Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -174,7 +205,7 @@ fun MatchScreen() {
         }
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> Commentary(sim, homeC, awayC)
+                0 -> Commentary(sim, homeC, awayC, shown)
                 1 -> Stats(sim)
                 else -> Ratings(sim)
             }
@@ -183,6 +214,30 @@ fun MatchScreen() {
     if (showSubs) {
         val us = sim.userSide
         if (us != null) SubDialog(sim, us, onClose = { showSubs = false; tick++ })
+    }
+}
+
+@Composable
+private fun TickerBox(t: Ticker?, homeC: Color, awayC: Color) {
+    val c = when (t?.side) { 0 -> homeC; 1 -> awayC; else -> TextDim }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp)
+            .background(if (t?.kind == 2) c.copy(alpha = 0.35f) else Surface2)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (t == null) return@Row
+        Text("${t.minute}'", color = TextDim, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.width(36.dp))
+        Box(Modifier.width(4.dp).height(36.dp).background(c))
+        Spacer(Modifier.width(10.dp))
+        Text(
+            if (t.kind == 1) "⚡ ${t.text}" else t.text,
+            fontSize = if (t.kind == 2) 18.sp else 16.sp,
+            fontWeight = if (t.kind == 0) FontWeight.Medium else FontWeight.Bold,
+            fontStyle = if (t.kind == 1) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+            color = if (t.kind == 1) Gold else TextMain,
+            maxLines = 3,
+        )
     }
 }
 
@@ -201,7 +256,7 @@ private fun Banner(title: String, sub: String?, action: @Composable () -> Unit) 
 }
 
 @Composable
-private fun ScoreBoard(sim: MatchSim) {
+private fun ScoreBoard(sim: MatchSim, hg: Int = sim.home.goals, ag: Int = sim.away.goals, revealedAll: Boolean = true) {
     Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 10.dp)) {
         val f = sim.fixture
         Text(
@@ -217,9 +272,9 @@ private fun ScoreBoard(sim: MatchSim) {
                 Text(sim.home.team.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text("${sim.home.goals} - ${sim.away.goals}", fontSize = 30.sp, fontWeight = FontWeight.Black)
-                Text(if (sim.finished) "MS" else "${sim.minute}'", color = Green, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                if (sim.penHome >= 0) Text("Pen. ${sim.penHome}-${sim.penAway}", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("$hg - $ag", fontSize = 30.sp, fontWeight = FontWeight.Black)
+                Text(if (sim.finished && revealedAll) "MS" else "${sim.minute}'", color = Green, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                if (sim.penHome >= 0 && revealedAll) Text("Pen. ${sim.penHome}-${sim.penAway}", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                 Text(sim.away.team.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
@@ -360,8 +415,8 @@ private fun evIcon(t: Ev) = when (t) {
 }
 
 @Composable
-private fun Commentary(sim: MatchSim, homeC: Color, awayC: Color) {
-    val list = sim.events.asReversed().toList()
+private fun Commentary(sim: MatchSim, homeC: Color, awayC: Color, shown: Int = sim.events.size) {
+    val list = sim.events.take(shown).asReversed()
     LazyColumn(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
         items(list) { e ->
             val isGoal = e.type == Ev.GOAL

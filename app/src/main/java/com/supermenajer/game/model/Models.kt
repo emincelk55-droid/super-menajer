@@ -45,6 +45,14 @@ class Player(
     var contractYears: Int = 0,
     /** Sözleşmedeki haftalık maaş (0 ise talep edilen maaş kullanılır). */
     var salary: Long = 0,
+    /** Kiralıktaysa asıl kulübü, değilse -1. */
+    var loanFrom: Int = -1,
+    /** Mutsuz ve transfer talep etti. */
+    var wantsAway: Boolean = false,
+    /** Son birebir konuşmanın zamanı (sezon*1000 + hafta). */
+    var lastTalk: Int = 0,
+    /** Forma sözü verildi; gelecek hafta 11'de değilse moral düşer. */
+    var promised: Boolean = false,
 ) {
     val overall: Int get() = ovrAt(pos)
 
@@ -201,6 +209,7 @@ class SeasonRecord(
     val userDivision: Int = 0,
     val euroWinner: String = "",
     val leagueName: String = "Süper Lig",
+    val awards: String = "",
 )
 
 /** Maç sonrası basın toplantısı sorusu. */
@@ -239,6 +248,18 @@ class Game(
     /** v0.4 kayıtlarında yeni ligler bir sonraki sezon başında kurulur. */
     var worldUpgradePending: Boolean = false,
     var press: PressQuestion? = null,
+    /** Gözlemcinin tam olarak tanıdığı oyuncular. */
+    var scouted: MutableSet<Int> = mutableSetOf(),
+    /** Raporu yarın gelecek oyuncular. */
+    var scoutQueue: MutableList<Int> = mutableListOf(),
+    /** Gözlemcinin çalıştığı ülke ("" = kendi ülken). */
+    var scoutCountry: String = "",
+    /** 0 genç yetenek, 1 hazır oyuncu, 2 kelepir */
+    var scoutFocus: Int = 0,
+    /** Gözlem listesi. */
+    var shortlist: MutableList<Int> = mutableListOf(),
+    /** jobOffers dolu ve fired=false ise: başarı sonrası gelen teklifler. */
+    var careerOffer: Boolean = false,
 ) {
     private class Index(
         val byId: HashMap<Int, Player>,
@@ -269,6 +290,10 @@ class Game(
 
     /** Oyuncunun takımını değiştirir (indeksi de günceller). */
     fun movePlayer(p: Player, teamId: Int) {
+        if (p.teamId != teamId) {
+            p.wantsAway = false
+            p.promised = false
+        }
         idx?.let {
             it.byTeam[p.teamId]?.remove(p)
             it.byTeam.getOrPut(teamId) { mutableListOf() }.add(p)

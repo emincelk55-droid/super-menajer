@@ -343,6 +343,7 @@ private fun HistoryView(g: Game) {
                 if (r.cupWinner.isNotEmpty()) Text("Kupa: ${r.cupWinner}", color = TextDim, fontSize = 13.sp)
                 if (r.euroWinner.isNotEmpty()) Text("Avrupa: ${r.euroWinner}", color = TextDim, fontSize = 13.sp)
                 Text("Gol kralı: ${r.topScorer}", color = TextDim, fontSize = 13.sp)
+                if (r.awards.isNotEmpty()) Text("🏅 ${r.awards}", color = Gold, fontSize = 12.sp)
             }
         }
     }

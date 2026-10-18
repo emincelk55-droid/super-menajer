@@ -50,10 +50,15 @@ class ScreensTest {
         shot("02_negotiate")
         GameRepo.selectedPlayer = null
         shot("03_transfer")
+        GameRepo.tab = 1
+        GameRepo.selectedPlayer = g.squad(g.userTeamId).filter { it.age <= 21 }.minBy { it.overall }
+        shot("03b_own_player")
+        GameRepo.selectedPlayer = null
         advance(4)
         g.offers += IncomingOffer(g.squad(g.userTeamId).maxBy { it.overall }.id, g.divisionTeams(12)[0].id, 20_000_000, g.week)
         g.press = PressQuestion("Rakip karşısında galibiyetin anahtarı neydi?", listOf("Oyuncularımın mücadelesi.", "Taktiğimiz tuttu, plan işledi.", "Henüz iyi oynamıyoruz."), 1)
-        GameRepo.tab = 0; shot("04_home")
+        GameRepo.tab = 0; GameRepo.reportOpen = true; shot("04_home")
+        GameRepo.reportOpen = false
         g.press = null
         GameRepo.tab = 3; GameRepo.leagueTab = 0; GameRepo.leagueSel = 10; shot("05_league_eng")
         GameRepo.leagueSel = 0; shot("06_league_tr")
@@ -64,8 +69,9 @@ class ScreensTest {
         // canlı maç, devre arası
         while (g.todayUserFixture() == null && !g.seasonOver) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)
-        repeat(45) { GameRepo.match!!.step() }
-        shot("11_halftime")
+        repeat(30) { GameRepo.match!!.step() }
+        shot("11_match_ticker")
+        repeat(15) { GameRepo.match!!.step() }
         repeat(20) { GameRepo.match!!.step() }
         shot("12_match")
         GameRepo.finishMatch()

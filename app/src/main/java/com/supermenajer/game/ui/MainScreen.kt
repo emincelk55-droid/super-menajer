@@ -155,6 +155,7 @@ private fun HomeTab(g: Game) {
                 item { if (f != null) NextMatchCard(g, f) else RestDayCard(g) }
             }
         }
+        if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) item { CareerOfferCard(g) }
         g.press?.let { q -> item { PressCard(g, q) } }
         if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
         if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
@@ -202,7 +203,9 @@ private fun NextMatchCard(g: Game, f: Fixture) {
                 color = Gold, fontSize = 12.sp,
             )
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
+        OpponentReport(g, if (f.home == g.userTeamId) a else h)
+        Spacer(Modifier.height(10.dp))
         Button(
             onClick = { GameRepo.playMatch(live = true) },
             modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
@@ -504,7 +507,7 @@ fun EuroGroupCard(g: Game, group: Int) {
 @Composable
 fun ReportLines(report: Map<String, Long>) {
     if (report.isEmpty()) return
-    val order = listOf(Economy.PRIZE, Economy.BONUS, Economy.BOARD, Economy.EURO, Economy.CUP, Economy.TICKETS, Economy.SALES, Economy.BUYS)
+    val order = listOf(Economy.PRIZE, Economy.BONUS, Economy.BOARD, Economy.EURO, Economy.CUP, Economy.TICKETS, Economy.SALES, Economy.BUYS, Economy.SCOUTING)
     report.entries.sortedBy { order.indexOf(it.key).let { i -> if (i < 0) 99 else i } }.forEach { (k, v) ->
         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
             Text(k, color = TextDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
@@ -579,5 +582,70 @@ private fun PressCard(g: Game, q: PressQuestion) {
             ) { Text(a, fontSize = 13.sp, textAlign = TextAlign.Center) }
         }
         TextButton(onClick = { GameRepo.skipPress() }) { Text("Yorum yapmadan geç", color = TextDim) }
+    }
+}
+
+@Composable
+private fun CareerOfferCard(g: Game) {
+    SectionCard("💼 Kariyer teklifi") {
+        Text("Başarın büyük kulüplerin dikkatini çekti! Kabul edersen hemen yeni takımının başına geçersin.", fontSize = 13.sp, color = TextDim)
+        Spacer(Modifier.height(8.dp))
+        g.jobOffers.mapNotNull { g.teamOrNull(it) }.forEach { t ->
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TeamBadge(t, 36.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(t.name, fontWeight = FontWeight.Bold)
+                    Text("${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · Bütçe ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
+                }
+                Button(onClick = { GameRepo.takeJob(t.id) }) { Text("Kabul") }
+            }
+        }
+        TextButton(onClick = { GameRepo.declineCareerOffer() }) { Text("Reddet, kulübümde kalıyorum") }
+    }
+}
+
+/** Yardımcı antrenörün rakip raporu ve önerileri. */
+@Composable
+private fun OpponentReport(g: Game, opp: Team) {
+    val open = GameRepo.reportOpen
+    val us = g.userTeam
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp)) {
+        Row(Modifier.fillMaxWidth().clickable { GameRepo.reportOpen = !open }, verticalAlignment = Alignment.CenterVertically) {
+            Text("📋 Yardımcı antrenör: rakip raporu", fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text(if (open) "▲" else "▼", color = TextDim)
+        }
+        if (!open) return@Column
+        val (oa, om, od) = com.supermenajer.game.game.Lineups.lineStrength(g, opp)
+        val (ua, um, ud) = com.supermenajer.game.game.Lineups.lineStrength(g, us)
+        Spacer(Modifier.height(8.dp))
+        Text("${opp.name}: ${opp.formation} · ${listOf("Defansif", "Dengeli", "Hücum")[opp.mentality]}" + if (opp.form.isNotEmpty()) " · Form ${opp.form}" else "", fontSize = 13.sp)
+        Spacer(Modifier.height(6.dp))
+        listOf(Triple("Hücum", ua, oa), Triple("Orta saha", um, om), Triple("Savunma", ud, od)).forEach { (n, mine, theirs) ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("$mine", fontWeight = FontWeight.Bold, color = if (mine >= theirs) Green else Red, modifier = Modifier.width(32.dp))
+                Text(n, color = TextDim, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("$theirs", fontWeight = FontWeight.Bold, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+            }
+        }
+        val danger = opp.lineup.mapNotNull { g.player(it) }.maxByOrNull { it.overall }
+        val scorer = g.squad(opp.id).maxByOrNull { it.goals }?.takeIf { it.goals > 0 }
+        danger?.let { Text("En tehlikeli oyuncu: ${it.name} (${it.pos.short})", fontSize = 12.sp) }
+        scorer?.let { Text("Golcüsü: ${it.name} (${it.goals} gol)", fontSize = 12.sp) }
+        Spacer(Modifier.height(6.dp))
+        val advice = mutableListOf<String>()
+        if (oa > ud + 3) advice += "Hücumları güçlü. Defansif oynamayı ya da 5-3-2'yi düşünebilirsin."
+        if (ua > od + 3) advice += "Savunmaları zayıf. Hücum oynayıp üstlerine gitmeliyiz!"
+        if (om > um + 3) advice += "Orta sahada ezilebiliriz. 4-5-1 veya 4-2-3-1 ile orta sahayı kalabalıklaştır."
+        if (um > om + 3) advice += "Orta saha bizde. Yüksek presle topu sürekli kazanabiliriz."
+        val tired = us.lineup.mapNotNull { g.player(it) }.filter { it.fitness < 75 }
+        if (tired.isNotEmpty()) advice += "${tired.joinToString { it.name }} yorgun (kondisyon %75 altı). Dinlendirmeyi düşün."
+        val unhappy = us.lineup.mapNotNull { g.player(it) }.filter { it.morale < 30 }
+        if (unhappy.isNotEmpty()) advice += "${unhappy.joinToString { it.name }} çok mutsuz, performansı düşük olabilir."
+        if (advice.isEmpty()) advice += "Güçler denk. Dengeli oynamak mantıklı hocam."
+        advice.forEach { Text("🗣 $it", fontSize = 12.sp, color = Gold, modifier = Modifier.padding(vertical = 1.dp)) }
     }
 }

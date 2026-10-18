@@ -53,6 +53,7 @@ import com.supermenajer.game.game.money
 import com.supermenajer.game.model.Game
 import com.supermenajer.game.model.Player
 import com.supermenajer.game.model.Pos
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 @Composable
@@ -98,6 +99,19 @@ fun SquadTab(g: Game) {
             }
             items(list, key = { it.id }) { p -> PlayerRow(g, p, p.id in t.lineup) }
         }
+        val loans = g.players.filter { it.loanFrom == t.id }
+        if (loans.isNotEmpty()) {
+            item(key = "loans") {
+                Text(
+                    "KİRALIKTAKİLER (${loans.size})", color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 14.dp, top = 14.dp, bottom = 4.dp),
+                )
+            }
+            items(loans, key = { "L" + it.id }) { p ->
+                val club = g.teamOrNull(p.teamId)
+                PlayerRow(g, p, false, extra = "${club?.short ?: "-"} · ${p.apps}M ${p.goals}G · ${p.startOvr}→${p.overall}")
+            }
+        }
     }
 }
 
@@ -118,6 +132,8 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
                 if (p.startOvr > 0 && dev != 0) Text(if (dev > 0) "  ▲$dev" else "  ▼${-dev}", fontSize = 12.sp, color = if (dev > 0) Green else Red, fontWeight = FontWeight.Bold)
                 if (p.injuredWeeks > 0) Text("  🚑${p.injuredWeeks}h", fontSize = 12.sp, color = Red)
                 if (p.teamId == g.userTeamId && p.contractYears == 1) Text("  📝", fontSize = 12.sp)
+                if (p.teamId == g.userTeamId && p.wantsAway) Text("  😠", fontSize = 12.sp)
+                if (!com.supermenajer.game.game.Scouting.known(g, p) && p.teamId != g.userTeamId) Text("  ?", fontSize = 12.sp, color = TextDim)
                 if (p.suspended > 0) Text("  🟥", fontSize = 12.sp)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -129,13 +145,15 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
             }
         }
         Spacer(Modifier.width(8.dp))
-        OvrBadge(p.overall)
+        PlayerOvrBadge(g, p)
     }
 }
 
 @Composable
 fun PlayerDialog(g: Game, p: Player) {
     val own = p.teamId == g.userTeamId
+    val loaned = p.loanFrom == g.userTeamId
+    val known = com.supermenajer.game.game.Scouting.known(g, p)
     var offer by remember(p.id) { mutableStateOf<Offer?>(null) }
     var message by remember(p.id) { mutableStateOf<String?>(null) }
     val team = if (p.teamId >= 0) g.team(p.teamId) else null
@@ -145,8 +163,21 @@ fun PlayerDialog(g: Game, p: Player) {
                 Text(it, color = Gold, fontSize = 13.sp)
                 Spacer(Modifier.height(8.dp))
             }
-            if (own) {
+            if (loaned) {
+                Text("Kiralıkta: ${team?.name} (${team?.let { g.leagueName(it) }})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                OutlinedButton(onClick = { GameRepo.recallLoan(p); GameRepo.selectedPlayer = null }, modifier = Modifier.fillMaxWidth()) { Text("Kiralıktan geri çağır") }
+            } else if (own) {
                 val t = g.userTeam
+                if (p.wantsAway) Text("😠 Transfer talep etti. Forma ver, konuş ya da sat.", color = Red, fontSize = 13.sp)
+                Text("BİREBİR KONUŞMA" + if (!GameRepo.canTalk(p)) " (bu hafta konuşuldu)" else "", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("👏 Övgü", "🗣 Eleştiri", "🤝 Forma sözü").forEachIndexed { i, n ->
+                        Chip(n, false, Modifier.weight(1f)) { if (GameRepo.canTalk(p)) message = GameRepo.talkToPlayer(p, i) }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
                 if (p.id in t.lineup) {
                     OutlinedButton(onClick = { GameRepo.removeFromLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("Yedeğe Al") }
                 } else if (p.available) {
@@ -154,6 +185,10 @@ fun PlayerDialog(g: Game, p: Player) {
                 }
                 Spacer(Modifier.height(6.dp))
                 ContractBox(g, p) { message = it }
+                if (p.age <= 23 && p.id !in t.lineup) {
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedButton(onClick = { GameRepo.loanOut(p)?.let { message = it } }, modifier = Modifier.fillMaxWidth()) { Text("🔁 Kiralık gönder (gelişsin)") }
+                }
                 Spacer(Modifier.height(6.dp))
                 val o = offer
                 if (o == null) {
@@ -173,6 +208,13 @@ fun PlayerDialog(g: Game, p: Player) {
                     }
                 }
             } else {
+                if (!known) {
+                    val requested = com.supermenajer.game.game.Scouting.requested(g, p)
+                    OutlinedButton(
+                        onClick = { message = GameRepo.scout(p) }, enabled = !requested, modifier = Modifier.fillMaxWidth(),
+                    ) { Text(if (requested) "🔍 Gözlemci izliyor, rapor yarın" else "🔍 Gözlemci gönder (${money(com.supermenajer.game.game.Scouting.COST)})") }
+                    Spacer(Modifier.height(8.dp))
+                }
                 val asking = GameRepo.askingPrice(p)
                 val step = (asking / 20 / 25_000 * 25_000).coerceAtLeast(25_000)
                 var bid by remember(p.id) {
@@ -216,7 +258,7 @@ fun PlayerDialog(g: Game, p: Player) {
                 .verticalScroll(rememberScrollState()).padding(18.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OvrBadge(p.overall, 52.dp)
+                PlayerOvrBadge(g, p, 52.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(p.name, fontSize = 20.sp, fontWeight = FontWeight.Black)
@@ -224,16 +266,17 @@ fun PlayerDialog(g: Game, p: Player) {
                         PosChip(p.pos)
                         Text("  ${Generator.flag(p.nation)} ${p.age} yaş", color = TextDim, fontSize = 13.sp)
                     }
-                    Text(team?.name ?: "Serbest oyuncu", color = TextDim, fontSize = 13.sp)
+                    Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 13.sp)
                 }
             }
             Spacer(Modifier.height(14.dp))
-            if (!own) {
+            if (!own && !loaned) {
                 actions()
                 Spacer(Modifier.height(14.dp))
             }
-            val potText = if (own || p.age >= 27) "${p.potential}" else "${(p.potential - 4).coerceAtLeast(p.overall)}-${(p.potential + 4).coerceAtMost(99)}"
-            InfoLine("Potansiyel", potText)
+            InfoLine("Potansiyel", com.supermenajer.game.game.Scouting.potText(g, p))
+            if (!known) InfoLine("Bilgi", "Gözlemci raporu yok, değerler tahmini", Gold)
+            else if (!own && !loaned && p.id in g.scouted) Text(com.supermenajer.game.game.Scouting.report(g, p), color = TextDim, fontSize = 12.sp)
             InfoLine("Değer", money(p.value))
             if (p.teamId >= 0) {
                 InfoLine("Maaş", "${money(p.wage)}/hafta")
@@ -245,15 +288,16 @@ fun PlayerDialog(g: Game, p: Player) {
             if (p.injuredWeeks > 0) InfoLine("Sakatlık", "${p.injuredWeeks} hafta", Red)
             if (p.suspended > 0) InfoLine("Ceza", "${p.suspended} maç", Red)
             Spacer(Modifier.height(12.dp))
-            Text("ÖZELLİKLER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("ÖZELLİKLER (1-20)", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            if (p.pos == Pos.GK) Attr("Kalecilik", p.goalkeeping)
-            Attr("Hız", p.pace)
-            Attr("Şut", p.shooting)
-            Attr("Pas", p.passing)
-            Attr("Teknik", p.dribbling)
-            Attr("Savunma", p.defending)
-            Attr("Fizik", p.physical)
+            val rg = { v: Int -> com.supermenajer.game.game.Scouting.range(g, p, v) }
+            if (p.pos == Pos.GK) Attr("Kalecilik", p.goalkeeping, rg(p.goalkeeping))
+            Attr("Hız", p.pace, rg(p.pace))
+            Attr("Şut", p.shooting, rg(p.shooting))
+            Attr("Pas", p.passing, rg(p.passing))
+            Attr("Teknik", p.dribbling, rg(p.dribbling))
+            Attr("Savunma", p.defending, rg(p.defending))
+            Attr("Fizik", p.physical, rg(p.physical))
             Spacer(Modifier.height(12.dp))
             Text("BU SEZON", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
@@ -264,7 +308,7 @@ fun PlayerDialog(g: Game, p: Player) {
                 Stat("Ort. Puan", if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
             }
             Spacer(Modifier.height(16.dp))
-            if (own) actions()
+            if (own || loaned) actions()
             TextButton(onClick = { GameRepo.selectedPlayer = null }, modifier = Modifier.align(Alignment.End)) { Text("Kapat") }
         }
     }
@@ -279,11 +323,27 @@ private fun InfoLine(label: String, value: String, color: Color = TextMain) {
 }
 
 @Composable
-private fun Attr(label: String, v: Int) {
+/** CM tarzı 1-20 ölçek. Bilinmeyen oyuncuda aralık gösterilir. */
+private fun to20(v: Int) = ((v / 5.0).roundToInt()).coerceIn(1, 20)
+
+@Composable
+private fun Attr(label: String, v: Int, range: IntRange = v..v) {
+    val known = range.first == range.last
+    val shown = if (known) to20(v) else to20((range.first + range.last) / 2)
+    val col = when {
+        shown >= 16 -> Green
+        shown >= 13 -> Color(0xFF9BE9A8)
+        shown >= 10 -> Gold
+        else -> Color(0xFFB0B8C1)
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 13.sp, modifier = Modifier.width(80.dp))
-        Bar(v / 100f, ovrColor(v), Modifier.weight(1f), 8.dp)
-        Text("$v", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(36.dp).padding(start = 8.dp))
+        Bar(shown / 20f, if (known) col else col.copy(alpha = 0.45f), Modifier.weight(1f), 8.dp)
+        Text(
+            if (known) "$shown" else "${to20(range.first)}-${to20(range.last)}",
+            fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (known) col else TextDim,
+            modifier = Modifier.width(48.dp).padding(start = 8.dp),
+        )
     }
 }
 
@@ -298,7 +358,7 @@ private fun Stat(label: String, v: String) {
 @Composable
 fun TransferTab(g: Game) {
     var posFilter by remember { mutableStateOf<Pos?>(null) }
-    var mode by remember { mutableIntStateOf(0) } // 0 tümü, 1 serbest, 2 bütçeme uygun, 3 genç yetenek
+    var mode by remember { mutableIntStateOf(0) } // 0 tümü, 1 serbest, 2 bütçeme uygun, 3 genç, 4 gözlem listesi
     var country by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableIntStateOf(0) } // 0 güç, 1 potansiyel, 2 ucuz, 3 genç
@@ -307,7 +367,7 @@ fun TransferTab(g: Game) {
     val list = remember(version, posFilter, mode, country, query, sort) {
         val q = query.trim().lowercase()
         g.players.asSequence()
-            .filter { it.teamId != g.userTeamId }
+            .filter { it.teamId != g.userTeamId && it.loanFrom != g.userTeamId }
             .filter { posFilter == null || it.pos == posFilter }
             .filter { country == null || (it.teamId >= 0 && g.teamOrNull(it.teamId)?.let { t -> g.countryOf(t) } == country) }
             .filter { q.isEmpty() || it.name.lowercase().contains(q) }
@@ -315,16 +375,18 @@ fun TransferTab(g: Game) {
                 when (mode) {
                     1 -> it.teamId < 0
                     2 -> GameRepo.askingPrice(it) <= budget && com.supermenajer.game.game.Economy.fitsWages(g, g.userTeam, it.demandWage)
-                    3 -> it.age <= 21 && it.potential >= 70
+                    3 -> it.age <= 21
+                    4 -> it.id in g.shortlist || it.id in g.scouted
                     else -> true
                 }
             }
             .sortedWith(
                 when (sort) {
-                    1 -> compareByDescending<Player> { it.potential }
-                    2 -> compareBy<Player> { GameRepo.askingPrice(it) }.thenByDescending { it.overall }
-                    3 -> compareBy<Player> { it.age }.thenByDescending { it.potential }
-                    else -> compareByDescending<Player> { it.overall }
+                    // Gizli bilgiyi sızdırmamak için tanımadığımız oyuncularda tahmini güç kullanılır.
+                    1 -> compareByDescending<Player> { if (com.supermenajer.game.game.Scouting.known(g, it)) it.potential else 0 }.thenByDescending { com.supermenajer.game.game.Scouting.estimate(g, it) }
+                    2 -> compareBy<Player> { GameRepo.askingPrice(it) }.thenByDescending { com.supermenajer.game.game.Scouting.estimate(g, it) }
+                    3 -> compareBy<Player> { it.age }.thenByDescending { com.supermenajer.game.game.Scouting.estimate(g, it) }
+                    else -> compareByDescending<Player> { com.supermenajer.game.game.Scouting.estimate(g, it) }
                 }
             )
             .take(150).toList()
@@ -338,6 +400,8 @@ fun TransferTab(g: Game) {
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(10.dp),
                 )
                 Spacer(Modifier.height(8.dp))
+                ScoutCard(g)
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = query, onValueChange = { query = it.take(30) }, singleLine = true,
                     placeholder = { Text("🔍 Oyuncu ara") }, modifier = Modifier.fillMaxWidth(),
@@ -347,7 +411,8 @@ fun TransferTab(g: Game) {
                     Chip("Tümü", mode == 0) { mode = 0 }
                     Chip("Bütçeme uygun", mode == 2) { mode = 2 }
                     Chip("Serbest", mode == 1) { mode = 1 }
-                    Chip("Genç yetenek", mode == 3) { mode = 3 }
+                    Chip("Genç (≤21)", mode == 3) { mode = 3 }
+                    Chip("📋 Gözlem listesi (${g.shortlist.size})", mode == 4) { mode = 4 }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -369,7 +434,8 @@ fun TransferTab(g: Game) {
         items(list, key = { it.id }) { p ->
             val t = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
             val team = t?.let { Generator.flag(g.flagOf(it)) + " " + it.short } ?: "Serbest"
-            PlayerRow(g, p, false, extra = "$team · ${money(GameRepo.askingPrice(p))}" + if (mode == 3 || sort == 1) " · P${p.potential}" else "")
+            val pot = if (com.supermenajer.game.game.Scouting.known(g, p) && (mode >= 3 || sort == 1)) " · P${p.potential}" else ""
+            PlayerRow(g, p, false, extra = "$team · ${money(GameRepo.askingPrice(p))}$pot")
         }
     }
 }
@@ -400,5 +466,32 @@ private fun ContractBox(g: Game, p: Player, onMessage: (String) -> Unit) {
             val err = GameRepo.renewContract(p, years)
             onMessage(err ?: "${p.name} ile $years yıllık sözleşme imzalandı! ✍️")
         }, modifier = Modifier.fillMaxWidth()) { Text("İmzala", fontWeight = FontWeight.Bold) }
+    }
+}
+
+/** Gözlemci ayarları: hangi ülkede, neyi arasın. */
+@Composable
+private fun ScoutCard(g: Game) {
+    var open by remember { mutableStateOf(false) }
+    val country = g.scoutCountry.ifEmpty { g.userCountry }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface1).padding(10.dp)) {
+        Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
+            Text("🔍 Gözlemci: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} $country · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(if (open) "▲" else "▼", color = TextDim)
+        }
+        if (open) {
+            Spacer(Modifier.height(6.dp))
+            Text("Gözlemcin her hafta seçtiğin ülkeden bir oyuncu önerir. Önerilenler Gözlem listesine eklenir ve tüm bilgileri açılır.", color = TextDim, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Season.activeCountries(g).forEach { c ->
+                    Chip(Generator.flag(com.supermenajer.game.model.Leagues.flagOf(c)) + " " + c, c == country) { GameRepo.setScout(c, g.scoutFocus) }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.supermenajer.game.game.Scouting.focusNames.forEachIndexed { i, n -> Chip(n, g.scoutFocus == i, Modifier.weight(1f)) { GameRepo.setScout(country, i) } }
+            }
+        }
     }
 }

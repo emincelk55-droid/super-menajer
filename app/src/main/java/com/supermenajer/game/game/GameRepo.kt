@@ -37,6 +37,7 @@ object GameRepo {
     var tacticsMode by mutableIntStateOf(0)
     var leagueTab by mutableIntStateOf(-1)
     var leagueSel by mutableIntStateOf(-1)
+    var reportOpen by mutableStateOf(false)
 
     fun init(d: File) {
         dir = d
@@ -179,6 +180,98 @@ object GameRepo {
 
     fun skipPress() {
         game?.press = null
+        changed()
+    }
+
+    // ---- Oyuncu yönetimi (CM tarzı) ----
+
+    private fun talkStamp(g: Game) = g.season * 1000 + g.leagueWeekAt(g.week)
+
+    fun canTalk(p: Player): Boolean {
+        val g = game ?: return false
+        return p.teamId == g.userTeamId && p.lastTalk != talkStamp(g)
+    }
+
+    /** Birebir konuşma: 0 övgü, 1 eleştiri, 2 forma sözü. Haftada bir. */
+    fun talkToPlayer(p: Player, kind: Int): String {
+        val g = game ?: return ""
+        if (!canTalk(p)) return "${p.name} ile bu hafta zaten konuştun."
+        p.lastTalk = talkStamp(g)
+        val r = Random.nextDouble()
+        val good = p.apps == 0 || p.avgRating >= 6.8
+        val (delta, msg) = when (kind) {
+            0 -> if (good) 6.0 to "${p.name} övgülerin için teşekkür etti, çok motive." else 2.0 to "${p.name} övgüne biraz şaşırdı ama memnun."
+            1 -> when {
+                p.apps >= 3 && p.avgRating < 6.4 && r < 0.6 -> 5.0 to "${p.name} mesajı aldı: \"Daha çok çalışacağım hocam.\""
+                p.apps >= 3 && p.avgRating < 6.4 -> -6.0 to "${p.name} eleştirine sert tepki gösterdi."
+                else -> -8.0 to "${p.name} eleştiriyi haksız buldu ve kırıldı."
+            }
+            else -> {
+                p.promised = true
+                10.0 to "${p.name} sözüne güveniyor. Gelecek hafta ilk 11'de olmazsa çok kırılacak!"
+            }
+        }
+        p.morale = (p.morale + delta).coerceIn(5.0, 100.0)
+        if (p.wantsAway && p.morale > 45) p.wantsAway = false
+        changed()
+        return msg
+    }
+
+    /** Genç oyuncuyu kiralık gönder (oynayarak gelişir). Hata mesajı döner. */
+    fun loanOut(p: Player): String? {
+        val g = game ?: return "Oyun yok"
+        val us = g.userTeam
+        if (p.teamId != us.id) return "Oyuncu takımında değil."
+        if (p.age > 23) return "Sadece 23 yaş ve altı oyuncular kiralık gönderilebilir."
+        if (!Season.transferWindowOpen(g)) return "Transfer dönemi kapalı."
+        if (g.squad(us.id).size <= 18) return "Kadro çok dar, kiralık gönderemezsin."
+        val country = g.userCountry
+        val clubs = g.teams.filter { t ->
+            t.id != us.id && t.division != com.supermenajer.game.model.Leagues.LEGACY_EURO &&
+                g.squad(t.id).size < 28 && p.overall >= Lineups.strength(g, t) - 3 && t.reputation < us.reputation
+        }
+        val club = clubs.filter { g.countryOf(it) == country }.randomOrNull() ?: clubs.randomOrNull()
+            ?: return "Oyuncuyu düzenli oynatacak bir kulüp bulunamadı."
+        us.lineup.replaceAll { if (it == p.id) -1 else it }
+        g.movePlayer(p, club.id)
+        p.loanFrom = us.id
+        Lineups.validate(g, us)
+        g.addNews("Kiralık", "${p.name} sezon sonuna kadar kiralık olarak ${club.name} (${g.leagueName(club)}) takımına gitti. Düzenli oynayıp gelişecek.")
+        selectedPlayer = null
+        changed()
+        return null
+    }
+
+    fun recallLoan(p: Player) {
+        val g = game ?: return
+        if (p.loanFrom != g.userTeamId) return
+        g.teamOrNull(p.teamId)?.lineup?.replaceAll { if (it == p.id) -1 else it }
+        g.movePlayer(p, g.userTeamId)
+        p.loanFrom = -1
+        g.addNews("Kiralıktan geri çağrıldı", "${p.name} takıma geri döndü.")
+        changed()
+    }
+
+    fun scout(p: Player): String {
+        val g = game ?: return ""
+        val err = Scouting.request(g, p)
+        changed()
+        return err ?: "Gözlemci yola çıktı. Rapor yarın gelecek (${money(Scouting.COST)})."
+    }
+
+    fun setScout(country: String, focus: Int) {
+        val g = game ?: return
+        g.scoutCountry = country
+        g.scoutFocus = focus
+        changed()
+    }
+
+    fun declineCareerOffer() {
+        val g = game ?: return
+        g.jobOffers.clear()
+        g.careerOffer = false
+        g.addNews("Teklif reddedildi", "${g.userTeam.name} ile devam ediyorsun. Taraftar sadakatini alkışlıyor!")
+        g.confidence = (g.confidence + 5).coerceAtMost(100.0)
         changed()
     }
 

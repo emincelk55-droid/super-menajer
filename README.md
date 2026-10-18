@@ -11,6 +11,7 @@ Android için Türkçe futbol menajerlik oyunu (Kotlin + Jetpack Compose).
 - Antrenman, oyuncu gelişimi, altyapı
 - Ekonomi: transfer bütçesi + haftalık maaş limiti, başarıya göre sezon sonu ödeneği, sözleşmeler
 - Yönetim güveni ve kovulma, basın toplantıları, devre arası konuşması
+- Championship Manager ruhu: gerilimli metin anlatımı, gizli özellikler ve gözlemci raporları (1-20 ölçek), wonderkid avı, oyuncu mutluluğu ve transfer talepleri, birebir konuşma, kiralık gönderme, rakip raporu, sezon ödülleri, kariyer teklifleri
 
 ## Derleme
 

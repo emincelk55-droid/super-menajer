@@ -101,7 +101,7 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 5,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 6,
         )
         for (t in teams) fillSquad(g, t, rnd, "TR")
         addLowerDivision(g, rnd)
@@ -132,10 +132,13 @@ object Generator {
             val age: Int
             when {
                 i < starters.getValue(pos) -> { target = lvl + rnd.nextInt(-3, 5); age = rnd.nextInt(22, 33) }
-                i == n - 1 && pos != Pos.GK -> { target = lvl - rnd.nextInt(9, 16); age = rnd.nextInt(17, 20) }
+                i == n - 1 && pos != Pos.GK -> { target = lvl - rnd.nextInt(9, 16); age = rnd.nextInt(16, 20) }
                 else -> { target = lvl - rnd.nextInt(2, 9); age = rnd.nextInt(19, 34) }
             }
-            g.addPlayer(makePlayer(g.nextPlayerId++, pos, target.roundToInt(), age, t.id, rnd, nation))
+            val pl = makePlayer(g.nextPlayerId++, pos, target.roundToInt(), age, t.id, rnd, nation)
+            // Dünyaya dağılmış gizli wonderkid'ler
+            if (age <= 19 && rnd.nextDouble() < 0.06) pl.potential = rnd.nextInt(83, 95)
+            g.addPlayer(pl)
         }
     }
 
@@ -155,6 +158,8 @@ object Generator {
         // Potansiyel takım seviyesinin etrafında; çok yüksek potansiyel nadir.
         val pot = teamLevel(t.reputation) - 3 + gauss(rnd) * 6
         p.potential = pot.roundToInt().coerceIn(p.overall + 4, 91)
+        // Nadir "altın çocuk": küçük kulüpte bile dünya yıldızı potansiyeli
+        if (rnd.nextDouble() < 0.025) p.potential = rnd.nextInt(84, 95)
         p.contractYears = 3
         p.salary = p.demandWage
         return p

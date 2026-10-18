@@ -14,7 +14,8 @@ import kotlin.random.Random
 
 enum class Ev { KICKOFF, GOAL, SAVE, MISS, POST, CORNER, YELLOW, RED, INJURY, SUB, INFO, HALF, FULL }
 
-class MatchEvent(val minute: Int, val type: Ev, val side: Int, val text: String, val playerId: Int = -1)
+/** buildUp: pozisyonun gerilimli girişi ("Sağdan orta... kafa..."); arayüz sonucu bundan sonra açıklar. */
+class MatchEvent(val minute: Int, val type: Ev, val side: Int, val text: String, val playerId: Int = -1, val buildUp: String = "")
 
 /** Maçtaki bir oyuncu. */
 class PIM(val p: Player, var slot: Slot) {
@@ -87,8 +88,8 @@ class MatchSim(
         s.bench += Lineups.bench(game, s.team)
     }
 
-    private fun ev(type: Ev, side: Int, text: String, pid: Int = -1) {
-        events += MatchEvent(minute, type, side, text, pid)
+    private fun ev(type: Ev, side: Int, text: String, pid: Int = -1, buildUp: String = "") {
+        events += MatchEvent(minute, type, side, text, pid, buildUp)
     }
 
     fun other(s: Side): Side = if (s === home) away else home
@@ -192,6 +193,7 @@ class MatchSim(
         val gkF = (keeper?.let { it.p.goalkeeping * (0.85 + 0.15 * it.fit / 100) } ?: 20.0) / 70.0
         val pGoal = (q * shootF / gkF).coerceIn(0.01, 0.92)
         if (penalty) ev(Ev.INFO, atk.index, Comms.penalty(atk.team, rnd))
+        val build = Comms.buildUp(shooter.p.name, assister?.p?.name, header, penalty, setPiece, rnd)
         ballX = if (atk === home) 0.93f else 0.07f
         ballY = 0.38f + rnd.nextFloat() * 0.24f
 
@@ -205,7 +207,7 @@ class MatchSim(
             ev(
                 Ev.GOAL, atk.index,
                 Comms.goal(shooter.p.name, assister?.p?.name, penalty, header, rnd) + "  (${home.goals}-${away.goals})",
-                shooter.p.id,
+                shooter.p.id, build,
             )
             ballX = 0.5f; ballY = 0.5f
             return
@@ -216,15 +218,15 @@ class MatchSim(
                 atk.onTarget++
                 shooter.rating += 0.1
                 keeper?.let { it.rating += 0.3 }
-                ev(Ev.SAVE, atk.index, Comms.save(shooter.p.name, keeper?.p?.name ?: "savunma", penalty, rnd))
+                ev(Ev.SAVE, atk.index, Comms.save(shooter.p.name, keeper?.p?.name ?: "savunma", penalty, rnd, header), shooter.p.id, build)
             }
             r2 < 0.48 -> {
                 shooter.rating += 0.05
-                ev(Ev.POST, atk.index, Comms.post(shooter.p.name, rnd))
+                ev(Ev.POST, atk.index, Comms.post(shooter.p.name, rnd), shooter.p.id, build)
             }
             else -> {
                 shooter.rating -= 0.05
-                ev(Ev.MISS, atk.index, Comms.miss(shooter.p.name, penalty, rnd))
+                ev(Ev.MISS, atk.index, Comms.miss(shooter.p.name, penalty, rnd), shooter.p.id, build)
             }
         }
         if (!setPiece && rnd.nextDouble() < 0.3) {

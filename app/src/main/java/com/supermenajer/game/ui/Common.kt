@@ -96,6 +96,22 @@ fun OvrBadge(ovr: Int, size: Dp = 34.dp) {
     }
 }
 
+/** Oyuncu gücü rozeti: tanımadığımız oyuncularda aralık gösterir (CM tarzı gizli özellik). */
+@Composable
+fun PlayerOvrBadge(g: com.supermenajer.game.model.Game, p: com.supermenajer.game.model.Player, size: Dp = 34.dp) {
+    if (com.supermenajer.game.game.Scouting.known(g, p)) {
+        OvrBadge(p.overall, size)
+        return
+    }
+    val est = com.supermenajer.game.game.Scouting.estimate(g, p)
+    Box(
+        Modifier.size(width = size * 1.45f, height = size).clip(RoundedCornerShape(8.dp)).background(ovrColor(est).copy(alpha = 0.55f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(com.supermenajer.game.game.Scouting.ovrText(g, p), fontWeight = FontWeight.Bold, color = Color.Black, fontSize = (size.value * 0.32f).sp)
+    }
+}
+
 @Composable
 fun PosChip(pos: Pos) {
     Text(

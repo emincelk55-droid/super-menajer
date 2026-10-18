@@ -33,9 +33,41 @@ object Comms {
         return if (assist != null) "$g Asist: $assist." else g
     }
 
-    fun save(shooter: String, gk: String, penalty: Boolean, rnd: Random) = if (penalty) {
+    /** Pozisyonun girişi: sonucu söylemeden gerilim kurar. */
+    fun buildUp(shooter: String, assist: String?, header: Boolean, penalty: Boolean, setPiece: Boolean, rnd: Random): String = when {
+        penalty -> listOf(
+            "$shooter topu beyaz noktaya koydu... geriliyor... koşuyor...",
+            "Stat nefesini tuttu... $shooter penaltıyı kullanacak... vuruyor...",
+        ).r(rnd)
+        header -> listOf(
+            "Korner kullanılıyor... top ceza sahasında... $shooter yükseldi...",
+            "${assist ?: "Kanattan"} ortaladı... ceza sahası karışık... $shooter kafayı vurdu...",
+        ).r(rnd)
+        setPiece -> listOf(
+            "Serbest vuruşun başında $shooter... baraj kuruldu... vuruyor...",
+            "$shooter frikiği kullanacak... aldığı mesafe uzun... ve vuruş...",
+        ).r(rnd)
+        assist != null -> listOf(
+            "$assist harika bir ara pas attı... $shooter kaleciyle karşı karşıya...",
+            "$assist sağ kanattan ortaladı... $shooter ceza sahasında...",
+            "$assist ile $shooter verkaç yaptı... $shooter vuruyor...",
+            "$assist sol kanatta rakibini geçti... içeri çevirdi... $shooter...",
+            "Hızlı kontra! $assist topu $shooter önüne bıraktı...",
+        ).r(rnd)
+        else -> listOf(
+            "$shooter topla ilerliyor... bir kişiyi geçti... ceza sahasında...",
+            "$shooter uzaktan şansını deneyecek gibi... vuruyor...",
+            "Savunmada hata! Top $shooter önünde kaldı...",
+            "$shooter rakibinin arkasına sarktı... sadece kaleci var...",
+        ).r(rnd)
+    }
+
+    fun save(shooter: String, gk: String, penalty: Boolean, rnd: Random, header: Boolean = false) = if (penalty) {
         "KURTARDI! $gk penaltıda $shooter karşısında gole izin vermedi!"
-    } else listOf(
+    } else if (header) listOf(
+        "$shooter kafayla vurdu, $gk çizgide çıkardı!",
+        "Kafa vuruşu kaleyi buldu ama $gk yerinde. Vuruşu yapan: $shooter.",
+    ).r(rnd) else listOf(
         "$shooter şutunu çekti, $gk iyi uzanarak kurtardı.",
         "Tehlikeli şut! $shooter denedi ama $gk yerinde.",
         "$gk müthiş bir refleksle golü önledi! Şutu atan: $shooter.",

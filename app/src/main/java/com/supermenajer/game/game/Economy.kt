@@ -22,6 +22,7 @@ object Economy {
     const val BOARD = "Yönetim ödeneği"
     const val PRIZE = "Lig sıralama ödülü"
     const val BONUS = "Hedef primi"
+    const val SCOUTING = "Gözlemci giderleri"
 
     private val superPrize = listOf(
         20_000_000L, 13_000_000L, 9_000_000L, 7_000_000L, 5_500_000L, 4_500_000L, 4_000_000L, 3_500_000L, 3_000_000L,
