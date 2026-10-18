@@ -275,6 +275,19 @@ object GameRepo {
         return err ?: "${st.name} göreve başladı!"
     }
 
+    fun startProject(type: Int, seatOption: Int = 0): String {
+        val g = game ?: return ""
+        val err = Facilities.start(g, type, seatOption)
+        changed()
+        return err ?: "İnşaat başladı!"
+    }
+
+    fun setTicketPrice(i: Int) {
+        val g = game ?: return
+        g.userTeam.ticketPrice = i.coerceIn(0, 2)
+        changed()
+    }
+
     fun declineCareerOffer() {
         val g = game ?: return
         g.jobOffers.clear()

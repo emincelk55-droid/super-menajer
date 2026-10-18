@@ -57,6 +57,11 @@ class ScreensTest {
         shot("03b_own_player")
         GameRepo.selectedPlayer = null
         advance(4)
+        g.userTeam.budget += 5_000_000
+        GameRepo.startProject(com.supermenajer.game.game.Facilities.TRAINING)
+        GameRepo.tab = 1; GameRepo.squadMode = 2
+        shot("03c_facilities")
+        GameRepo.squadMode = 0
         g.offers += IncomingOffer(g.squad(g.userTeamId).maxBy { it.overall }.id, g.divisionTeams(12)[0].id, 20_000_000, g.week)
         g.press = PressQuestion("Rakip karşısında galibiyetin anahtarı neydi?", listOf("Oyuncularımın mücadelesi.", "Taktiğimiz tuttu, plan işledi.", "Henüz iyi oynamıyoruz."), 1)
         GameRepo.tab = 0; GameRepo.reportOpen = true; shot("04_home")

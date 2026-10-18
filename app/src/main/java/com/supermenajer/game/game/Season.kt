@@ -72,6 +72,8 @@ object Season {
         g.cupWinner = -1
         g.cupWinners = mutableMapOf()
         g.press = null
+        Facilities.ensureAll(g)
+        for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
         g.offers.clear()
         computeExpectations(g)
@@ -124,6 +126,16 @@ object Season {
         }
         if (g.saveVersion < 6) migrateV6(g)
         if (g.saveVersion < 7) migrateV7(g)
+        if (g.saveVersion < 8) migrateV8(g)
+    }
+
+    private fun migrateV8(g: Game) {
+        g.saveVersion = 8
+        Facilities.ensureAll(g)
+        g.addNews(
+            "Güncelleme: v0.8 · Stadyum ve tesisler",
+            "Kadro → Tesisler'den stadyumunu büyütebilir, bilet fiyatını belirleyebilir; antrenman tesisi, altyapı akademisi ve sağlık merkezini geliştirebilirsin. Seyirci sayısı artık formuna ve maçın önemine göre değişiyor!",
+        )
     }
 
     private fun migrateV7(g: Game) {
@@ -292,7 +304,9 @@ object Season {
         val dayFixtures = g.weekFixtures(g.week)
         for (f in dayFixtures) {
             val h = g.team(f.home)
-            Economy.earn(h, Economy.TICKETS, Economy.ticketIncome(h))
+            if (f.attendance == 0) f.attendance = Facilities.attendance(g, f, rnd)
+            Facilities.record(g, f)
+            Economy.earn(h, Economy.TICKETS, Facilities.ticketIncome(g, f))
             if (f.comp == Comp.EURO) Economy.earn(h, Economy.EURO, 400_000L)
             if (Comp.isCup(f.comp) && f.winner >= 0) {
                 val prize = listOf(150_000L, 250_000L, 400_000L, 700_000L, 1_500_000L)[f.round]
@@ -303,6 +317,7 @@ object Season {
             2 -> Europe.advance(g, d.number, rnd)
             0 -> {
                 weeklyUpdate(g, rnd)
+                Facilities.weekly(g)
                 if (d.number % 6 == 0) {
                     val leader = g.table(g.userTeam.division).first()
                     g.addNews("Lig lideri", "${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.")
@@ -343,11 +358,13 @@ object Season {
             if (mine && p.injuredWeeks > 0 && rnd.nextDouble() < physioHeal) p.injuredWeeks--
             if (p.suspended > 0) p.suspended--
             val team = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
+            // Sağlık merkezi tüm kulüplerde iyileşmeyi hızlandırır
+            if (p.injuredWeeks > 0 && rnd.nextDouble() < Facilities.medicalHeal(team)) p.injuredWeeks--
             val focus = team?.training ?: 0
             val intensity = team?.intensity ?: 1
             val intF = when (intensity) { 0 -> 0.7; 2 -> 1.4; else -> 1.0 }
             val youthF = (if (focus == 4) (if (p.age <= 21) 1.8 else 0.7) else 1.0) * (if (p.loanFrom >= 0) 1.5 else 1.0) *
-                (if (mine) coachF else 1.0)
+                (if (mine) coachF else 1.0) * Facilities.trainingFactor(team)
             val gap = p.potential - p.overall
             if (p.age <= 24 && gap > 0 && rnd.nextDouble() < (0.14 + gap * 0.01) * intF * youthF) {
                 improve(p, 1, rnd, focus)
@@ -358,7 +375,7 @@ object Season {
             }
             // Antrenman sakatlığı
             if (team != null && p.injuredWeeks == 0) {
-                val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 } * (if (mine) physioRisk else 1.0)
+                val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 } * (if (mine) physioRisk else 1.0) * Facilities.medicalRisk(team)
                 if (rnd.nextDouble() < risk) {
                     p.injuredWeeks = rnd.nextInt(1, 4)
                     if (team.id == g.userTeamId) g.addNews("Antrenmanda sakatlık", "${p.name} antrenmanda sakatlandı (${p.injuredWeeks} hafta).")
@@ -551,6 +568,8 @@ object Season {
         g.offers.clear()
         g.press = null
         g.confidence = 55.0
+        g.projects.clear()
+        Facilities.ensure(g.userTeam)
         Lineups.validate(g, g.userTeam)
         g.addNews("Yeni görev", "$old macerası bitti. Artık ${g.userTeam.name} teknik direktörüsün! Hedef: ${objectiveText(g.userTeam)}.")
     }
@@ -561,6 +580,7 @@ object Season {
         val us = g.userTeam
         val budgetBefore = us.budget
         Economy.seasonPayout(g)
+        Facilities.aiUpgrades(g, Random.Default)
         for (id in activeLeagues(g)) {
             g.table(id).forEachIndexed { i, t ->
                 val champ = if (i == 0) 2 else 0
@@ -681,6 +701,7 @@ object Season {
                 sq = g.squad(t.id)
             }
         }
+        Facilities.youthIntake(g, rnd)
         if (g.worldUpgradePending) WorldGen.upgradeWorld(g, rnd)
         Generator.topUpFreeAgents(g, rnd)
         g.season++

@@ -101,7 +101,7 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 7,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 8,
         )
         for (t in teams) fillSquad(g, t, rnd, "TR")
         addLowerDivision(g, rnd)
@@ -153,13 +153,15 @@ object Generator {
     }
 
     fun youth(g: Game, t: Team, pos: Pos, rnd: Random): Player {
-        val target = (teamLevel(t.reputation) - rnd.nextInt(10, 20)).roundToInt()
+        Facilities.ensure(t)
+        val bonus = Facilities.youthBonus(t)
+        val target = (teamLevel(t.reputation) - rnd.nextInt(10, 20) + bonus).roundToInt()
         val p = makePlayer(g.nextPlayerId++, pos, target, rnd.nextInt(17, 19), t.id, rnd, nationOf(g, t))
         // Potansiyel takım seviyesinin etrafında; çok yüksek potansiyel nadir.
-        val pot = teamLevel(t.reputation) - 3 + gauss(rnd) * 6
+        val pot = teamLevel(t.reputation) - 3 + bonus + gauss(rnd) * 6
         p.potential = pot.roundToInt().coerceIn(p.overall + 4, 91)
         // Nadir "altın çocuk": küçük kulüpte bile dünya yıldızı potansiyeli
-        if (rnd.nextDouble() < 0.025) p.potential = rnd.nextInt(84, 95)
+        if (rnd.nextDouble() < Facilities.wonderkidChance(t)) p.potential = rnd.nextInt(84, 95)
         p.contractYears = 3
         p.salary = p.demandWage
         return p

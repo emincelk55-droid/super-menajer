@@ -631,6 +631,13 @@ fun SummaryScreen() {
                     }
                 }
             }
+            com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
+                item {
+                    val us = sim.home.team.id == g.userTeamId
+                    val income = if (us) " · Bilet geliri ${com.supermenajer.game.game.money(com.supermenajer.game.game.Facilities.ticketIncome(g, sim.fixture))}" else ""
+                    Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
+                }
+            }
             item {
                 SectionCard("Maç istatistikleri") { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
             }

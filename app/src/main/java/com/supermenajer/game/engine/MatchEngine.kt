@@ -1,5 +1,6 @@
 package com.supermenajer.game.engine
 
+import com.supermenajer.game.game.Facilities
 import com.supermenajer.game.game.Lineups
 import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Fixture
@@ -80,6 +81,8 @@ class MatchSim(
         setup(home)
         setup(away)
         ev(Ev.KICKOFF, -1, Comms.kickoff(home.team, away.team, rnd))
+        if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
+        Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
     }
 
     private fun setup(s: Side) {

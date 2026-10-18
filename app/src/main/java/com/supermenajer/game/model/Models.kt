@@ -131,6 +131,19 @@ class Team(
     var income: MutableMap<String, Long> = mutableMapOf(),
     /** Geçen sezonun mali raporu. */
     var lastReport: MutableMap<String, Long> = mutableMapOf(),
+    /** Stadyum kapasitesi (0 = henüz kurulmadı). */
+    var stadium: Int = 0,
+    var stadiumName: String = "",
+    /** 0 ucuz, 1 normal, 2 pahalı */
+    var ticketPrice: Int = 1,
+    /** Tesis seviyeleri 1-10. */
+    var trainingFac: Int = 0,
+    var youthFac: Int = 0,
+    var medicalFac: Int = 0,
+    /** Bu sezonki iç saha seyirci toplamı ve maç sayısı. */
+    var attTotal: Long = 0,
+    var attGames: Int = 0,
+    var lastAttendance: Int = 0,
 ) {
     val played: Int get() = won + drawn + lost
     val points: Int get() = won * 3 + drawn
@@ -179,6 +192,7 @@ class Fixture(
     val round: Int = 0,
     var pen: String = "",
     var winner: Int = -1,
+    var attendance: Int = 0,
     /** Avrupa grup maçlarında grup numarası (0-7). */
     val group: Int = -1,
 ) {
@@ -223,6 +237,10 @@ class Staff(
     val wage: Long,
     val nation: String,
 )
+
+/** İnşaat projesi. type: 0 stadyum, 1 antrenman, 2 altyapı, 3 sağlık. amount: eklenen koltuk ya da hedef seviye. */
+@Serializable
+class Project(val type: Int, val amount: Int, var weeksLeft: Int, val totalWeeks: Int, val cost: Long)
 
 /** Maç sonrası basın toplantısı sorusu. */
 @Serializable
@@ -278,6 +296,8 @@ class Game(
     var staffMarket: MutableList<Staff> = mutableListOf(),
     var staffMarketSeason: Int = 0,
     var nextStaffId: Int = 1,
+    /** Kullanıcının kulübündeki inşaat projeleri. */
+    var projects: MutableList<Project> = mutableListOf(),
 ) {
     private class Index(
         val byId: HashMap<Int, Player>,

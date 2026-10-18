@@ -29,7 +29,7 @@ class FeaturesTest {
         val target = g.players.first { it.teamId >= 0 && it.teamId != us.id && g.countryOf(g.team(it.teamId)) == "İspanya" }
         assertTrue(!Scouting.known(g, target))
         val r = Scouting.range(g, target, target.overall)
-        assertTrue(target.overall in r && r.last - r.first == 12)
+        assertTrue(target.overall in r && r.last - r.first == 2 * com.supermenajer.game.game.StaffLogic.scoutUncertainty(g, false))
         assertEquals("?", Scouting.potText(g, target))
         val budget = us.budget
         GameRepo.scout(target)
