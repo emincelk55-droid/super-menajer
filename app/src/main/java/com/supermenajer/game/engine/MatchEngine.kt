@@ -1,6 +1,7 @@
 package com.supermenajer.game.engine
 
 import com.supermenajer.game.game.Lineups
+import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Fixture
 import com.supermenajer.game.model.Formations
 import com.supermenajer.game.model.Game
@@ -63,6 +64,11 @@ class MatchSim(
     var ballY = 0.5f
         private set
     val finished: Boolean get() = minute >= 90
+    var penHome = -1
+        private set
+    var penAway = -1
+        private set
+    val isCup: Boolean get() = fixture.comp == Comp.CUP
     val userSide: Side? get() = sides.firstOrNull { it.team.id == userTeamId }
 
     init {
@@ -332,6 +338,49 @@ class MatchSim(
             }
         }
         ev(Ev.FULL, -1, Comms.full(home, away))
+        if (isCup && home.goals == away.goals) shootout()
+    }
+
+    private fun shootout() {
+        ev(Ev.INFO, -1, "Eşitlik bozulmadı... Kazananı PENALTILAR belirleyecek!")
+        val takers = sides.associateWith { s -> s.onPitch.filter { it.slot.pos != Pos.GK }.sortedByDescending { it.p.shooting } }
+        fun kick(s: Side, i: Int): Boolean {
+            val list = takers.getValue(s)
+            if (list.isEmpty()) return false
+            val taker = list[i % list.size]
+            val gk = other(s).gk()?.p?.goalkeeping ?: 40
+            val p = (0.76 * (taker.p.shooting / 70.0).pow(0.5) / (gk / 70.0).pow(0.5)).coerceIn(0.5, 0.92)
+            val scored = rnd.nextDouble() < p
+            ev(Ev.INFO, s.index, (if (scored) "✅ " else "❌ ") + "Penaltı: ${taker.p.name}" + if (scored) " gol!" else " kaçırdı!")
+            return scored
+        }
+        var h = 0
+        var a = 0
+        for (i in 0 until 5) {
+            if (kick(home, i)) h++
+            if (h > a + (5 - i)) break
+            if (kick(away, i)) a++
+            if (a > h + (4 - i) || h > a + (4 - i)) break
+        }
+        var i = 5
+        while (h == a) {
+            if (kick(home, i)) h++
+            if (kick(away, i)) a++
+            i++
+        }
+        penHome = h
+        penAway = a
+        val w = if (h > a) home else away
+        ev(Ev.FULL, w.index, "Penaltılar: $h-$a. ${w.team.name} turu geçti!")
+    }
+
+    /** Kupa maçında turu geçen takım. */
+    fun cupWinner(): Team? = when {
+        !finished -> null
+        home.goals > away.goals -> home.team
+        away.goals > home.goals -> away.team
+        penHome > penAway -> home.team
+        else -> away.team
     }
 
     fun manOfTheMatch(): PIM? = (home.used + away.used).maxByOrNull { it.rating }
@@ -341,8 +390,13 @@ class MatchSim(
         check(finished)
         fixture.hg = home.goals
         fixture.ag = away.goals
-        record(home.team, home.goals, away.goals)
-        record(away.team, away.goals, home.goals)
+        if (isCup) {
+            if (penHome >= 0) fixture.pen = "$penHome-$penAway"
+            fixture.winner = cupWinner()?.id ?: -1
+        } else {
+            record(home.team, home.goals, away.goals)
+            record(away.team, away.goals, home.goals)
+        }
         for (s in sides) {
             val res = s.goals.compareTo(other(s).goals)
             for (m in s.used) {

@@ -38,6 +38,8 @@ class Player(
     var goals: Int = 0,
     var assists: Int = 0,
     var ratingSum: Double = 0.0,
+    /** Sezon başındaki genel güç; gelişimi göstermek için. */
+    var startOvr: Int = 0,
 ) {
     val overall: Int get() = ovrAt(pos)
 
@@ -96,6 +98,12 @@ class Team(
     var ga: Int = 0,
     var form: String = "",
     var expected: Int = 9,
+    /** 0 = Süper Lig, 1 = 1. Lig */
+    var division: Int = 0,
+    /** 0 dengeli, 1 hücum, 2 savunma, 3 fizik, 4 gençler */
+    var training: Int = 0,
+    /** 0 hafif, 1 normal, 2 yoğun */
+    var intensity: Int = 1,
 ) {
     val played: Int get() = won + drawn + lost
     val points: Int get() = won * 3 + drawn
@@ -106,22 +114,53 @@ class Team(
     }
 }
 
+object Comp {
+    const val SUPER = 0
+    const val FIRST = 1
+    const val CUP = 2
+    fun name(c: Int) = when (c) { SUPER -> "Süper Lig"; FIRST -> "1. Lig"; else -> "Türkiye Kupası" }
+    val cupRounds = listOf("Son 32", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
+}
+
 @Serializable
 class Fixture(
+    /** Takvimdeki gün (1'den başlar). */
     val week: Int,
     val home: Int,
     val away: Int,
     var hg: Int = -1,
     var ag: Int = -1,
+    val comp: Int = Comp.SUPER,
+    val round: Int = 0,
+    var pen: String = "",
+    var winner: Int = -1,
 ) {
     val played: Boolean get() = hg >= 0
+    fun involves(teamId: Int) = home == teamId || away == teamId
+    val scoreText: String get() = if (!played) "-" else "$hg - $ag" + if (pen.isNotEmpty()) " (P $pen)" else ""
 }
+
+/** Takvim günü: type 0 = lig haftası (number = hafta), 1 = kupa turu (number = tur). */
+@Serializable
+class Day(val type: Int, val number: Int)
+
+@Serializable
+class IncomingOffer(val playerId: Int, val teamId: Int, var price: Long, val day: Int)
 
 @Serializable
 class News(val season: Int, val week: Int, val title: String, val body: String)
 
 @Serializable
-class SeasonRecord(val season: Int, val champion: String, val userTeam: String, val userPos: Int, val topScorer: String)
+class SeasonRecord(
+    val season: Int,
+    val champion: String,
+    val userTeam: String,
+    val userPos: Int,
+    val topScorer: String,
+    val cupWinner: String = "",
+    val firstChampion: String = "",
+    val userDivision: Int = 0,
+)
 
 @Serializable
 class Game(
@@ -136,24 +175,50 @@ class Game(
     var nextPlayerId: Int,
     var seasonOver: Boolean = false,
     val history: MutableList<SeasonRecord> = mutableListOf(),
+    var calendar: MutableList<Day> = mutableListOf(),
+    /** Yönetimin güveni (0-100). 0'a inerse kovulursun. */
+    var confidence: Double = 60.0,
+    var fired: Boolean = false,
+    var jobOffers: MutableList<Int> = mutableListOf(),
+    val offers: MutableList<IncomingOffer> = mutableListOf(),
+    var cupWinner: Int = -1,
+    /** Eski (v0.1) kayıtlarda alan yoktur ve 1 okunur. */
+    var saveVersion: Int = 1,
 ) {
     fun player(id: Int): Player? = players.firstOrNull { it.id == id }
     fun team(id: Int): Team = teams.first { it.id == id }
     val userTeam: Team get() = team(userTeamId)
     fun squad(teamId: Int): List<Player> = players.filter { it.teamId == teamId }
-    val totalWeeks: Int get() = (teams.size - 1) * 2
+    val totalDays: Int get() = calendar.size
+    val today: Day? get() = calendar.getOrNull(week - 1)
 
-    fun table(): List<Team> = teams.sortedWith(
+    /** Verilen güne kadar oynanmış en son lig haftası (kupa günleri için bir önceki hafta). */
+    fun leagueWeekAt(day: Int): Int =
+        calendar.take(day.coerceIn(0, calendar.size)).lastOrNull { it.type == 0 }?.number ?: 0
+
+    fun dayLabel(day: Int): String {
+        val d = calendar.getOrNull(day - 1) ?: return ""
+        return if (d.type == 0) "${d.number}. Hafta" else "Kupa · ${Comp.cupRounds[d.number]}"
+    }
+
+    fun divisionTeams(div: Int): List<Team> = teams.filter { it.division == div }
+
+    fun table(div: Int = 0): List<Team> = divisionTeams(div).sortedWith(
         compareByDescending<Team> { it.points }
             .thenByDescending { it.gd }
             .thenByDescending { it.gf }
             .thenBy { it.name }
     )
 
-    fun position(teamId: Int): Int = table().indexOfFirst { it.id == teamId } + 1
+    fun position(teamId: Int): Int = table(team(teamId).division).indexOfFirst { it.id == teamId } + 1
     fun weekFixtures(w: Int): List<Fixture> = fixtures.filter { it.week == w }
+
+    /** Kullanıcının bugünkü maçı (yoksa null). */
+    fun todayUserFixture(): Fixture? = fixtures.firstOrNull { it.week == week && !it.played && it.involves(userTeamId) }
+
+    /** Kullanıcının oynanmamış sıradaki maçı. */
     fun nextUserFixture(): Fixture? =
-        fixtures.firstOrNull { !it.played && (it.home == userTeamId || it.away == userTeamId) }
+        fixtures.filter { !it.played && it.involves(userTeamId) }.minByOrNull { it.week }
 
     fun addNews(title: String, body: String) {
         news.add(0, News(season, week, title, body))

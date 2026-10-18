@@ -49,7 +49,9 @@ import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Screen
 import com.supermenajer.game.game.Season
 import com.supermenajer.game.game.money
+import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Fixture
+import com.supermenajer.game.model.IncomingOffer
 import com.supermenajer.game.model.Game
 
 @Composable
@@ -118,8 +120,8 @@ private fun TopBar(g: Game) {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(t.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val wk = if (g.seasonOver) "Sezon bitti" else "Hafta ${g.week}/${g.totalWeeks}"
-            Text("${g.managerName} · ${g.season}-${(g.season + 1) % 100} · $wk", color = TextDim, fontSize = 12.sp)
+            val wk = if (g.seasonOver) "Sezon bitti" else g.dayLabel(g.week)
+            Text("${Comp.name(t.division)} · ${g.season}-${(g.season + 1) % 100} · $wk", color = TextDim, fontSize = 12.sp, maxLines = 1)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(money(t.budget), color = if (t.budget >= 0) Gold else Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -135,11 +137,15 @@ private fun HomeTab(g: Game) {
         contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (g.seasonOver) {
-            item { SeasonEndCard(g) }
-        } else {
-            g.nextUserFixture()?.let { f -> item { NextMatchCard(g, f) } }
+        when {
+            g.fired -> item { FiredCard(g) }
+            g.seasonOver -> item { SeasonEndCard(g) }
+            else -> {
+                val f = g.todayUserFixture()
+                item { if (f != null) NextMatchCard(g, f) else RestDayCard(g) }
+            }
         }
+        if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
         item { BoardCard(g) }
         item { MiniTable(g) }
         item { RecentResults(g) }
@@ -152,21 +158,22 @@ private fun NextMatchCard(g: Game, f: Fixture) {
     val h = g.team(f.home)
     val a = g.team(f.away)
     val issues = g.userTeam.lineup.mapNotNull { g.player(it) }.filter { !it.available }
-    SectionCard("Sıradaki maç · Hafta ${f.week}") {
+    val title = if (f.comp == Comp.CUP) "Türkiye Kupası · ${Comp.cupRounds[f.round]}" else "${Comp.name(f.comp)} · ${g.dayLabel(f.week)}"
+    SectionCard("Sıradaki maç · $title") {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                TeamBadge(h, 56.dp)
-                Spacer(Modifier.height(6.dp))
-                Text(h.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp)
-                Text("${g.position(h.id)}. sıra", color = TextDim, fontSize = 12.sp)
+            for ((i, t) in listOf(h, a).withIndex()) {
+                if (i == 1) Text("VS", fontSize = 22.sp, fontWeight = FontWeight.Black, color = TextDim)
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    TeamBadge(t, 56.dp)
+                    Spacer(Modifier.height(6.dp))
+                    Text(t.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp)
+                    Text("${Comp.name(t.division)} · ${g.position(t.id)}. sıra", color = TextDim, fontSize = 12.sp)
+                }
             }
-            Text("VS", fontSize = 22.sp, fontWeight = FontWeight.Black, color = TextDim)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                TeamBadge(a, 56.dp)
-                Spacer(Modifier.height(6.dp))
-                Text(a.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp)
-                Text("${g.position(a.id)}. sıra", color = TextDim, fontSize = 12.sp)
-            }
+        }
+        if (f.comp == Comp.CUP) {
+            Spacer(Modifier.height(8.dp))
+            Text("Tek maç eleme. Beraberlikte penaltılar!", color = Gold, fontSize = 12.sp)
         }
         if (issues.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -189,26 +196,97 @@ private fun NextMatchCard(g: Game, f: Fixture) {
 }
 
 @Composable
+private fun RestDayCard(g: Game) {
+    val d = g.today
+    SectionCard(g.dayLabel(g.week)) {
+        Text(
+            if (d?.type == 1) "Bu kupa turunda maçımız yok. Diğer maçları takip edebilirsin." else "Bugün maçımız yok.",
+            fontSize = 15.sp,
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = { GameRepo.skipDay() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp)) {
+            Text("⏩  GÜNÜ GEÇ", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun FiredCard(g: Game) {
+    SectionCard("Kovuldun!") {
+        Text("😞 Yönetim seninle yolları ayırdı.", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        Spacer(Modifier.height(6.dp))
+        Text("Ama futbol dünyası seni unutmadı. Şu kulüpler teknik direktör arıyor:", color = TextDim, fontSize = 13.sp)
+        Spacer(Modifier.height(10.dp))
+        g.jobOffers.map { g.team(it) }.forEach { t ->
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TeamBadge(t, 36.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(t.name, fontWeight = FontWeight.Bold)
+                    Text("${Comp.name(t.division)} · ${g.position(t.id)}. sıra · ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
+                }
+                Button(onClick = { GameRepo.takeJob(t.id) }) { Text("İmzala") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IncomingOffersCard(g: Game) {
+    var msg by remember { mutableStateOf<String?>(null) }
+    SectionCard("Gelen transfer teklifleri") {
+        msg?.let { Text(it, color = Gold, fontSize = 13.sp); Spacer(Modifier.height(8.dp)) }
+        g.offers.toList().forEachIndexed { i, o: IncomingOffer ->
+            val p = g.player(o.playerId) ?: return@forEachIndexed
+            val buyer = g.team(o.teamId)
+            if (i > 0) HorizontalDivider(color = Line, modifier = Modifier.padding(vertical = 8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TeamBadge(buyer, 30.dp)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("${buyer.name} → ${p.name}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Teklif: ${money(o.price)} · Değeri: ${money(p.value)} · Güç ${p.overall}", color = TextDim, fontSize = 12.sp)
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(onClick = { GameRepo.acceptIncoming(o); msg = null }, modifier = Modifier.weight(1f)) { Text("Sat", fontSize = 13.sp) }
+                OutlinedButton(onClick = { msg = GameRepo.counterIncoming(o) }, modifier = Modifier.weight(1f)) { Text("+%20 iste", fontSize = 13.sp) }
+                OutlinedButton(onClick = { GameRepo.rejectIncoming(o); msg = null }, modifier = Modifier.weight(1f)) { Text("Reddet", fontSize = 13.sp) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SeasonEndCard(g: Game) {
     val rec = g.history.lastOrNull()
     val t = g.userTeam
     val pos = rec?.userPos ?: g.position(t.id)
     val target = Season.objectiveTarget(t.expected)
     SectionCard("Sezon sonu") {
-        Text("🏆 Şampiyon: ${rec?.champion ?: "-"}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(Modifier.height(6.dp))
-        Text("Gol kralı: ${rec?.topScorer ?: "-"}", color = TextDim)
+        Text("🏆 Süper Lig şampiyonu: ${rec?.champion ?: "-"}", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        if (!rec?.cupWinner.isNullOrEmpty()) Text("🥇 Türkiye Kupası: ${rec?.cupWinner}", fontSize = 15.sp)
+        if (!rec?.firstChampion.isNullOrEmpty()) Text("1. Lig şampiyonu: ${rec?.firstChampion}", color = TextDim, fontSize = 14.sp)
+        Text("Gol kralı: ${rec?.topScorer ?: "-"}", color = TextDim, fontSize = 14.sp)
         Spacer(Modifier.height(12.dp))
-        Text("${t.name} ligi $pos. sırada bitirdi.", fontSize = 16.sp)
+        Text("${t.name} ${Comp.name(t.division)}'i $pos. sırada bitirdi.", fontSize = 16.sp)
+        if (t.division == 0 && pos >= 16) Text("⬇️ Küme düştük...", color = Red, fontWeight = FontWeight.Bold)
+        if (t.division == 1 && pos <= 3) Text("⬆️ SÜPER LİG'E YÜKSELDİK!", color = Gold, fontWeight = FontWeight.Bold)
         val (msg, col) = when {
             pos == 1 -> "Efsane sezon! Taraftar seni omuzlarda taşıyor! 🎉" to Gold
-            pos <= target -> "Yönetim hedefi (${Season.objectiveText(t.expected)}) tuttu. Başkan çok memnun! 👏" to Green
+            pos <= target -> "Yönetim hedefi (${Season.objectiveText(t)}) tuttu. Başkan çok memnun! 👏" to Green
             pos <= target + 3 -> "Hedefin biraz gerisinde kaldık. Yönetim yeni sezonda daha fazlasını bekliyor." to Gold
             else -> "Hedefin çok gerisinde kaldık. Yönetim sabırsızlanıyor... 😬" to Red
         }
         Spacer(Modifier.height(6.dp))
         Text(msg, color = col)
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
+        Text("Sezon arası transfer dönemi açık: yeni sezondan önce kadronu güçlendirebilirsin.", color = TextDim, fontSize = 12.sp)
+        Spacer(Modifier.height(12.dp))
         Button(
             onClick = { GameRepo.startNewSeason() },
             modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
@@ -230,7 +308,7 @@ private fun BoardCard(g: Game) {
     SectionCard("Yönetim") {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Hedef: ${Season.objectiveText(t.expected)}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Hedef: ${Season.objectiveText(t)}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(status, color = col, fontSize = 13.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -238,6 +316,15 @@ private fun BoardCard(g: Game) {
                 Text("sıra", color = TextDim, fontSize = 11.sp)
             }
         }
+        Spacer(Modifier.height(10.dp))
+        val c = g.confidence
+        val cc = when { c >= 60 -> Green; c >= 30 -> Gold; else -> Red }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Yönetim güveni", color = TextDim, fontSize = 13.sp, modifier = Modifier.width(110.dp))
+            Bar((c / 100).toFloat(), cc, Modifier.weight(1f), 8.dp)
+            Text(" ${c.toInt()}%", color = cc, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+        if (c < 25 && !g.fired) Text("⚠️ Koltuğun sallanıyor! Sonuçlar düzelmezse kovulabilirsin.", color = Red, fontSize = 12.sp)
         if (t.form.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -250,10 +337,10 @@ private fun BoardCard(g: Game) {
 
 @Composable
 private fun MiniTable(g: Game) {
-    val table = g.table()
+    val table = g.table(g.userTeam.division)
     val ui = table.indexOfFirst { it.id == g.userTeamId }
     val rows = (table.indices.take(5) + listOf(ui - 1, ui, ui + 1)).filter { it in table.indices }.distinct().sorted()
-    SectionCard("Puan durumu") {
+    SectionCard("Puan durumu · ${Comp.name(g.userTeam.division)}") {
         var prev = -1
         rows.forEach { i ->
             if (prev >= 0 && i != prev + 1) Text("···", color = TextDim, modifier = Modifier.padding(start = 8.dp))
@@ -282,11 +369,12 @@ private fun MiniTable(g: Game) {
 
 @Composable
 private fun RecentResults(g: Game) {
-    val res = g.fixtures.filter { it.played && (it.home == g.userTeamId || it.away == g.userTeamId) }.takeLast(5).reversed()
+    val res = g.fixtures.filter { it.played && it.involves(g.userTeamId) }.sortedBy { it.week }.takeLast(5).reversed()
     if (res.isEmpty()) return
     SectionCard("Son maçlar") {
         res.forEachIndexed { i, f ->
             if (i > 0) HorizontalDivider(color = Line, modifier = Modifier.padding(vertical = 4.dp))
+            if (f.comp == Comp.CUP) Text("Kupa · ${Comp.cupRounds[f.round]}", color = TextDim, fontSize = 11.sp)
             ResultRow(g, f, g.userTeamId)
         }
     }
@@ -296,40 +384,43 @@ private fun RecentResults(g: Game) {
 fun ResultRow(g: Game, f: Fixture, highlightTeam: Int = -1) {
     val h = g.team(f.home)
     val a = g.team(f.away)
-    val userGoals = if (f.home == highlightTeam) f.hg else f.ag
-    val oppGoals = if (f.home == highlightTeam) f.ag else f.hg
+    val involved = f.involves(highlightTeam)
     val col = when {
-        highlightTeam != f.home && highlightTeam != f.away -> Surface2
-        userGoals > oppGoals -> Green
-        userGoals == oppGoals -> Gold
-        else -> Red
+        !involved || !f.played -> Surface2
+        f.comp == Comp.CUP -> if (f.winner == highlightTeam) Green else Red
+        else -> {
+            val ug = if (f.home == highlightTeam) f.hg else f.ag
+            val og = if (f.home == highlightTeam) f.ag else f.hg
+            if (ug > og) Green else if (ug == og) Gold else Red
+        }
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(h.name, modifier = Modifier.weight(1f), textAlign = TextAlign.End, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            fontWeight = if (h.id == highlightTeam) FontWeight.Bold else FontWeight.Normal)
+            fontWeight = if (h.id == highlightTeam || f.winner == h.id) FontWeight.Bold else FontWeight.Normal)
         Spacer(Modifier.width(6.dp))
         TeamBadge(h, 20.dp)
-        Box(
-            Modifier.padding(horizontal = 6.dp).clip(RoundedCornerShape(6.dp)).background(col).padding(horizontal = 8.dp, vertical = 2.dp),
-        ) {
-            Text(if (f.played) "${f.hg} - ${f.ag}" else "  -  ", fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                color = if (col == Surface2) TextMain else Color.Black)
+        Column(Modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.clip(RoundedCornerShape(6.dp)).background(col).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                Text(if (f.played) "${f.hg} - ${f.ag}" else "  -  ", fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    color = if (col == Surface2) TextMain else Color.Black)
+            }
+            if (f.pen.isNotEmpty()) Text("P ${f.pen}", fontSize = 10.sp, color = TextDim)
         }
         TeamBadge(a, 20.dp)
         Spacer(Modifier.width(6.dp))
         Text(a.name, modifier = Modifier.weight(1f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            fontWeight = if (a.id == highlightTeam) FontWeight.Bold else FontWeight.Normal)
+            fontWeight = if (a.id == highlightTeam || f.winner == a.id) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
 @Composable
 private fun NewsCard(g: Game) {
     SectionCard("Haberler") {
-        g.news.take(10).forEachIndexed { i, n ->
+        g.news.take(12).forEachIndexed { i, n ->
             if (i > 0) HorizontalDivider(color = Line, modifier = Modifier.padding(vertical = 8.dp))
             Text(n.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(n.body, color = TextDim, fontSize = 13.sp)
-            Text("${n.season} · Hafta ${n.week}", color = TextDim.copy(alpha = 0.6f), fontSize = 11.sp)
+            Text("${n.season} · ${g.dayLabel(n.week).ifEmpty { "Sezon arası" }}", color = TextDim.copy(alpha = 0.6f), fontSize = 11.sp)
         }
     }
 }

@@ -60,6 +60,7 @@ import com.supermenajer.game.engine.MatchSim
 import com.supermenajer.game.engine.PIM
 import com.supermenajer.game.engine.Side
 import com.supermenajer.game.game.GameRepo
+import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Player
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -190,6 +191,13 @@ private fun Banner(title: String, sub: String?, action: @Composable () -> Unit) 
 @Composable
 private fun ScoreBoard(sim: MatchSim) {
     Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        val f = sim.fixture
+        Text(
+            if (f.comp == Comp.CUP) "TÜRKİYE KUPASI · ${Comp.cupRounds[f.round].uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
+            color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 TeamBadge(sim.home.team, 34.dp)
@@ -199,6 +207,7 @@ private fun ScoreBoard(sim: MatchSim) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
                 Text("${sim.home.goals} - ${sim.away.goals}", fontSize = 30.sp, fontWeight = FontWeight.Black)
                 Text(if (sim.finished) "MS" else "${sim.minute}'", color = Green, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                if (sim.penHome >= 0) Text("Pen. ${sim.penHome}-${sim.penAway}", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                 Text(sim.away.team.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
@@ -448,8 +457,8 @@ fun SummaryScreen() {
                 }
             }
             item {
-                SectionCard("Haftanın diğer sonuçları") {
-                    g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture }.forEachIndexed { i, f ->
+                SectionCard("Diğer sonuçlar · ${Comp.name(sim.fixture.comp)}") {
+                    g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->
                         if (i > 0) HorizontalDivider(color = Line)
                         ResultRow(g, f)
                     }

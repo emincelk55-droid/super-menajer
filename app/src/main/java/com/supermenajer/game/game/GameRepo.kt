@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.supermenajer.game.engine.MatchSim
 import com.supermenajer.game.model.Game
+import com.supermenajer.game.model.IncomingOffer
 import com.supermenajer.game.model.Player
 import com.supermenajer.game.model.Team
 import kotlinx.serialization.json.Json
@@ -31,6 +32,8 @@ object GameRepo {
         private set
     var selectedPlayer by mutableStateOf<Player?>(null)
     var tab by mutableIntStateOf(0)
+    var tacticsMode by mutableIntStateOf(0)
+    var leagueTab by mutableIntStateOf(-1)
 
     fun init(d: File) {
         dir = d
@@ -53,7 +56,10 @@ object GameRepo {
     }
 
     fun load(): Boolean = runCatching {
-        game = json.decodeFromString(Game.serializer(), saveFile.readText())
+        val g = json.decodeFromString(Game.serializer(), saveFile.readText())
+        Season.migrate(g)
+        game = g
+        save()
         bump()
         true
     }.getOrDefault(false)
@@ -65,7 +71,7 @@ object GameRepo {
         val t = g.userTeam
         g.addNews(
             "Hoş geldin hocam!",
-            "${t.name} yönetimi seni yeni teknik direktör olarak açıkladı. Yönetimin bu sezonki hedefi: ${Season.objectiveText(t.expected)}. Bütçen: ${money(t.budget)}.",
+            "${t.name} yönetimi seni yeni teknik direktör olarak açıkladı. Yönetimin bu sezonki hedefi: ${Season.objectiveText(t)}. Bütçen: ${money(t.budget)}.",
         )
         game = g
         tab = 0
@@ -76,7 +82,8 @@ object GameRepo {
 
     fun playMatch(live: Boolean) {
         val g = game ?: return
-        val f = g.nextUserFixture() ?: return
+        if (g.fired) return
+        val f = g.todayUserFixture() ?: return
         val sim = MatchSim(g, f, g.userTeamId, autoUserSubs = !live)
         match = sim
         if (live) {
@@ -96,11 +103,38 @@ object GameRepo {
         sim.applyToGame()
         Season.matchNews(g, sim)
         Season.simulateRest(g, sim.fixture.week)
-        Season.endWeek(g)
+        Season.endDay(g)
         Lineups.validate(g, g.userTeam)
         save()
         screen = Screen.SUMMARY
         bump()
+    }
+
+    /** Kullanıcının maçı olmayan günü (ör. kupadan elendiyse) geçer. */
+    fun skipDay() {
+        val g = game ?: return
+        if (g.fired || g.seasonOver || g.todayUserFixture() != null) return
+        Season.simulateRest(g, g.week)
+        Season.endDay(g)
+        Lineups.validate(g, g.userTeam)
+        changed()
+    }
+
+    fun takeJob(teamId: Int) {
+        val g = game ?: return
+        Season.takeJob(g, teamId)
+        tab = 0
+        changed()
+    }
+
+    fun setTraining(v: Int) {
+        game?.userTeam?.training = v
+        changed()
+    }
+
+    fun setIntensity(v: Int) {
+        game?.userTeam?.intensity = v
+        changed()
     }
 
     fun closeSummary() {
@@ -192,58 +226,148 @@ object GameRepo {
 
     // ---- Transfer ----
 
+    /** Oturum boyunca pazarlık hafızası: oyuncu id -> (deneme sayısı, karşı teklif). */
+    private val talks = HashMap<Int, Pair<Int, Long>>()
+
+    private fun r25k(v: Double): Long = (v / 25_000).roundToLong() * 25_000
+
     fun askingPrice(p: Player): Long {
         val g = game ?: return p.value
-        if (p.teamId < 0) return (p.value * 0.15 / 25_000).roundToLong() * 25_000
+        if (p.teamId < 0) return r25k(p.value * 0.15)
         val seller = g.team(p.teamId)
         val key = p.id in seller.lineup
-        return ((p.value * if (key) 1.35 else 1.1) / 25_000).roundToLong() * 25_000
+        val needsMoney = if (seller.budget < 0) 0.9 else 1.0
+        return r25k(p.value * (if (key) 1.35 else 1.1) * needsMoney)
     }
 
-    /** Hata mesajı döner; başarılıysa null. */
-    fun buy(p: Player): String? {
+    fun counterFor(p: Player): Long? = talks[p.id]?.second?.takeIf { it > 0 }
+
+    /** Transfere engel bir durum varsa açıklamasını döner. */
+    fun transferBlock(p: Player): String? {
         val g = game ?: return "Oyun yok"
         val us = g.userTeam
         if (p.teamId == us.id) return "Oyuncu zaten senin takımında."
-        val price = askingPrice(p)
-        if (us.budget < price) return "Bütçe yetersiz. Gereken: ${money(price)}"
+        if (p.teamId >= 0 && !Season.transferWindowOpen(g)) return "Transfer dönemi kapalı. Şu an sadece serbest oyuncu alabilirsin."
         if (g.squad(us.id).size >= 30) return "Kadro dolu (en fazla 30 oyuncu)."
-        val sellerName: String
+        if (p.teamId >= 0 && g.squad(p.teamId).size <= 18) return "${g.team(p.teamId).name} kadrosu dar olduğu için satmıyor."
+        val level = Lineups.strength(g, us)
         if (p.teamId >= 0) {
             val seller = g.team(p.teamId)
-            if (g.squad(seller.id).size <= 18) return "${seller.name} kadrosu dar olduğu için satmıyor."
+            if (p.overall >= level + 6 && (us.reputation < seller.reputation || us.division > seller.division)) {
+                return "${p.name} daha büyük bir kulüpte oynamak istiyor, takımımıza gelmeye sıcak bakmıyor."
+            }
+        } else if (p.overall >= level + 10) {
+            return "${p.name} daha iddialı bir takım arıyor."
+        }
+        val tries = talks[p.id]?.first ?: 0
+        if (tries >= 3) return "Kulüp görüşmeleri kesti. Bir süre bu oyuncu için teklif yapamazsın."
+        return null
+    }
+
+    sealed class Reply {
+        data object Accepted : Reply()
+        class Counter(val price: Long) : Reply()
+        class Rejected(val msg: String) : Reply()
+    }
+
+    fun offerFor(p: Player, offer: Long): Reply {
+        val g = game ?: return Reply.Rejected("Oyun yok")
+        transferBlock(p)?.let { return Reply.Rejected(it) }
+        val us = g.userTeam
+        if (us.budget < offer) return Reply.Rejected("Bütçe yetersiz.")
+        val asking = askingPrice(p)
+        val counter = counterFor(p)
+        val (tries, _) = talks[p.id] ?: (0 to 0L)
+        if (offer >= asking || (counter != null && offer >= counter)) {
+            completeBuy(p, offer)
+            talks.remove(p.id)
+            return Reply.Accepted
+        }
+        if (p.teamId < 0) {
+            talks[p.id] = (tries + 1) to 0L
+            return Reply.Rejected("${p.name} bu imza parasını az buldu.")
+        }
+        val seller = g.team(p.teamId).name
+        if (offer >= asking * 0.8) {
+            val c = r25k((offer + asking) / 2.0).coerceAtLeast(offer + 25_000)
+            talks[p.id] = (tries + 1) to c
+            return Reply.Counter(c)
+        }
+        talks[p.id] = (tries + 1) to (counter ?: 0L)
+        return Reply.Rejected("$seller teklifi reddetti: \"Bu rakam ciddi değil.\"")
+    }
+
+    private fun completeBuy(p: Player, price: Long) {
+        val g = game ?: return
+        val us = g.userTeam
+        val sellerName = if (p.teamId >= 0) {
+            val seller = g.team(p.teamId)
             seller.budget += price
             seller.lineup.replaceAll { if (it == p.id) -1 else it }
-            sellerName = seller.name
-        } else sellerName = "serbest oyuncu"
+            seller.name
+        } else "serbest oyuncu"
         us.budget -= price
         p.teamId = us.id
         p.morale = 80.0
         g.addNews("Transfer!", "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${money(price)} karşılığında $sellerName → ${us.name}.")
         changed()
-        return null
     }
 
     fun makeOffer(p: Player): Offer? {
         val g = game ?: return null
+        if (!Season.transferWindowOpen(g)) return null
         if (g.squad(g.userTeamId).size <= 16) return null
-        val price = (p.value * Random.nextDouble(0.85, 1.05) / 25_000).roundToLong() * 25_000
+        val price = r25k(p.value * Random.nextDouble(0.85, 1.05))
         val buyer = g.teams.filter { it.id != g.userTeamId && it.budget >= price && g.squad(it.id).size < 30 }
             .randomOrNull() ?: return null
         return Offer(p, buyer, price)
     }
 
     fun acceptOffer(o: Offer) {
+        sellPlayer(o.player, o.buyer, o.price)
+    }
+
+    private fun sellPlayer(p: Player, buyer: Team, price: Long) {
         val g = game ?: return
         val us = g.userTeam
-        if (o.player.teamId != us.id) return
-        us.budget += o.price
-        o.buyer.budget -= o.price
-        o.player.teamId = o.buyer.id
+        if (p.teamId != us.id) return
+        us.budget += price
+        buyer.budget -= price
+        p.teamId = buyer.id
+        g.offers.removeAll { it.playerId == p.id }
         Lineups.validate(g, us)
-        g.addNews("Satış", "${o.player.name}, ${money(o.price)} karşılığında ${o.buyer.name} takımına satıldı.")
+        g.addNews("Satış", "${p.name}, ${money(price)} karşılığında ${buyer.name} takımına satıldı.")
         selectedPlayer = null
         changed()
+    }
+
+    fun acceptIncoming(o: IncomingOffer) {
+        val g = game ?: return
+        val p = g.player(o.playerId) ?: return
+        sellPlayer(p, g.team(o.teamId), o.price)
+    }
+
+    fun rejectIncoming(o: IncomingOffer) {
+        val g = game ?: return
+        g.offers.remove(o)
+        g.player(o.playerId)?.let { if (o.price > it.value * 1.2) it.morale = (it.morale - 8).coerceAtLeast(5.0) }
+        changed()
+    }
+
+    /** Daha yüksek bedel ister; kulüp %50 ihtimalle kabul eder. Mesaj döner. */
+    fun counterIncoming(o: IncomingOffer): String {
+        val g = game ?: return ""
+        val buyer = g.team(o.teamId)
+        val ask = r25k(o.price * 1.2)
+        val msg = if (buyer.budget >= ask && Random.nextDouble() < 0.5) {
+            o.price = ask
+            "${buyer.name} yeni rakamı kabul etti: ${money(ask)}. Satışı onaylayabilirsin."
+        } else {
+            g.offers.remove(o)
+            "${buyer.name} masadan kalktı."
+        }
+        changed()
+        return msg
     }
 }
 

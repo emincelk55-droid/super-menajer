@@ -62,6 +62,27 @@ object Generator {
         TeamDef("Malatya Kayısıspor", "MAL", "Malatya", 0xFFFFB300, 0xFF212121, 56),
     )
 
+    val lowerDefs = listOf(
+        TeamDef("Kocaeli Körfez Gücü", "KOC", "Kocaeli", 0xFF2E7D32, 0xFF111111, 55),
+        TeamDef("Manisa Lale SK", "MAN", "Manisa", 0xFFE91E63, 0xFFFFFFFF, 54),
+        TeamDef("Denizli Horozspor", "DEN", "Denizli", 0xFF1565C0, 0xFF111111, 53),
+        TeamDef("Mersin Liman FK", "MER", "Mersin", 0xFF0277BD, 0xFFFFEB3B, 52),
+        TeamDef("Hatay Defnespor", "HAT", "Hatay", 0xFF880E4F, 0xFFFFFFFF, 51),
+        TeamDef("Erzurum Palandöken", "ERZ", "Erzurum", 0xFF0D47A1, 0xFFFFFFFF, 50),
+        TeamDef("Aydın Efespor", "AYD", "Aydın", 0xFFF57C00, 0xFF111111, 49),
+        TeamDef("Balıkesir Kazdağı", "BAL", "Balıkesir", 0xFFC62828, 0xFF111111, 48),
+        TeamDef("Tekirdağ Trakya FK", "TEK", "Tekirdağ", 0xFF00838F, 0xFFFFFFFF, 47),
+        TeamDef("Ordu Fındıkspor", "ORD", "Ordu", 0xFF5D4037, 0xFFFFC107, 46),
+        TeamDef("Bolu Abant SK", "BOL", "Bolu", 0xFF558B2F, 0xFFFFFFFF, 45),
+        TeamDef("Van Gölü SK", "VAN", "Van", 0xFF1E88E5, 0xFFFFEB3B, 44),
+        TeamDef("Şanlıurfa Balıklıgöl", "URF", "Şanlıurfa", 0xFF43A047, 0xFFFFEB3B, 43),
+        TeamDef("Çorum Hititspor", "ÇOR", "Çorum", 0xFFB71C1C, 0xFF111111, 42),
+        TeamDef("Zonguldak Kömürspor", "ZON", "Zonguldak", 0xFF263238, 0xFFD32F2F, 41),
+        TeamDef("Edirne Selimiye FK", "EDİ", "Edirne", 0xFF6A1B9A, 0xFFFFFFFF, 40),
+        TeamDef("Afyon Termalspor", "AFY", "Afyon", 0xFF283593, 0xFFE53935, 39),
+        TeamDef("Uşak Ulubey SK", "UŞA", "Uşak", 0xFF9E9D24, 0xFF111111, 38),
+    )
+
     /** Pozisyon başına kadro planı. */
     val squadPlan = linkedMapOf(Pos.GK to 3, Pos.DF to 8, Pos.MF to 8, Pos.FW to 5)
     private val starters = mapOf(Pos.GK to 1, Pos.DF to 4, Pos.MF to 4, Pos.FW to 2)
@@ -74,11 +95,22 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 2,
         )
         for (t in teams) squad(g, t, rnd)
+        addLowerDivision(g, rnd)
         topUpFreeAgents(g, rnd)
         return g
+    }
+
+    /** 1. Lig takımlarını ve kadrolarını ekler (eski kayıtların taşınmasında da kullanılır). */
+    fun addLowerDivision(g: Game, rnd: Random) {
+        val base = (g.teams.maxOfOrNull { it.id } ?: -1) + 1
+        lowerDefs.forEachIndexed { i, d ->
+            val t = Team(base + i, d.name, d.short, d.city, d.c1, d.c2, d.rep, budgetFor(d.rep), division = 1)
+            g.teams += t
+            squad(g, t, rnd)
+        }
     }
 
     private fun budgetFor(rep: Int): Long = ((rep - 45) * (rep - 45) * 15_000L).coerceAtLeast(1_500_000L)

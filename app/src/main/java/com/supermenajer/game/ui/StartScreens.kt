@@ -88,7 +88,7 @@ fun TitleScreen() {
                 Text("Kayıt dosyası okunamadı.", color = Red)
             }
             Spacer(Modifier.height(40.dp))
-            Text("v0.1", color = TextDim, fontSize = 12.sp)
+            Text("v0.2", color = TextDim, fontSize = 12.sp)
         }
     }
 }
@@ -98,6 +98,7 @@ fun NewGameScreen() {
     val world = remember { Generator.newWorld().also { Season.computeExpectations(it) } }
     var name by remember { mutableStateOf("") }
     var selected by remember { mutableIntStateOf(-1) }
+    var div by remember { mutableIntStateOf(0) }
     val hasSave = remember { GameRepo.hasSave() }
     BackHandler { GameRepo.screen = Screen.TITLE }
 
@@ -111,15 +112,20 @@ fun NewGameScreen() {
             )
             Spacer(Modifier.height(12.dp))
             Text("Takımını seç", color = TextDim, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("Süper Lig", div == 0) { div = 0 }
+                Chip("1. Lig (zor mod)", div == 1) { div = 1 }
+            }
         }
         LazyColumn(
             Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(world.teams.sortedBy { it.expected }, key = { it.id }) { t ->
+            items(world.divisionTeams(div).sortedBy { it.expected }, key = { it.id }) { t ->
                 val sel = t.id == selected
-                val stars = when { t.reputation >= 84 -> 5; t.reputation >= 72 -> 4; t.reputation >= 65 -> 3; t.reputation >= 59 -> 2; else -> 1 }
+                val stars = when { t.reputation >= 84 -> 5; t.reputation >= 72 -> 4; t.reputation >= 63 -> 3; t.reputation >= 52 -> 2; else -> 1 }
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface1)
                         .border(2.dp, if (sel) Green else Color.Transparent, RoundedCornerShape(12.dp))
@@ -131,7 +137,7 @@ fun NewGameScreen() {
                     Column(Modifier.weight(1f)) {
                         Text(t.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text("★".repeat(stars) + "☆".repeat(5 - stars), color = Gold, fontSize = 13.sp)
-                        Text("Hedef: ${Season.objectiveText(t.expected)} · Bütçe: ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
+                        Text("Hedef: ${Season.objectiveText(t)} · Bütçe: ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
                     }
                     OvrBadge(Lineups.strength(world, t).toInt())
                 }
