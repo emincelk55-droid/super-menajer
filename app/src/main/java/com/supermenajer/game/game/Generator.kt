@@ -27,7 +27,7 @@ object Generator {
 
     private class NameSet(val nation: String, val first: List<String>, val last: List<String>)
 
-    private val foreign = listOf(
+    private val foreignNames = listOf(
         NameSet("BR", listOf("Lucas", "Thiago", "Gabriel", "Rafael", "Bruno", "Diego", "Felipe", "Vinicius"), listOf("Silva", "Santos", "Oliveira", "Souza", "Costa", "Pereira", "Lima", "Rocha")),
         NameSet("AR", listOf("Matías", "Facundo", "Lautaro", "Nicolás", "Julián", "Santiago"), listOf("González", "Fernández", "Romero", "Álvarez", "Sosa", "Medina")),
         NameSet("SN", listOf("Moussa", "Ibrahima", "Cheikh", "Sadio", "Mamadou", "Pape"), listOf("Diallo", "Ndiaye", "Sow", "Diop", "Sarr", "Gueye")),
@@ -37,7 +37,13 @@ object Generator {
         NameSet("DK", listOf("Jonas", "Erik", "Mikkel", "Rasmus", "Andreas"), listOf("Jensen", "Larsen", "Nielsen", "Hansen", "Møller")),
         NameSet("PT", listOf("João", "Rúben", "André", "Gonçalo", "Nuno"), listOf("Ferreira", "Gomes", "Carvalho", "Mendes", "Pinto")),
         NameSet("FR", listOf("Hugo", "Théo", "Lucas", "Mathis", "Yanis"), listOf("Martin", "Bernard", "Dubois", "Moreau", "Laurent")),
+        NameSet("ES", listOf("Pablo", "Sergio", "Álvaro", "Iker", "Javier", "Raúl"), listOf("García", "Martínez", "López", "Sánchez", "Ruiz", "Navarro")),
+        NameSet("IT", listOf("Marco", "Lorenzo", "Federico", "Matteo", "Andrea", "Davide"), listOf("Rossi", "Bianchi", "Esposito", "Ricci", "Romano", "Conti")),
+        NameSet("DE", listOf("Leon", "Jonas", "Lukas", "Felix", "Niklas", "Tim"), listOf("Müller", "Schmidt", "Weber", "Wagner", "Becker", "Hoffmann")),
+        NameSet("GB", listOf("Harry", "Jack", "James", "Oliver", "Mason", "Callum"), listOf("Smith", "Walker", "Taylor", "Wright", "Hughes", "Clarke")),
+        NameSet("NL", listOf("Daan", "Sem", "Bram", "Luuk", "Thijs"), listOf("de Jong", "Bakker", "Visser", "van Dijk", "Smit")),
     )
+
 
     class TeamDef(val name: String, val short: String, val city: String, val c1: Long, val c2: Long, val rep: Int)
 
@@ -83,6 +89,38 @@ object Generator {
         TeamDef("Uşak Ulubey SK", "UŞA", "Uşak", 0xFF9E9D24, 0xFF111111, 38),
     )
 
+    /** Avrupa Kupası'nın yabancı kulüpleri (ülke adı city alanında tutulur). */
+    val euroDefs = listOf(
+        TeamDef("Northbridge United", "NBU", "İngiltere", 0xFFD50000, 0xFFFFFFFF, 92),
+        TeamDef("Real Montaña CF", "RMO", "İspanya", 0xFFFFFFFF, 0xFF283593, 92),
+        TeamDef("FC Rheinstadt", "RHE", "Almanya", 0xFFB71C1C, 0xFFFFFFFF, 90),
+        TeamDef("Kingsport City", "KCI", "İngiltere", 0xFF81D4FA, 0xFF0D47A1, 90),
+        TeamDef("AC Lombardia", "LOM", "İtalya", 0xFF212121, 0xFFD32F2F, 88),
+        TeamDef("Olympique Lumière", "OLU", "Fransa", 0xFF0D47A1, 0xFFE53935, 88),
+        TeamDef("Atlético Levante Sur", "ALS", "İspanya", 0xFFC62828, 0xFFFFFFFF, 87),
+        TeamDef("Vesuvio Calcio", "VES", "İtalya", 0xFF29B6F6, 0xFFFFFFFF, 86),
+        TeamDef("Borussia Waldheim", "BWA", "Almanya", 0xFFFFEB3B, 0xFF111111, 85),
+        TeamDef("Redhill Rovers", "RRO", "İngiltere", 0xFF1A237E, 0xFFFFFFFF, 84),
+        TeamDef("Sporting Atlântico", "SPA", "Portekiz", 0xFF2E7D32, 0xFFFFFFFF, 82),
+        TeamDef("Grachten FC", "GRA", "Hollanda", 0xFFE53935, 0xFFFFFFFF, 81),
+        TeamDef("FC Adriatico", "ADR", "İtalya", 0xFF1565C0, 0xFF111111, 80),
+        TeamDef("AS Bretagne", "ASB", "Fransa", 0xFF111111, 0xFFFFFFFF, 79),
+        TeamDef("FC Douro", "DOU", "Portekiz", 0xFF0D47A1, 0xFFFFFFFF, 79),
+        TeamDef("Eintracht Nordberg", "EIN", "Almanya", 0xFF424242, 0xFFE53935, 78),
+        TeamDef("Polder Utd", "POL", "Hollanda", 0xFFFF6F00, 0xFF111111, 77),
+        TeamDef("Valle Real CF", "VAL", "İspanya", 0xFFFFC107, 0xFF1B5E20, 77),
+        TeamDef("Celtic Highlands", "CHI", "İskoçya", 0xFF2E7D32, 0xFFFFFFFF, 75),
+        TeamDef("Royal Antwerpia", "ANW", "Belçika", 0xFFC62828, 0xFFFFFFFF, 74),
+        TeamDef("Dinamo Zagora", "DZA", "Hırvatistan", 0xFF1565C0, 0xFFFFFFFF, 73),
+        TeamDef("Steppe Donetsia", "STE", "Ukrayna", 0xFFFF8F00, 0xFF111111, 73),
+        TeamDef("Aegean FC", "AEG", "Yunanistan", 0xFFD32F2F, 0xFFFFFFFF, 72),
+        TeamDef("Red Star Danube", "RSD", "Sırbistan", 0xFFC62828, 0xFFFFFFFF, 71),
+        TeamDef("Viking Bergen", "VIK", "Norveç", 0xFF111111, 0xFFFFC107, 69),
+        TeamDef("Alpen Salzburg", "ALP", "Avusturya", 0xFFFFFFFF, 0xFFD32F2F, 70),
+        TeamDef("FC Øresund", "ØRE", "Danimarka", 0xFF0D47A1, 0xFFFFFFFF, 68),
+        TeamDef("Slavia Moldau", "SLM", "Çekya", 0xFFD32F2F, 0xFFFFFFFF, 67),
+    )
+
     /** Pozisyon başına kadro planı. */
     val squadPlan = linkedMapOf(Pos.GK to 3, Pos.DF to 8, Pos.MF to 8, Pos.FW to 5)
     private val starters = mapOf(Pos.GK to 1, Pos.DF to 4, Pos.MF to 4, Pos.FW to 2)
@@ -95,10 +133,11 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 2,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 3,
         )
         for (t in teams) squad(g, t, rnd)
         addLowerDivision(g, rnd)
+        addEuropeanTeams(g, rnd)
         topUpFreeAgents(g, rnd)
         return g
     }
@@ -108,6 +147,16 @@ object Generator {
         val base = (g.teams.maxOfOrNull { it.id } ?: -1) + 1
         lowerDefs.forEachIndexed { i, d ->
             val t = Team(base + i, d.name, d.short, d.city, d.c1, d.c2, d.rep, budgetFor(d.rep), division = 1)
+            g.teams += t
+            squad(g, t, rnd)
+        }
+    }
+
+    /** Avrupa'nın yabancı kulüplerini ekler (division = 2). */
+    fun addEuropeanTeams(g: Game, rnd: Random) {
+        val base = (g.teams.maxOfOrNull { it.id } ?: -1) + 1
+        euroDefs.forEachIndexed { i, d ->
+            val t = Team(base + i, d.name, d.short, d.city, d.c1, d.c2, d.rep, budgetFor(d.rep) * 2, division = 2)
             g.teams += t
             squad(g, t, rnd)
         }
@@ -125,7 +174,7 @@ object Generator {
                 i == n - 1 && pos != Pos.GK -> { target = lvl - rnd.nextInt(9, 16); age = rnd.nextInt(17, 20) }
                 else -> { target = lvl - rnd.nextInt(2, 9); age = rnd.nextInt(19, 34) }
             }
-            g.players += makePlayer(g.nextPlayerId++, pos, target.roundToInt(), age, t.id, rnd)
+            g.players += makePlayer(g.nextPlayerId++, pos, target.roundToInt(), age, t.id, rnd, foreign = t.division == 2)
         }
     }
 
@@ -138,7 +187,7 @@ object Generator {
 
     fun youth(g: Game, t: Team, pos: Pos, rnd: Random): Player {
         val target = (teamLevel(t.reputation) - rnd.nextInt(10, 20)).roundToInt()
-        val p = makePlayer(g.nextPlayerId++, pos, target, rnd.nextInt(17, 19), t.id, rnd)
+        val p = makePlayer(g.nextPlayerId++, pos, target, rnd.nextInt(17, 19), t.id, rnd, foreign = t.division == 2)
         p.potential = (p.overall + rnd.nextInt(10, 29)).coerceAtMost(92)
         return p
     }
@@ -150,11 +199,11 @@ object Generator {
         Pos.FW to intArrayOf(3, 4, -10, 2, -35, -3),
     )
 
-    fun makePlayer(id: Int, pos: Pos, target: Int, age: Int, teamId: Int, rnd: Random): Player {
+    fun makePlayer(id: Int, pos: Pos, target: Int, age: Int, teamId: Int, rnd: Random, foreign: Boolean = false): Player {
         val o = offsets.getValue(pos)
         fun a(i: Int) = (target + o[i] + rnd.nextInt(-6, 7)).coerceIn(15, 95)
         val gk = if (pos == Pos.GK) (target + rnd.nextInt(-2, 4)).coerceIn(30, 95) else rnd.nextInt(8, 22)
-        val (name, nation) = randomName(rnd)
+        val (name, nation) = randomName(rnd, foreign)
         val p = Player(id, name, age, nation, pos, a(0), a(1), a(2), a(3), a(4), a(5), gk, 0, teamId)
         repeat(4) {
             val diff = target - p.overall
@@ -183,11 +232,11 @@ object Generator {
         }
     }
 
-    private fun randomName(rnd: Random): Pair<String, String> {
-        return if (rnd.nextDouble() < 0.78) {
+    private fun randomName(rnd: Random, foreign: Boolean = false): Pair<String, String> {
+        return if (!foreign && rnd.nextDouble() < 0.78) {
             "${trFirst.random(rnd)} ${trLast.random(rnd)}" to "TR"
         } else {
-            val s = foreign.random(rnd)
+            val s = foreignNames.random(rnd)
             "${s.first.random(rnd)} ${s.last.random(rnd)}" to s.nation
         }
     }

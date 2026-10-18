@@ -26,6 +26,8 @@ object Season {
             c += Day(0, w)
             val r = cupAfterWeek.indexOf(w)
             if (r >= 0) c += Day(1, r)
+            val e = Europe.afterWeek.indexOf(w)
+            if (e >= 0) c += Day(2, e)
         }
         return c
     }
@@ -69,11 +71,20 @@ object Season {
         }
         val cupTeams = g.divisionTeams(0) + g.divisionTeams(1).sortedByDescending { it.reputation }.take(14)
         drawCup(g, 0, cupTeams, rnd)
+        Europe.start(g, rnd)
     }
 
     /** Eski (v0.1) kayıtları yeni yapıya taşır. */
     fun migrate(g: Game, rnd: Random = Random.Default) {
-        if (g.saveVersion >= 2) return
+        if (g.saveVersion < 2) migrateV2(g, rnd)
+        if (g.saveVersion < 3) {
+            if (g.teams.none { it.division == 2 }) Generator.addEuropeanTeams(g, rnd)
+            g.saveVersion = 3
+            g.addNews("Güncelleme: v0.3", "Avrupa Kupası geldi! Süper Lig'i ilk 4'te bitiren takımlar gelecek sezon Avrupa'da 28 dev kulüple yarışacak.")
+        }
+    }
+
+    private fun migrateV2(g: Game, rnd: Random) {
         if (g.calendar.isEmpty()) g.calendar = MutableList(LEAGUE_WEEKS) { Day(0, it + 1) }
         if (g.teams.none { it.division == 1 }) {
             Generator.addLowerDivision(g, rnd)
@@ -164,7 +175,13 @@ object Season {
         val score = "${h.team.name} ${h.goals} - ${a.goals} ${a.team.name}" +
             if (sim.penHome >= 0) " (Penaltılar ${sim.penHome}-${sim.penAway})" else ""
         val won = if (sim.isCup) sim.cupWinner()?.id == us.team.id else us.goals > them.goals
+        val euro = sim.fixture.comp == Comp.EURO
         val title = when {
+            euro && sim.isCup && won -> "Avrupa'da tur atladık!"
+            euro && sim.isCup -> "Avrupa'ya veda ettik"
+            euro && us.goals > them.goals -> "Avrupa'da galibiyet!"
+            euro && us.goals == them.goals -> "Avrupa'da beraberlik"
+            euro -> "Avrupa'da mağlubiyet"
             sim.isCup && won -> "Kupada tur atladık!"
             sim.isCup -> "Kupaya veda ettik"
             us.goals - them.goals >= 3 -> "Farklı galibiyet!"
@@ -186,14 +203,16 @@ object Season {
         }
         // Yönetim güveni
         val t = us.team
-        var delta = if (sim.isCup) {
+        var delta = if (euro) {
+            if (sim.isCup) (if (won) 4.0 else 0.0) else if (us.goals > them.goals) 2.0 else if (us.goals < them.goals) -0.5 else 0.5
+        } else if (sim.isCup) {
             if (won) 2.0 else if (t.expected <= 3 && sim.fixture.round <= 1) -6.0 else -1.0
         } else when {
             us.goals > them.goals -> 3.0
             us.goals == them.goals -> 0.0
             else -> -3.5
         }
-        if (!sim.isCup && g.leagueWeekAt(g.week) >= 6) {
+        if (!sim.isCup && !euro && g.leagueWeekAt(g.week) >= 6) {
             val pos = g.position(t.id)
             val target = objectiveTarget(t.expected)
             delta += when {
@@ -211,12 +230,15 @@ object Season {
         for (f in dayFixtures) {
             val h = g.team(f.home)
             h.budget += 50_000L + h.reputation * 2_500L
+            if (f.comp == Comp.EURO) h.budget += 400_000L
             if (f.comp == Comp.CUP) {
                 val prize = listOf(150_000L, 250_000L, 400_000L, 700_000L, 1_500_000L)[f.round]
                 g.team(f.winner).budget += prize
             }
         }
-        if (d.type == 0) {
+        if (d.type == 2) {
+            Europe.advance(g, d.number, rnd)
+        } else if (d.type == 0) {
             weeklyUpdate(g, rnd)
             if (d.number % 6 == 0) {
                 val leader = g.table(g.userTeam.division).first()
@@ -378,9 +400,9 @@ object Season {
     private fun fire(g: Game, rnd: Random) {
         g.fired = true
         val cur = g.userTeam
-        g.jobOffers = g.teams.filter { it.id != cur.id && it.reputation <= cur.reputation - 3 }
+        g.jobOffers = g.teams.filter { it.division < 2 && it.id != cur.id && it.reputation <= cur.reputation - 3 }
             .shuffled(rnd).take(3).map { it.id }.toMutableList()
-        if (g.jobOffers.isEmpty()) g.jobOffers = g.teams.filter { it.id != cur.id }.sortedBy { it.reputation }.take(3).map { it.id }.toMutableList()
+        if (g.jobOffers.isEmpty()) g.jobOffers = g.teams.filter { it.division < 2 && it.id != cur.id }.sortedBy { it.reputation }.take(3).map { it.id }.toMutableList()
         g.addNews("KOVULDUN!", "${cur.name} yönetimi kötü sonuçlar nedeniyle yollarını seninle ayırdı. Masada yeni teklifler var.")
     }
 
@@ -414,7 +436,10 @@ object Season {
             g.season, sl.first().name, us.name, userPos, topText,
             cupWinner = if (g.cupWinner >= 0) g.team(g.cupWinner).name else "",
             firstChampion = fl.first().name, userDivision = us.division,
+            euroWinner = if (g.euroWinner >= 0) g.team(g.euroWinner).name else "",
         )
+        g.euroQualified = sl.take(4).map { it.id }.toMutableList()
+        if (us.id in g.euroQualified) g.addNews("AVRUPA'DAYIZ!", "${us.name} gelecek sezon Avrupa Kupası'nda mücadele edecek!")
         g.addNews("Sezon sona erdi", "${g.season} Süper Lig şampiyonu ${sl.first().name}! Gol kralı: $topText. Düşenler: ${sl.takeLast(3).joinToString { it.name }}. Yükselenler: ${fl.take(3).joinToString { it.name }}.")
         if (sl.first().id == us.id) g.addNews("ŞAMPİYONUZ!", "Tebrikler hocam! ${us.name} Süper Lig şampiyonu!")
         val target = objectiveTarget(us.expected)

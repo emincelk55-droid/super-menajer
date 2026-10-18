@@ -260,12 +260,14 @@ fun LeagueTab(g: Game) {
             Chip("Süper Lig", tab == 0) { tab = 0 }
             Chip("1. Lig", tab == 1) { tab = 1 }
             Chip("Kupa", tab == 2) { tab = 2 }
+            Chip("Avrupa", tab == 5) { tab = 5 }
             Chip("Fikstür", tab == 3) { tab = 3 }
             Chip("Krallık", tab == 4) { tab = 4 }
         }
         when (tab) {
             0, 1 -> LeagueTable(g, tab)
             2 -> CupView(g)
+            5 -> EuroView(g)
             3 -> Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { if (day > 1) day-- }) { Text("◀", fontSize = 18.sp) }
@@ -274,7 +276,7 @@ fun LeagueTab(g: Game) {
                 }
                 val list = g.weekFixtures(day)
                 LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                    for (comp in listOf(com.supermenajer.game.model.Comp.CUP, com.supermenajer.game.model.Comp.SUPER, com.supermenajer.game.model.Comp.FIRST)) {
+                    for (comp in listOf(com.supermenajer.game.model.Comp.EURO, com.supermenajer.game.model.Comp.CUP, com.supermenajer.game.model.Comp.SUPER, com.supermenajer.game.model.Comp.FIRST)) {
                         val fs = list.filter { it.comp == comp }.sortedByDescending { it.involves(g.userTeamId) }
                         if (fs.isEmpty()) continue
                         item { Text(com.supermenajer.game.model.Comp.name(comp).uppercase(), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) }
@@ -288,6 +290,57 @@ fun LeagueTab(g: Game) {
             }
             else -> Scorers(g)
         }
+    }
+}
+
+@Composable
+private fun EuroView(g: Game) {
+    val Comp = com.supermenajer.game.model.Comp
+    val ko = g.fixtures.filter { it.comp == Comp.EURO && it.round >= Comp.EURO_KO }
+    LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (g.euroWinner >= 0) item {
+            SectionCard("Avrupa'nın en büyüğü") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🏆", fontSize = 30.sp)
+                    Spacer(Modifier.width(10.dp))
+                    TeamBadge(g.team(g.euroWinner), 34.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(g.team(g.euroWinner).name, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                }
+            }
+        }
+        if (g.euroTeams.isEmpty()) {
+            item {
+                SectionCard("Avrupa Kupası") {
+                    Text("Bu sezon Avrupa Kupası oynanmıyor.", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Süper Lig'i ilk 4'te bitiren takımlar gelecek sezon Avrupa'nın 28 dev kulübüyle yarışır: 8 grup, ardından son 16'dan finale tek maç eleme.", color = TextDim, fontSize = 13.sp)
+                }
+            }
+            return@LazyColumn
+        }
+        for (r in Comp.euroRounds.indices.reversed().filter { it >= Comp.EURO_KO }) {
+            val fs = ko.filter { it.round == r }.sortedByDescending { it.involves(g.userTeamId) || !g.isForeign(g.team(it.home)) || !g.isForeign(g.team(it.away)) }
+            if (fs.isEmpty()) continue
+            item {
+                SectionCard(Comp.euroRounds[r]) {
+                    fs.forEachIndexed { i, f ->
+                        if (i > 0) HorizontalDivider(color = Line)
+                        ResultRow(g, f, g.userTeamId)
+                    }
+                }
+            }
+        }
+        // Kullanıcının ve Türk takımlarının grupları önce
+        val order = (0 until 8).sortedBy { gi ->
+            val ids = g.euroTeams.subList(gi * 4, gi * 4 + 4)
+            when {
+                g.userTeamId in ids -> 0
+                ids.any { !g.isForeign(g.team(it)) } -> 1
+                else -> 2
+            }
+        }
+        for (gi in order) item { EuroGroupCard(g, gi) }
     }
 }
 

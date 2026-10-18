@@ -88,7 +88,7 @@ fun TitleScreen() {
                 Text("Kayıt dosyası okunamadı.", color = Red)
             }
             Spacer(Modifier.height(40.dp))
-            Text("v0.2", color = TextDim, fontSize = 12.sp)
+            Text("v0.3", color = TextDim, fontSize = 12.sp)
         }
     }
 }

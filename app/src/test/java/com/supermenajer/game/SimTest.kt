@@ -33,6 +33,12 @@ class SimTest {
         }
         val cup = g.fixtures.filter { it.comp == Comp.CUP }
         println("  Kupa maçları=${cup.size} penaltı=${cup.count { it.pen.isNotEmpty() }} şampiyon=${g.team(g.cupWinner).name}")
+        val euro = g.fixtures.filter { it.comp == Comp.EURO }
+        if (euro.isNotEmpty()) {
+            val turks = g.euroTeams.map { g.team(it) }.filter { it.division != 2 }
+            val koTurks = euro.filter { it.round >= Comp.EURO_KO }.flatMap { listOf(it.home, it.away) }.distinct().count { g.team(it).division != 2 }
+            println("  Avrupa maçları=${euro.size} gol/maç=${"%.2f".format(euro.sumOf { it.hg + it.ag }.toDouble() / euro.size)} Türkler=${turks.map { it.short }} elemeye kalan Türk=$koTurks şampiyon=${g.team(g.euroWinner).name}")
+        }
         println("  Kullanıcı: ${g.userTeam.name} güven=${g.confidence.toInt()} haber=${g.news.take(3).map { it.title }}")
     }
 
@@ -40,7 +46,7 @@ class SimTest {
     fun simulateSeasons() {
         val rnd = Random(7)
         val g = Generator.newWorld(rnd)
-        assertEquals(36, g.teams.size)
+        assertEquals(64, g.teams.size)
         g.userTeamId = 30
         g.managerName = "Test"
         Season.start(g, rnd)
@@ -49,6 +55,9 @@ class SimTest {
             assertEquals(306, g.fixtures.count { it.comp == Comp.SUPER && it.played })
             assertEquals(31, g.fixtures.count { it.comp == Comp.CUP })
             assertTrue(g.cupWinner >= 0)
+            assertEquals(96 + 15, g.fixtures.count { it.comp == Comp.EURO && it.played })
+            assertTrue(g.euroWinner >= 0)
+            assertEquals(4, g.euroTeams.count { g.team(it).division != 2 })
             report(g)
             Season.newSeason(g, rnd)
             assertEquals(18, g.divisionTeams(0).size)
@@ -60,7 +69,7 @@ class SimTest {
         val rnd = Random(3)
         val g = Generator.newWorld(rnd)
         // v0.1 benzeri kayıt: sadece Süper Lig, takvimsiz, 10. haftada
-        val lower = g.divisionTeams(1).map { it.id }.toSet()
+        val lower = (g.divisionTeams(1) + g.divisionTeams(2)).map { it.id }.toSet()
         g.teams.removeAll { it.id in lower }
         g.players.removeAll { it.teamId in lower }
         g.saveVersion = 1
@@ -71,11 +80,28 @@ class SimTest {
         repeat(9) { playDay(g, rnd) }
         g.calendar = mutableListOf()
         Season.migrate(g, rnd)
-        assertEquals(36, g.teams.size)
+        assertEquals(64, g.teams.size)
         assertEquals(9 * 9, g.fixtures.count { it.comp == Comp.FIRST && it.played })
+        assertEquals(3, g.saveVersion)
+        assertTrue(g.euroTeams.isEmpty())
         while (!g.seasonOver) playDay(g, rnd)
         Season.newSeason(g, rnd)
+        assertEquals(32, g.euroTeams.size)
         while (!g.seasonOver) playDay(g, rnd)
         report(g)
+    }
+
+    @Test
+    fun bigClubInEurope() {
+        val rnd = Random(11)
+        val g = Generator.newWorld(rnd)
+        g.userTeamId = 0
+        Season.start(g, rnd)
+        assertTrue(g.userTeamId in g.euroTeams)
+        // Aynı grupta iki Türk takımı olmamalı
+        for (gi in 0 until 8) assertTrue(g.euroTeams.subList(gi * 4, gi * 4 + 4).count { g.team(it).division != 2 } <= 1)
+        while (!g.seasonOver) playDay(g, rnd)
+        report(g)
+        println("  Haberler: " + g.news.filter { it.title.contains("Avrupa") }.take(6).joinToString(" | ") { it.title })
     }
 }

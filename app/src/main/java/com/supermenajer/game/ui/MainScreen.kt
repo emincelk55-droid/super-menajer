@@ -45,7 +45,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.supermenajer.game.game.Europe
 import com.supermenajer.game.game.GameRepo
+import com.supermenajer.game.game.Generator
 import com.supermenajer.game.game.Screen
 import com.supermenajer.game.game.Season
 import com.supermenajer.game.game.money
@@ -146,6 +148,7 @@ private fun HomeTab(g: Game) {
             }
         }
         if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
+        if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
         item { BoardCard(g) }
         item { MiniTable(g) }
         item { RecentResults(g) }
@@ -158,7 +161,10 @@ private fun NextMatchCard(g: Game, f: Fixture) {
     val h = g.team(f.home)
     val a = g.team(f.away)
     val issues = g.userTeam.lineup.mapNotNull { g.player(it) }.filter { !it.available }
-    val title = if (f.comp == Comp.CUP) "Türkiye Kupası · ${Comp.cupRounds[f.round]}" else "${Comp.name(f.comp)} · ${g.dayLabel(f.week)}"
+    val title = when (f.comp) {
+        Comp.CUP, Comp.EURO -> "${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}"
+        else -> "${Comp.name(f.comp)} · ${g.dayLabel(f.week)}"
+    }
     SectionCard("Sıradaki maç · $title") {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             for ((i, t) in listOf(h, a).withIndex()) {
@@ -167,13 +173,16 @@ private fun NextMatchCard(g: Game, f: Fixture) {
                     TeamBadge(t, 56.dp)
                     Spacer(Modifier.height(6.dp))
                     Text(t.name, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 14.sp)
-                    Text("${Comp.name(t.division)} · ${g.position(t.id)}. sıra", color = TextDim, fontSize = 12.sp)
+                    Text(if (g.isForeign(t)) "${Generator.flag(countryCode(t.city))} ${t.city}" else "${Comp.name(t.division)} · ${g.position(t.id)}. sıra", color = TextDim, fontSize = 12.sp)
                 }
             }
         }
-        if (f.comp == Comp.CUP) {
+        if (Comp.isKnockout(f.comp, f.round)) {
             Spacer(Modifier.height(8.dp))
             Text("Tek maç eleme. Beraberlikte penaltılar!", color = Gold, fontSize = 12.sp)
+        } else if (f.comp == Comp.EURO) {
+            Spacer(Modifier.height(8.dp))
+            Text("Avrupa Kupası grup maçı · Gruptan ilk 2 çıkar. Galibiyet primi: €600K", color = Gold, fontSize = 12.sp)
         }
         if (issues.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -200,7 +209,11 @@ private fun RestDayCard(g: Game) {
     val d = g.today
     SectionCard(g.dayLabel(g.week)) {
         Text(
-            if (d?.type == 1) "Bu kupa turunda maçımız yok. Diğer maçları takip edebilirsin." else "Bugün maçımız yok.",
+            when (d?.type) {
+                1 -> "Bu kupa turunda maçımız yok. Diğer maçları takip edebilirsin."
+                2 -> "Bu Avrupa gecesinde maçımız yok. Türk temsilcilerini Lig → Avrupa sekmesinden takip edebilirsin."
+                else -> "Bugün maçımız yok."
+            },
             fontSize = 15.sp,
         )
         Spacer(Modifier.height(12.dp))
@@ -270,6 +283,7 @@ private fun SeasonEndCard(g: Game) {
     SectionCard("Sezon sonu") {
         Text("🏆 Süper Lig şampiyonu: ${rec?.champion ?: "-"}", fontWeight = FontWeight.Bold, fontSize = 17.sp)
         if (!rec?.cupWinner.isNullOrEmpty()) Text("🥇 Türkiye Kupası: ${rec?.cupWinner}", fontSize = 15.sp)
+        if (!rec?.euroWinner.isNullOrEmpty()) Text("🌍 Avrupa Kupası: ${rec?.euroWinner}", fontSize = 15.sp)
         if (!rec?.firstChampion.isNullOrEmpty()) Text("1. Lig şampiyonu: ${rec?.firstChampion}", color = TextDim, fontSize = 14.sp)
         Text("Gol kralı: ${rec?.topScorer ?: "-"}", color = TextDim, fontSize = 14.sp)
         Spacer(Modifier.height(12.dp))
@@ -374,7 +388,7 @@ private fun RecentResults(g: Game) {
     SectionCard("Son maçlar") {
         res.forEachIndexed { i, f ->
             if (i > 0) HorizontalDivider(color = Line, modifier = Modifier.padding(vertical = 4.dp))
-            if (f.comp == Comp.CUP) Text("Kupa · ${Comp.cupRounds[f.round]}", color = TextDim, fontSize = 11.sp)
+            if (f.comp == Comp.CUP || f.comp == Comp.EURO) Text("${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}", color = TextDim, fontSize = 11.sp)
             ResultRow(g, f, g.userTeamId)
         }
     }
@@ -421,6 +435,58 @@ private fun NewsCard(g: Game) {
             Text(n.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(n.body, color = TextDim, fontSize = 13.sp)
             Text("${n.season} · ${g.dayLabel(n.week).ifEmpty { "Sezon arası" }}", color = TextDim.copy(alpha = 0.6f), fontSize = 11.sp)
+        }
+    }
+}
+
+fun countryCode(country: String): String = when (country) {
+    "İngiltere", "İskoçya" -> "GB"
+    "İspanya" -> "ES"
+    "Almanya" -> "DE"
+    "İtalya" -> "IT"
+    "Fransa" -> "FR"
+    "Portekiz" -> "PT"
+    "Hollanda" -> "NL"
+    "Belçika" -> "BE"
+    "Hırvatistan" -> "HR"
+    "Ukrayna" -> "UA"
+    "Yunanistan" -> "GR"
+    "Sırbistan" -> "RS"
+    "Norveç" -> "NO"
+    "Avusturya" -> "AT"
+    "Danimarka" -> "DK"
+    "Çekya" -> "CZ"
+    else -> "TR"
+}
+
+/** Avrupa grubu puan tablosu. */
+@Composable
+fun EuroGroupCard(g: Game, group: Int) {
+    SectionCard("Avrupa Kupası · Grup ${Europe.groupLetter(group)}") {
+        Row(Modifier.padding(horizontal = 6.dp)) {
+            Text("Takım", Modifier.weight(1f), color = TextDim, fontSize = 11.sp)
+            listOf("O", "G", "B", "M", "AV", "P").forEach { Text(it, Modifier.width(26.dp), color = TextDim, fontSize = 11.sp, textAlign = TextAlign.Center) }
+        }
+        Europe.groupTable(g, group).forEachIndexed { i, r ->
+            val me = r.team.id == g.userTeamId
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp))
+                    .background(if (me) Green.copy(alpha = 0.15f) else Color.Transparent)
+                    .padding(horizontal = 6.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.width(3.dp).height(18.dp).background(if (i < 2) Blue else Color.Transparent))
+                Spacer(Modifier.width(5.dp))
+                TeamBadge(r.team, 22.dp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    (if (g.isForeign(r.team)) Generator.flag(countryCode(r.team.city)) + " " else "🇹🇷 ") + r.team.name,
+                    Modifier.weight(1f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (me) FontWeight.Bold else FontWeight.Normal,
+                )
+                listOf(r.p, r.w, r.d, r.l, r.gd).forEach { Text("$it", Modifier.width(26.dp), fontSize = 12.sp, color = TextDim, textAlign = TextAlign.Center) }
+                Text("${r.pts}", Modifier.width(26.dp), fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            }
         }
     }
 }

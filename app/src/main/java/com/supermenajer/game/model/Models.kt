@@ -118,8 +118,16 @@ object Comp {
     const val SUPER = 0
     const val FIRST = 1
     const val CUP = 2
-    fun name(c: Int) = when (c) { SUPER -> "Süper Lig"; FIRST -> "1. Lig"; else -> "Türkiye Kupası" }
+    const val EURO = 3
+    fun name(c: Int) = when (c) { SUPER -> "Süper Lig"; FIRST -> "1. Lig"; CUP -> "Türkiye Kupası"; else -> "Avrupa Kupası" }
     val cupRounds = listOf("Son 32", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
+    /** 0-5 grup maçları, 6 son 16, 7 çeyrek final, 8 yarı final, 9 final */
+    val euroRounds = listOf("Grup 1. maç", "Grup 2. maç", "Grup 3. maç", "Grup 4. maç", "Grup 5. maç", "Grup 6. maç", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
+    const val EURO_KO = 6
+    fun roundName(comp: Int, round: Int) = if (comp == EURO) euroRounds[round] else cupRounds[round]
+
+    /** Bir maçın eleme (tek maç, gerekirse penaltı) olup olmadığı. */
+    fun isKnockout(comp: Int, round: Int) = comp == CUP || (comp == EURO && round >= EURO_KO)
 }
 
 @Serializable
@@ -134,13 +142,15 @@ class Fixture(
     val round: Int = 0,
     var pen: String = "",
     var winner: Int = -1,
+    /** Avrupa grup maçlarında grup numarası (0-7). */
+    val group: Int = -1,
 ) {
     val played: Boolean get() = hg >= 0
     fun involves(teamId: Int) = home == teamId || away == teamId
     val scoreText: String get() = if (!played) "-" else "$hg - $ag" + if (pen.isNotEmpty()) " (P $pen)" else ""
 }
 
-/** Takvim günü: type 0 = lig haftası (number = hafta), 1 = kupa turu (number = tur). */
+/** Takvim günü: type 0 = lig haftası (number = hafta), 1 = kupa turu, 2 = Avrupa (number = tur). */
 @Serializable
 class Day(val type: Int, val number: Int)
 
@@ -160,6 +170,7 @@ class SeasonRecord(
     val cupWinner: String = "",
     val firstChampion: String = "",
     val userDivision: Int = 0,
+    val euroWinner: String = "",
 )
 
 @Serializable
@@ -182,6 +193,11 @@ class Game(
     var jobOffers: MutableList<Int> = mutableListOf(),
     val offers: MutableList<IncomingOffer> = mutableListOf(),
     var cupWinner: Int = -1,
+    /** Avrupa Kupası'ndaki 32 takım; grup g = 4g..4g+3. */
+    var euroTeams: MutableList<Int> = mutableListOf(),
+    /** Gelecek sezon Avrupa'ya katılacak Türk takımları. */
+    var euroQualified: MutableList<Int> = mutableListOf(),
+    var euroWinner: Int = -1,
     /** Eski (v0.1) kayıtlarda alan yoktur ve 1 okunur. */
     var saveVersion: Int = 1,
 ) {
@@ -198,8 +214,16 @@ class Game(
 
     fun dayLabel(day: Int): String {
         val d = calendar.getOrNull(day - 1) ?: return ""
-        return if (d.type == 0) "${d.number}. Hafta" else "Kupa · ${Comp.cupRounds[d.number]}"
+        return when (d.type) {
+            0 -> "${d.number}. Hafta"
+            1 -> "Kupa · ${Comp.cupRounds[d.number]}"
+            else -> "Avrupa · ${Comp.euroRounds[d.number]}"
+        }
     }
+
+    /** Takımın bulunduğu lig ya da (yabancı kulüpse) ülkesi. */
+    fun leagueName(t: Team): String = if (t.division == 2) t.city else Comp.name(t.division)
+    fun isForeign(t: Team) = t.division == 2
 
     fun divisionTeams(div: Int): List<Team> = teams.filter { it.division == div }
 

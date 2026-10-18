@@ -35,25 +35,32 @@ class ScreensTest {
         GameRepo.init(Files.createTempDirectory("sm").toFile())
         GameRepo.screen = Screen.NEW_GAME
         shot("01_newgame")
-        GameRepo.newCareer(Generator.newWorld(), "Emin Hoca", 3)
+        GameRepo.newCareer(Generator.newWorld(), "Emin Hoca", 0)
         val g = GameRepo.game!!
         GameRepo.tab = 4
         GameRepo.selectedPlayer = g.players.first { it.teamId == 25 && it.overall > 55 }
         shot("00_negotiate_open")
         GameRepo.selectedPlayer = null
         advance(6)
-        g.offers += IncomingOffer(g.squad(3).maxBy { it.overall }.id, 0, 9_000_000, g.week)
+        g.offers += IncomingOffer(g.squad(0).maxBy { it.overall }.id, 0, 9_000_000, g.week)
         GameRepo.tab = 0; shot("02_home")
         GameRepo.tab = 2; GameRepo.tacticsMode = 1; shot("03_training")
         GameRepo.tab = 3; GameRepo.leagueTab = 2; shot("04_cup")
         GameRepo.leagueTab = 1; shot("05_firstleague")
         GameRepo.tab = 4; shot("06_transfer")
-        GameRepo.selectedPlayer = g.squad(0).maxBy { it.overall }
+        GameRepo.selectedPlayer = g.squad(5).maxBy { it.overall }
         shot("07_negotiate")
         GameRepo.selectedPlayer = g.players.first { it.teamId == 25 }
         shot("08_negotiate2")
         GameRepo.selectedPlayer = null
-        advance(20)
+        while (g.today?.type != 2 || g.todayUserFixture() == null) advance(1)
+        GameRepo.playMatch(live = true)
+        repeat(60) { GameRepo.match!!.step() }
+        shot("13_euro_match")
+        GameRepo.finishMatch(); GameRepo.closeSummary()
+        GameRepo.tab = 0; shot("14_home_euro")
+        GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("15_euro_tab")
+        advance(14)
         GameRepo.tab = 1; shot("09_squad")
         GameRepo.tab = 0; shot("10_home_later")
         // kupa maçı canlı

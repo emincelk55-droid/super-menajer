@@ -68,7 +68,9 @@ class MatchSim(
         private set
     var penAway = -1
         private set
-    val isCup: Boolean get() = fixture.comp == Comp.CUP
+    /** Tek maç eleme (Türkiye Kupası veya Avrupa eleme turları): beraberlikte penaltı. */
+    val isCup: Boolean get() = Comp.isKnockout(fixture.comp, fixture.round)
+    private val isLeague: Boolean get() = fixture.comp == Comp.SUPER || fixture.comp == Comp.FIRST
     val userSide: Side? get() = sides.firstOrNull { it.team.id == userTeamId }
 
     init {
@@ -393,7 +395,7 @@ class MatchSim(
         if (isCup) {
             if (penHome >= 0) fixture.pen = "$penHome-$penAway"
             fixture.winner = cupWinner()?.id ?: -1
-        } else {
+        } else if (isLeague) {
             record(home.team, home.goals, away.goals)
             record(away.team, away.goals, home.goals)
         }
