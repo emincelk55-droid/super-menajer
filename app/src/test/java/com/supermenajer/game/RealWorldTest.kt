@@ -75,6 +75,18 @@ class RealWorldTest {
             val best = world.players.filter { it.teamId in tr.map { t -> t.id } }.sortedByDescending { it.overall }.take(8)
             println("TR en iyiler: " + best.joinToString { "${it.name} ${it.overall}" })
             assertTrue(world.managers.size > 100)
+            // Galatasaray 4-4-2: kanatlara kanatçılar, uyum tam
+            val gs = tr.first()
+            com.supermenajer.game.game.Lineups.changeFormation(world, gs, "4-4-2")
+            com.supermenajer.game.game.Lineups.autoPick(world, gs)
+            val sl = com.supermenajer.game.model.Formations.slots(gs.formation)
+            val txt = gs.lineup.mapIndexed { i, id ->
+                val p = world.player(id)!!
+                val d = com.supermenajer.game.game.Positions.slotDet(sl[i])
+                "${d.code}:${p.name}(${com.supermenajer.game.game.Positions.codes(p)}) fit=${com.supermenajer.game.game.Positions.fit(p, d)} r=${com.supermenajer.game.game.Positions.rating(p, sl[i])}"
+            }
+            println("GS442: " + txt.joinToString(" | "))
+            assertTrue(gs.lineup.indices.all { i -> com.supermenajer.game.game.Positions.fit(world.player(gs.lineup[i])!!, com.supermenajer.game.game.Positions.slotDet(sl[i])) >= 0.97 })
         }
     }
 }

@@ -126,7 +126,7 @@ class MatchSim(
     }
 
     private fun eff(m: PIM): Double =
-        m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0) * (1.0 + m.boost) *
+        com.supermenajer.game.game.Positions.rating(m.p, m.slot) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0) * (1.0 + m.boost) *
             com.supermenajer.game.game.Traits.matchFactor(m.p, big) *
             com.supermenajer.game.game.Positions.fit(m.p, com.supermenajer.game.game.Positions.slotDet(m.slot))
 
@@ -406,7 +406,7 @@ class MatchSim(
         v.rating -= 0.2
         ev(Ev.INJURY, s.index, Comms.injury(v.p.name, rnd), v.p.id)
         val rep = s.bench.filter { it.pos == v.slot.pos }.maxByOrNull { it.overall }
-            ?: s.bench.filter { it.pos != Pos.GK }.maxByOrNull { it.ovrAt(v.slot.pos) }
+            ?: s.bench.filter { it.pos != Pos.GK }.maxByOrNull { com.supermenajer.game.game.Positions.rating(it, v.slot) }
         if (rep == null || !substitute(s, v, rep)) s.onPitch.remove(v)
     }
 
@@ -430,7 +430,7 @@ class MatchSim(
             .minByOrNull { it.fit - if (it.yellow > 0) 8 else 0 } ?: return
         if (tired.fit > 70 && tired.yellow == 0) return
         val rep = s.bench.filter { it.pos == tired.slot.pos }.maxByOrNull { it.overall }
-            ?: s.bench.filter { it.pos != Pos.GK }.maxByOrNull { it.ovrAt(tired.slot.pos) } ?: return
+            ?: s.bench.filter { it.pos != Pos.GK }.maxByOrNull { com.supermenajer.game.game.Positions.rating(it, tired.slot) } ?: return
         substitute(s, tired, rep)
     }
 
@@ -586,8 +586,12 @@ class MatchSim(
                 if (m.injured) p.injuredWeeks = m.injWeeks
             }
             val playedIds = s.used.map { it.p.id }.toSet()
+            val str = com.supermenajer.game.game.Lineups.strength(game, s.team)
             game.squad(s.team.id).filter { it.id !in playedIds }.forEach {
-                it.morale = (it.morale + res * 1.5 - if (it.overall >= 70 && it.age >= 22) 1.0 else 0.0).coerceIn(5.0, 100.0)
+                // Oynatılmayan kilit oyuncu galibiyete sevinmez, kenarda kalmaya kırılır
+                val key = it.overall >= str - 2 && it.age >= 21
+                val gain = if (key) minOf(res * 1.5, 0.0) - 1.0 else res * 1.5 - if (it.overall >= 70 && it.age >= 22) 1.0 else 0.0
+                it.morale = (it.morale + gain).coerceIn(5.0, 100.0)
             }
         }
     }

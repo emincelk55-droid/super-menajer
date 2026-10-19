@@ -19,7 +19,7 @@ for n, line in enumerate(open(sys.argv[1], encoding="utf-8"), 1):
         cur = [f[1], {"KL":0,"DF":0,"MF":0,"FW":0}, 0]; teams.append(cur)
     elif f[0] == "P":
         if cur is None: err("P before TEAM"); continue
-        if len(f) != 11: err("P needs 11 fields"); continue
+        if len(f) not in (11, 12): err("P needs 11 or 12 fields"); continue
         if not f[1].isdigit(): err("shirt int")
         if not (f[3].isdigit() and 1975 <= int(f[3]) <= 2011): err("birth year")
         if not re.fullmatch(r"[A-Z]{2}", f[4]): err("nation ISO2")

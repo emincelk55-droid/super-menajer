@@ -54,6 +54,8 @@ class Player(
     var learnDet: Int = -1,
     var learnProgress: Int = 0,
     var secondDet: Int = -1,
+    /** Gerçek veride oyuncunun oynayabildiği diğer mevkiler (Positions.Det sıraları). */
+    var extraDets: MutableList<Int> = mutableListOf(),
     /** Forma numarası (0 = atanmadı). */
     var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */

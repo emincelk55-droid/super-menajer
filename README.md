@@ -79,3 +79,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - İsimler gerçeğe benzer ama birebir aynı değil (ör. Arda Gülar, Kylian Mbapé, Galatasarai, Trabzunspor)
 - Sponsorlar gerçek markalara benzer isimlerle; kadro sınırı 34
 - Veri biçimi ve doğrulayıcı: tools/world/
+
+### v1.9
+- Çoklu mevki: her gerçek oyuncunun oynayabildiği tüm mevkiler (ör. Barış Alper SĞK/SLK/SF/SĞB/SLB, Arda Gülar OOS/SĞK/MO/SLK)
+- Otomatik 11, maç gücü, oyuncu değişiklikleri ve taktik ekranı mevki listesine göre çalışır; kanat forvetleri kanat orta sahada da doğal oynar
+- Talimatlar ve Roller & Görevler tam ekran; saha ve kadro listesi yalnızca Diziliş sekmesinde

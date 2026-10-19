@@ -18,6 +18,8 @@ object RealWorld {
     class PlayerRow(
         val number: Int, val name: String, val birth: Int, val nation: String, val det: Positions.Det, val det2: Positions.Det?,
         val foot: Int, val ovr: Int, val pot: Int, val attrs: IntArray,
+        /** Oynayabildiği tüm mevkiler (ana mevki dahil). */
+        val all: List<Positions.Det> = emptyList(),
     )
 
     class TeamRow(
@@ -64,6 +66,7 @@ object RealWorld {
                     teams.last().players += PlayerRow(
                         f[1].toIntOrNull() ?: 0, f[2], f[3].toIntOrNull() ?: 2000, f[4].uppercase(), det, dets[f[6]],
                         when (f[7]) { "L" -> 1; "B" -> 2; else -> 0 }, ovr, (f[9].toIntOrNull() ?: ovr).coerceAtLeast(ovr), a.toIntArray(),
+                        f.getOrNull(11)?.split(",")?.mapNotNull { dets[it.trim()] } ?: emptyList(),
                     )
                 }
             }
@@ -114,7 +117,7 @@ object RealWorld {
     /** Eksik temel mevkileri (3 stoper, iki bek, DOS, MO, santrfor) en uygun oyuncunun 2. mevkisiyle kapatır. */
     fun cover(g: Game, t: Team) {
         val sq = g.squad(t.id)
-        fun has(d: Positions.Det) = sq.count { it.detail == d.ordinal || it.secondDet == d.ordinal }
+        fun has(d: Positions.Det) = sq.count { Positions.canPlay(it, d) }
         val need = listOf(
             Positions.Det.STP to 3, Positions.Det.SLB to 1, Positions.Det.SGB to 1,
             Positions.Det.DOS to 1, Positions.Det.MO to 1, Positions.Det.SF to 1,
@@ -151,6 +154,8 @@ object RealWorld {
         p.potential = r.pot.coerceIn(p.overall, 96)
         p.detail = r.det.ordinal
         p.secondDet = r.det2?.takeIf { it != r.det }?.ordinal ?: -1
+        p.extraDets = r.all.filter { it != r.det && it.ordinal != p.secondDet && (it == Positions.Det.KL) == (r.det == Positions.Det.KL) }
+            .map { it.ordinal }.distinct().toMutableList()
         p.foot = r.foot
         p.number = r.number.coerceIn(0, 99)
         p.contractYears = rnd.nextInt(1, 6)

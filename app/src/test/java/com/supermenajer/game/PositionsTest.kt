@@ -23,7 +23,7 @@ class PositionsTest {
         // Her takımda en az 3 stoper, 1 sol bek, 1 sağ bek, 1 DOS, 1 MO, 1 santrfor
         for (t in g.teams) {
             val sq = g.squad(t.id)
-            fun n(d: Det) = sq.count { Positions.det(it) == d || it.secondDet == d.ordinal }
+            fun n(d: Det) = sq.count { Positions.canPlay(it, d) }
             assertTrue(t.name, n(Det.STP) >= 3)
             assertTrue(t.name, n(Det.SLB) >= 1 && n(Det.SGB) >= 1)
             assertTrue(t.name, n(Det.DOS) >= 1 && n(Det.SF) >= 1)

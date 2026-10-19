@@ -30,7 +30,7 @@ class LineupTest {
                     if (naturals >= needed) {
                         checked++
                         // Oyuncunun öğrenilmiş/gerçek 2. mevkisi de doğal sayılır
-                        if (p.pos != pos && p.secondDet != com.supermenajer.game.game.Positions.slotDet(slots[i]).ordinal) wrong++
+                        if (p.pos != pos && !com.supermenajer.game.game.Positions.canPlay(p, com.supermenajer.game.game.Positions.slotDet(slots[i]))) wrong++
                     }
                 }
             }

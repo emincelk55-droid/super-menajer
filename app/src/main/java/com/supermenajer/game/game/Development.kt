@@ -29,7 +29,7 @@ object Development {
             Positions.Det.SGK -> listOf(Positions.Det.SLK, Positions.Det.OOS, Positions.Det.SF, Positions.Det.SGB)
             Positions.Det.SF -> listOf(Positions.Det.OOS, Positions.Det.SLK, Positions.Det.SGK)
         }
-        return list.filter { it.ordinal != p.secondDet }
+        return list.filter { !Positions.canPlay(p, it) }
     }
 
     fun setFocus(p: Player, focus: Int) {
@@ -56,10 +56,11 @@ object Development {
                 val f = when (Traits.of(p)) { Traits.PRO -> 1.3; Traits.LAZY -> 0.7; else -> 1.0 }
                 p.learnProgress += (base * f * coach.coerceAtMost(1.3)).toInt().coerceAtLeast(1)
                 if (p.learnProgress >= 100) {
-                    p.secondDet = p.learnDet
+                    val learned = p.learnDet
+                    if (p.secondDet < 0) p.secondDet = learned else if (learned !in p.extraDets) p.extraDets += learned
                     p.learnDet = -1
                     p.learnProgress = 0
-                    g.addNews("🎓 Yeni mevki öğrenildi", "${p.name} artık ${D[p.secondDet].label} (${D[p.secondDet].code}) mevkisinde de oynayabiliyor.")
+                    g.addNews("🎓 Yeni mevki öğrenildi", "${p.name} artık ${D[learned].label} (${D[learned].code}) mevkisinde de oynayabiliyor.")
                 }
             }
         }

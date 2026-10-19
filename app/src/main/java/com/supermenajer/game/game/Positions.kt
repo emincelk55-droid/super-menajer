@@ -106,11 +106,28 @@ object Positions {
 
     fun natRoleName(p: Player): String = Roles.byPos.getValue(p.pos).getOrNull(natRole(p))?.name ?: ""
 
+    /** Oyuncunun oynayabildiği tüm detaylı mevkiler (ana mevki önce). */
+    fun dets(p: Player): List<Det> {
+        val out = linkedSetOf(det(p))
+        if (p.secondDet in Det.entries.indices) out += Det.entries[p.secondDet]
+        for (d in p.extraDets) if (d in Det.entries.indices) out += Det.entries[d]
+        return out.toList()
+    }
+
+    fun canPlay(p: Player, d: Det): Boolean = det(p) == d || p.secondDet == d.ordinal || d.ordinal in p.extraDets
+
+    /** "SĞK, SLK, OOS" gibi mevki listesi. */
+    fun codes(p: Player): String = dets(p).joinToString(", ") { it.code }
+
+    /** Oyuncunun o yerdeki gücü: oynayabildiği mevkide kendi genel gücü, değilse kaba mevki formülü. */
+    fun rating(p: Player, slot: Slot): Int =
+        if (canPlay(p, slotDet(slot))) maxOf(p.overall, p.ovrAt(slot.pos)) else p.ovrAt(slot.pos)
+
     /** Oyuncunun o yerdeki uyumu (1.0 tam; kanat değişimi, bek ↔ kanat gibi yakın mevkiler biraz düşük). */
     fun fit(p: Player, slot: Det): Double {
         val d = det(p)
         if (d == slot) return 1.0
-        if (p.secondDet == slot.ordinal) return 0.98
+        if (p.secondDet == slot.ordinal || slot.ordinal in p.extraDets) return 0.98
         val both = p.foot == 2
         fun pair(a: Det, b: Det) = (d == a && slot == b) || (d == b && slot == a)
         return when {

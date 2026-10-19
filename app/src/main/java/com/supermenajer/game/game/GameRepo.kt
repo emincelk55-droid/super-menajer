@@ -572,7 +572,7 @@ object GameRepo {
         if (p.id in t.lineup || !p.available) return
         val slots = com.supermenajer.game.model.Formations.slots(t.formation)
         val candidates = slots.indices.filter { slots[it].pos == p.pos }.ifEmpty { slots.indices.filter { it != 0 } }
-        val worst = candidates.minByOrNull { i -> g.player(t.lineup[i])?.ovrAt(slots[i].pos) ?: -1 } ?: return
+        val worst = candidates.minByOrNull { i -> g.player(t.lineup[i])?.let { Positions.rating(it, slots[i]) } ?: -1 } ?: return
         t.lineup[worst] = p.id
         changed()
     }

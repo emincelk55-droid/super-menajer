@@ -19,9 +19,10 @@ object Lineups {
     fun score(p: Player, slot: Slot): Double {
         val det = Positions.slotDet(slot)
         val fit = Positions.fit(p, det)
-        val detBonus = if (Positions.det(p) == det) 40 else if (fit >= 0.95) 20 else 0
-        val natural = p.pos == slot.pos || p.secondDet == det.ordinal
-        return p.ovrAt(slot.pos) * (0.6 + 0.4 * p.fitness / 100.0) * fit + (if (natural) 1000 else 0) + detBonus
+        val can = Positions.canPlay(p, det)
+        val detBonus = if (Positions.det(p) == det) 40 else if (can) 30 else if (fit >= 0.95) 20 else 0
+        val natural = p.pos == slot.pos || can
+        return Positions.rating(p, slot) * (0.6 + 0.4 * p.fitness / 100.0) * fit + (if (natural) 1000 else 0) + detBonus
     }
 
     /** Mevcut formasyon için en iyi 11'i seçer. */
@@ -90,7 +91,7 @@ object Lineups {
         var a = 0.0; var m = 0.0; var d = 0.0
         t.lineup.forEachIndexed { i, id ->
             val p = g.player(id) ?: return@forEachIndexed
-            val e = p.ovrAt(slots[i].pos) * Positions.fit(p, Positions.slotDet(slots[i]))
+            val e = Positions.rating(p, slots[i]) * Positions.fit(p, Positions.slotDet(slots[i]))
             when (slots[i].pos) {
                 Pos.GK -> { m += e * 0.1; d += e * 0.3 }
                 Pos.DF -> { a += e * 0.12; m += e * 0.3; d += e }

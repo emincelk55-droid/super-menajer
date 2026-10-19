@@ -79,6 +79,11 @@ fun roleAbbr(name: String): String =
 @Composable
 fun TacticsBoard(g: Game) {
     GameRepo.version
+    // Talimatlar ve roller tam genişlikte; saha ve kadro listesi yalnız Diziliş'te
+    when (GameRepo.tacticsPanel) {
+        1 -> { InstructionsPanel(g); return }
+        2 -> { RolesPanel(g); return }
+    }
     val t = g.userTeam
     var sel by remember { mutableIntStateOf(-1) }
     var drag by remember { mutableStateOf<DragState?>(null) }
@@ -162,10 +167,8 @@ fun TacticsBoard(g: Game) {
                     MiniStat("Takım kimyası", "${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", if (g.cohesion >= 65) Green else if (g.cohesion >= 40) Gold else Red)
                 }
                 Spacer(Modifier.height(6.dp))
-                when (GameRepo.tacticsPanel) {
-                    1 -> InstructionsPanel(g)
-                    2 -> RolesPanel(g)
-                    else -> {
+                run {
+                    run {
                         Text(
                             when {
                                 drag != null -> "Bir mevkiye bırak · sahadan listeye bırakırsan oyuncu çıkar"
@@ -200,7 +203,7 @@ fun TacticsBoard(g: Game) {
                                 val roles = R.byPos.getValue(slots[i].pos)
                                 val role = roles[R.roleIndex(t, i).coerceIn(0, roles.size - 1)]
                                 SquadLine(
-                                    p, p.ovrAt(slots[i].pos), roleAbbr(role.name), selected = sel == i,
+                                    p, com.supermenajer.game.game.Positions.rating(p, slots[i]), roleAbbr(role.name), selected = sel == i,
                                     onClick = { sel = if (sel == i) -1 else if (sel >= 0) { GameRepo.swapSlots(sel, i); -1 } else i },
                                     dragMod = Modifier,
                                 )
@@ -220,7 +223,7 @@ fun TacticsBoard(g: Game) {
                                         .alpha(if (!p.available) 0.45f else if (drag?.player?.id == p.id) 0.35f else 1f),
                                 ) {
                                     SquadLine(
-                                        p, if (selSlot != null) p.ovrAt(selSlot.pos) else p.overall, null, selected = false,
+                                        p, if (selSlot != null) com.supermenajer.game.game.Positions.rating(p, selSlot) else p.overall, null, selected = false,
                                         onClick = { if (sel >= 0 && p.available) { GameRepo.putInSlot(sel, p.id); sel = -1 } else GameRepo.selectedPlayer = p },
                                         dragMod = Modifier.pointerInput(p.id) {
                                             detectDragGesturesAfterLongPress(
@@ -299,7 +302,7 @@ private fun SquadLine(p: Player, ovr: Int, role: String?, selected: Boolean, onC
                 fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Text(
-                det.label + (if (p.secondDet >= 0) " · ${com.supermenajer.game.game.Positions.Det.entries[p.secondDet].code}" else "") +
+                com.supermenajer.game.game.Positions.codes(p) +
                     " · ${com.supermenajer.game.game.Positions.natRoleName(p)}",
                 fontSize = 10.sp, color = TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -322,7 +325,10 @@ private fun SquadLine(p: Player, ovr: Int, role: String?, selected: Boolean, onC
 @Composable
 private fun PitchToken(g: Game, p: Player?, slot: com.supermenajer.game.model.Slot, selected: Boolean, shirt: Color, collar: Color, role: String) {
     val pos = slot.pos
-    val fit = p?.let { if (it.pos != pos) 0.0 else com.supermenajer.game.game.Positions.fit(it, com.supermenajer.game.game.Positions.slotDet(slot)) } ?: 1.0
+    val fit = p?.let {
+        val d = com.supermenajer.game.game.Positions.slotDet(slot)
+        if (it.pos != pos && !com.supermenajer.game.game.Positions.canPlay(it, d)) 0.0 else com.supermenajer.game.game.Positions.fit(it, d)
+    } ?: 1.0
     val fitC = if (fit < 0.93) Red else if (fit < 1.0) Gold else Green
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -331,7 +337,7 @@ private fun PitchToken(g: Game, p: Player?, slot: com.supermenajer.game.model.Sl
         )
         Box(Modifier.padding(top = 1.dp)) {
             Shirt(shirt, collar, p?.number?.takeIf { it > 0 }?.toString() ?: "", selected, Modifier.size(35.dp, 31.dp))
-            val ovr = p?.ovrAt(pos)
+            val ovr = p?.let { com.supermenajer.game.game.Positions.rating(it, slot) }
             Box(
                 Modifier.align(Alignment.TopEnd).offset(x = 14.dp, y = 6.dp).clip(RoundedCornerShape(5.dp))
                     .background(if (ovr == null) Color.Gray else ovrColor(ovr)).padding(horizontal = 3.dp),
@@ -386,43 +392,53 @@ private fun RolesPanel(g: Game) {
     val pen = R.penaltyTaker(g, t, onPitch)
     val fk = R.freeKickTaker(g, t, onPitch)
     val cor = R.cornerTaker(g, t, onPitch)
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        item {
-            Text("C: kaptan · P: penaltı · F: frikik · K: korner. ⭐ oyuncunun doğal özelliği: o rolde %3 daha verimli oynar.", color = TextDim, fontSize = 11.sp)
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        GridCells.Adaptive(400.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Text(
+                "C: kaptan · P: penaltı · F: frikik · K: korner — dokunarak görev ver. ⭐ oyuncunun doğal özelliği: o rolde %3 daha verimli oynar.",
+                color = TextDim, fontSize = 13.sp,
+            )
         }
         items(slots.size) { i ->
             val p = g.player(t.lineup.getOrNull(i) ?: -1)
             val roles = R.byPos.getValue(slots[i].pos)
             val cur = R.roleIndex(t, i).coerceIn(0, roles.size - 1)
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(6.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface1).padding(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    SlotChip(slots[i], small = true)
-                    Text(
-                        " ${p?.number?.takeIf { it > 0 }?.let { "#$it " } ?: ""}${p?.name ?: "Boş"}",
-                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                    )
+                    SlotChip(slots[i])
+                    Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                        Text(
+                            "${p?.number?.takeIf { it > 0 }?.let { "$it. " } ?: ""}${p?.name ?: "Boş"}",
+                            fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        if (p != null) Text(com.supermenajer.game.game.Positions.codes(p), color = TextDim, fontSize = 11.sp, maxLines = 1)
+                    }
                     if (p != null) {
                         listOf("C" to (cap?.id == p.id), "P" to (pen?.id == p.id), "F" to (fk?.id == p.id), "K" to (cor?.id == p.id)).forEachIndexed { k, (lbl, on) ->
                             Box(
-                                Modifier.padding(start = 3.dp).size(22.dp).clip(CircleShape).background(if (on) Gold else Surface2)
+                                Modifier.padding(start = 4.dp).size(30.dp).clip(CircleShape).background(if (on) Gold else Surface2)
                                     .clickable { GameRepo.setDuty(k, p.id) },
                                 contentAlignment = Alignment.Center,
-                            ) { Text(lbl, fontSize = 10.sp, fontWeight = FontWeight.Black, color = if (on) Color.Black else TextDim) }
+                            ) { Text(lbl, fontSize = 12.sp, fontWeight = FontWeight.Black, color = if (on) Color.Black else TextDim) }
                         }
                     }
                 }
-                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val nat = p?.let { if (it.pos == slots[i].pos) com.supermenajer.game.game.Positions.natRole(it) else -1 } ?: -1
                     roles.forEachIndexed { r, role ->
                         Text(
-                            (if (r == nat) "⭐ " else "") + role.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                            color = if (r == cur) Color.Black else TextMain,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (r == cur) Green else Surface2)
-                                .clickable { GameRepo.setRole(i, r) }.padding(horizontal = 8.dp, vertical = 3.dp),
+                            (if (r == nat) "⭐ " else "") + role.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            color = if (r == cur) Color.Black else TextMain, maxLines = 1,
+                            modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (r == cur) Green else Surface2)
+                                .clickable { GameRepo.setRole(i, r) }.padding(horizontal = 12.dp, vertical = 7.dp),
                         )
                     }
                 }
-                Text(roles[cur].info, color = TextDim, fontSize = 10.sp)
+                Text(roles[cur].info, color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
     }
@@ -441,40 +457,53 @@ private val instrs = listOf(
 @Composable
 private fun InstructionsPanel(g: Game) {
     val t = g.userTeam
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        GridCells.Adaptive(420.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         item {
-            InstrRow("Oyun anlayışı", listOf("Defansif", "Dengeli", "Hücum"), t.mentality) { GameRepo.setMentality(it) }
-            InstrRow("Pres", listOf("Düşük", "Orta", "Yüksek"), t.pressing) { GameRepo.setPressing(it) }
+            InstrCard("Oyun anlayışı", listOf("Defansif", "Dengeli", "Hücum"), t.mentality,
+                listOf("Geride kal, kontrayı bekle.", "Dengeli oyun.", "Rakip yarı sahada baskı, daha çok atak.")) { GameRepo.setMentality(it) }
+        }
+        item {
+            InstrCard("Pres", listOf("Düşük", "Orta", "Yüksek"), t.pressing,
+                listOf("Rakibi bekle, enerji sakla.", "Dengeli pres.", "Önde bas, top kap; daha çok yorgunluk.")) { GameRepo.setPressing(it) }
         }
         items(instrs.size) { i ->
             val ins = instrs[i]
             val v = when (ins.key) { "tempo" -> t.tempo; "width" -> t.width; "passing" -> t.passing; else -> t.defLine }
-            InstrRow(ins.title, ins.options, v) { GameRepo.setInstruction(ins.key, it) }
-            Text(ins.info[v], color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(start = 2.dp))
+            InstrCard(ins.title, ins.options, v, ins.info) { GameRepo.setInstruction(ins.key, it) }
         }
-        item {
-            Text("ÖZEL TALİMATLAR", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Chip("⚡ Kontra atak", t.counter) { GameRepo.setInstruction("counter", if (t.counter) 0 else 1) }
-                Chip("🚩 Ofsayt tuzağı", t.offsideTrap) { GameRepo.setInstruction("offside", if (t.offsideTrap) 0 else 1) }
-                Chip("⏳ Zaman geçir", t.timeWasting) { GameRepo.setInstruction("timewaste", if (t.timeWasting) 0 else 1) }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface1).padding(12.dp)) {
+                Text("ÖZEL TALİMATLAR", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("⚡ Kontra atak", t.counter) { GameRepo.setInstruction("counter", if (t.counter) 0 else 1) }
+                    Chip("🚩 Ofsayt tuzağı", t.offsideTrap) { GameRepo.setInstruction("offside", if (t.offsideTrap) 0 else 1) }
+                    Chip("⏳ Zaman geçir", t.timeWasting) { GameRepo.setInstruction("timewaste", if (t.timeWasting) 0 else 1) }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Kontra: hücuma çıkan rakibe karşı hızlı ataklar. Ofsayt tuzağı: atakları keser ama bozulursa tehlikeli. Zaman geçir: 70'den sonra öndeyken oyunu yavaşlatır.",
+                    color = TextDim, fontSize = 12.sp,
+                )
             }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Kontra: hücuma çıkan rakibe karşı hızlı ataklar. Ofsayt tuzağı: atakları keser ama bozulursa tehlikeli. Zaman geçir: 70'den sonra öndeyken oyunu yavaşlatır.",
-                color = TextDim, fontSize = 11.sp,
-            )
         }
     }
 }
 
+/** Tek talimat kartı: başlık, üç seçenek ve seçilenin açıklaması. */
 @Composable
-private fun InstrRow(title: String, options: List<String>, value: Int, onSelect: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, fontSize = 12.sp, color = TextMain, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(96.dp), maxLines = 1)
-        options.forEachIndexed { i, o ->
-            Chip(o, value == i, Modifier.weight(1f).padding(horizontal = 2.dp)) { onSelect(i) }
+private fun InstrCard(title: String, options: List<String>, value: Int, info: List<String>, onSelect: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface1).padding(12.dp)) {
+        Text(title.uppercase(), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            options.forEachIndexed { i, o -> Chip(o, value == i, Modifier.weight(1f)) { onSelect(i) } }
         }
+        Spacer(Modifier.height(6.dp))
+        Text(info.getOrElse(value) { "" }, color = TextDim, fontSize = 12.sp, minLines = 2)
     }
 }

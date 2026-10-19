@@ -395,7 +395,7 @@ fun PlayerDialog(g: Game, p: Player) {
                     }
                     Text(
                         "Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}" +
-                            (if (p.secondDet >= 0) " · 2. mevki ${com.supermenajer.game.game.Positions.Det.entries[p.secondDet].code}" else ""),
+                            " · Mevkiler: ${com.supermenajer.game.game.Positions.codes(p)}",
                         color = Gold, fontSize = 12.sp, maxLines = 1,
                     )
                     Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name} · ${g.leagueName(it)}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 12.sp, maxLines = 1)
@@ -646,7 +646,7 @@ private fun TrainingBox(p: Player) {
             Chip(n, p.trainFocus == i) { GameRepo.setFocus(p, i) }
         }
     }
-    val opts = dev.learnable(p).filter { it.ordinal != p.secondDet }
+    val opts = dev.learnable(p).filter { !com.supermenajer.game.game.Positions.canPlay(p, it) }
     if (opts.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
         Text("YENİ MEVKİ ÖĞRET", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)

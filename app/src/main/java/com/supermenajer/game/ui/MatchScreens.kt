@@ -513,7 +513,7 @@ private fun SubDialog(sim: MatchSim, side: Side, onClose: () -> Unit) {
             } else {
                 Text("${o.p.name} yerine girecek oyuncu (${o.slot.pos.label}):", color = Gold, fontSize = 13.sp)
                 Spacer(Modifier.height(6.dp))
-                val bench = side.bench.sortedWith(compareByDescending<Player> { it.pos == o.slot.pos }.thenByDescending { it.ovrAt(o.slot.pos) })
+                val bench = side.bench.sortedWith(compareByDescending<Player> { it.pos == o.slot.pos || com.supermenajer.game.game.Positions.canPlay(it, com.supermenajer.game.game.Positions.slotDet(o.slot)) }.thenByDescending { com.supermenajer.game.game.Positions.rating(it, o.slot) })
                 if (bench.isEmpty()) Text("Yedek oyuncu kalmadı.", color = TextDim)
                 bench.forEach { p ->
                     Row(
@@ -526,7 +526,7 @@ private fun SubDialog(sim: MatchSim, side: Side, onClose: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text(p.name, modifier = Modifier.weight(1f), fontSize = 14.sp)
                         Text("Bu mevkide ", color = TextDim, fontSize = 12.sp)
-                        OvrBadge(p.ovrAt(o.slot.pos), 30.dp)
+                        OvrBadge(com.supermenajer.game.game.Positions.rating(p, o.slot), 30.dp)
                     }
                 }
                 TextButton(onClick = { out = null }) { Text("← Geri") }
