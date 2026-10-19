@@ -63,7 +63,8 @@ object Economy {
     /** Sezon başı: maaş limitleri ve gelir defteri sıfırlanır. */
     fun startSeason(g: Game) {
         for (t in g.teams) {
-            t.wageBudget = wageCap(t)
+            // Gerçek kadrolarda maaşlar formülü aşabilir: mevcut maaşların üstünde pay bırak
+            t.wageBudget = maxOf(wageCap(t), (squadWages(g, t.id) * 1.12).toLong())
             t.income = mutableMapOf()
         }
     }

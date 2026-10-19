@@ -29,8 +29,9 @@ object Scouting {
         val u = uncertainty(g, p)
         if (u == 0) return v..v
         val off = (p.id * 7 + v) % (2 * u + 1)
-        val lo = (v - off).coerceAtLeast(1)
-        return lo..(lo + 2 * u).coerceAtMost(99)
+        // Pencere 1-99 dışına taşarsa kaydırılır (genişlik sabit kalır)
+        val lo = (v - off).coerceIn(1, 99 - 2 * u)
+        return lo..(lo + 2 * u)
     }
 
     fun ovrText(g: Game, p: Player): String = range(g, p, p.overall).let { if (it.first == it.last) "${it.first}" else "${it.first}-${it.last}" }

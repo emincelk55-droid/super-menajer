@@ -107,6 +107,26 @@ object RealWorld {
                 if (p.number > 0 && !numbers.add(p.number)) p.number = 0
                 g.addPlayer(p)
             }
+            cover(g, t)
+        }
+    }
+
+    /** Eksik temel mevkileri (3 stoper, iki bek, DOS, MO, santrfor) en uygun oyuncunun 2. mevkisiyle kapatır. */
+    fun cover(g: Game, t: Team) {
+        val sq = g.squad(t.id)
+        fun has(d: Positions.Det) = sq.count { it.detail == d.ordinal || it.secondDet == d.ordinal }
+        val need = listOf(
+            Positions.Det.STP to 3, Positions.Det.SLB to 1, Positions.Det.SGB to 1,
+            Positions.Det.DOS to 1, Positions.Det.MO to 1, Positions.Det.SF to 1,
+        )
+        for ((d, n) in need) {
+            var have = has(d)
+            while (have < n) {
+                val c = sq.filter { it.secondDet < 0 && it.detail != d.ordinal && it.pos != Pos.GK }
+                    .maxByOrNull { Positions.fit(it, d) * 100 + it.overall * 0.1 } ?: break
+                c.secondDet = d.ordinal
+                have++
+            }
         }
     }
 

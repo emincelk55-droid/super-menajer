@@ -72,3 +72,10 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - FM tarzı taktik ekranı: üstte sekmeler (Diziliş, Talimatlar, Roller & Görevler, Antrenman), gerçek ölçülü saha, forma şeklinde oyuncular ve üstlerinde rol kısaltmaları (uyuma göre yeşil/sarı/kırmızı)
 - Sağda FM tarzı kadro listesi: mevki, kondisyon halkası, güç ve rol; hücum/orta saha/savunma gücü ve takım kimyası
 - Yeni puan tablosu: atılan/yenilen gol, renkli averaj, son 5 maç formu, bölge renkleri ve kendi takımın vurgulu
+
+### v1.8
+- Gerçek dünya: 13 ligin 2026-27 kadroları (Süper Lig, 1. Lig, İngiltere, İspanya, Almanya, İtalya ve 2. ligleri, Fransa, Portekiz, Hollanda) — 234 kulüp, 6.500 oyuncu
+- Güçler, mevkiler, ikinci mevkiler, ayak, yaş ve forma numaraları gerçeğe göre; teknik direktörler ve stadyumlar (kapasiteleriyle) gerçek
+- İsimler gerçeğe benzer ama birebir aynı değil (ör. Arda Gülar, Kylian Mbapé, Galatasarai, Trabzunspor)
+- Sponsorlar gerçek markalara benzer isimlerle; kadro sınırı 34
+- Veri biçimi ve doğrulayıcı: tools/world/

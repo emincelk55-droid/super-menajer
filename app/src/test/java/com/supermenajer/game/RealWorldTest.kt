@@ -21,6 +21,19 @@ class RealWorldTest {
         val clubs = listOf("Galatasaray", "Fenerbahçe", "Beşiktaş", "Real Madrid", "FC Barcelona", "Liverpool", "Manchester City", "Bayern Munich", "Santiago Bernabéu", "Rams Park")
         for (n in people) { val a = Alias.person(n); println("ALIAS $n -> $a"); assertNotEquals(n, a) }
         for (n in clubs) { val a = Alias.club(n); println("ALIAS $n -> $a"); assertNotEquals(n, a) }
+        // Tüm gerçek kulüp, hoca ve oyuncu isimleri değişmiş olmalı
+        val same = mutableListOf<String>()
+        for (id in listOf(0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)) {
+            val d = RealWorld.load(id) ?: continue
+            for (t in d.teams) {
+                if (Alias.club(t.name) == t.name) same += t.name
+                if (Alias.person(t.coach) == t.coach) same += t.coach
+                for (p in t.players) if (Alias.person(p.name) == p.name) same += p.name
+            }
+        }
+        println("AYNI KALAN: ${same.size} ${same.take(40)}")
+        println("ALIAS Tottenham Hotspur -> ${Alias.club("Tottenham Hotspur")}")
+        assertEquals(0, same.size)
         assertEquals("Arda Gülar", Alias.person("Arda Güler"))
         assertEquals("Kylian Mbapé", Alias.person("Kylian Mbappé"))
     }

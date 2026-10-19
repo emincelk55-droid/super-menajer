@@ -673,7 +673,7 @@ object GameRepo {
         if (p.teamId == us.id) return "Oyuncu zaten senin takımında."
         if (p.loanFrom >= 0) return "${p.name} şu an kiralık oynuyor."
         if (p.teamId >= 0 && !Season.transferWindowOpen(g)) return "Transfer dönemi kapalı. Şu an sadece serbest oyuncu alabilirsin."
-        if (g.squad(us.id).size >= 30) return "Kadro dolu (en fazla 30 oyuncu)."
+        if (g.squad(us.id).size >= 34) return "Kadro dolu (en fazla 34 oyuncu)."
         if (!Economy.fitsWages(g, us, p.demandWage)) {
             return "Maaş bütçesi yetersiz: ${money(Economy.squadWages(g, us.id))} + ${money(p.demandWage)} > ${money(us.wageBudget)}/hafta. Önce oyuncu satmalısın."
         }
@@ -749,7 +749,7 @@ object GameRepo {
         if (!Season.transferWindowOpen(g)) return null
         if (g.squad(g.userTeamId).size <= 16) return null
         val price = r25k(p.value * Random.nextDouble(0.85, 1.05))
-        val buyer = g.teams.filter { it.id != g.userTeamId && it.budget >= price && g.squad(it.id).size < 30 }
+        val buyer = g.teams.filter { it.id != g.userTeamId && it.budget >= price && g.squad(it.id).size < 34 }
             .randomOrNull() ?: return null
         return Offer(p, buyer, price)
     }

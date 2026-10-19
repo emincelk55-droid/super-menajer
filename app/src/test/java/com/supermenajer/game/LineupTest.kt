@@ -27,7 +27,11 @@ class LineupTest {
                     // Yeterli doğal oyuncu varken başka mevkiden oyuncu konmamalı
                     val naturals = squad.count { it.pos == pos }
                     val needed = slots.count { it.pos == pos }
-                    if (naturals >= needed) { checked++; if (p.pos != pos) wrong++ }
+                    if (naturals >= needed) {
+                        checked++
+                        // Oyuncunun öğrenilmiş/gerçek 2. mevkisi de doğal sayılır
+                        if (p.pos != pos && p.secondDet != com.supermenajer.game.game.Positions.slotDet(slots[i]).ordinal) wrong++
+                    }
                 }
             }
         }

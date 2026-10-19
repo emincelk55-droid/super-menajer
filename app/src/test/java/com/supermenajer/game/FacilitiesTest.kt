@@ -23,7 +23,7 @@ class FacilitiesTest {
         val g = GameRepo.game!!
         g.confidence = 100.0
         val us = g.userTeam
-        assertTrue(g.teams.all { it.stadium in 5_000..80_000 && it.trainingFac in 1..9 })
+        assertTrue(g.teams.all { it.stadium in 3_000..100_000 && it.trainingFac in 1..9 })
         println("STAT: ${us.name} ${us.stadiumName} ${us.stadium} · tesis ${us.trainingFac}/${us.youthFac}/${us.medicalFac}")
 
         // Proje: para düşer, N hafta sonra seviye artar

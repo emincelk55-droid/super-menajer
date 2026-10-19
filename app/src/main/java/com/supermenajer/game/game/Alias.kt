@@ -26,6 +26,10 @@ object Alias {
     /** Tek kelimeyi tanınır şekilde değiştir. */
     fun word(w: String): String {
         if (w.length < 3) return w
+        // Türk kulüplerinde "-spor" eki korunur, şehir kısmı değişir: Trabzonspor → Trabzunspor
+        for (suf in listOf("spor", "gücü", "birliği")) {
+            if (w.length > suf.length + 3 && w.endsWith(suf)) return word(w.dropLast(suf.length)) + suf
+        }
         val chars = w.toMutableList()
         // 1) Çift harf varsa birini at: Mbappé → Mbapé, Haaland → Haland
         for (i in 1 until chars.size) {
@@ -52,14 +56,19 @@ object Alias {
         if (parts.isEmpty()) return name
         val last = parts.indices.reversed().firstOrNull { parts[it].length >= 3 && parts[it].lowercase() !in setOf("jr.", "júnior", "junior", "filho", "neto") }
             ?: (parts.size - 1)
-        return parts.mapIndexed { i, p -> if (i == last) word(p) else p }.joinToString(" ")
+        val out = parts.mapIndexed { i, p -> if (i == last) word(p) else p }.joinToString(" ")
+        // Çok kısa tek isimler (ör. "MT"): sona harf ekle
+        return if (out == name) name + "e" else out
     }
 
     /** Kulüp / stadyum adı: en uzun ayırt edici kelime değişir. */
     fun club(name: String): String {
         val parts = name.trim().split(Regex("\\s+"))
         val cand = parts.indices.filter { parts[it].lowercase().trimEnd('.', ',') !in generic && parts[it].any { c -> c.isLetter() } }
-        val pick = cand.maxByOrNull { parts[it].length } ?: return parts.mapIndexed { i, p -> if (i == parts.lastIndex) word(p) else p }.joinToString(" ")
-        return parts.mapIndexed { i, p -> if (i == pick) word(p) else p }.joinToString(" ")
+        // Hepsi genel kelimeyse (ör. "Sporting CP") en uzun kelime değişir
+        val pick = cand.maxByOrNull { parts[it].length } ?: parts.indices.maxBy { parts[it].length }
+        val out = parts.mapIndexed { i, p -> if (i == pick) word(p) else p }.joinToString(" ")
+        // Çok kısa adlar (ör. "AZ"): kulüp eki
+        return if (out == name) "$name FC" else out
     }
 }

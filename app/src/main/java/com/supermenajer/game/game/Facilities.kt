@@ -33,12 +33,14 @@ object Facilities {
 
     /** Henüz tesisi olmayan takımlara itibara uygun başlangıç değerleri. */
     fun ensure(t: Team) {
-        if (t.stadium > 0) return
-        t.stadium = ((baseFans(t) * 0.9 / 1000).roundToInt() * 1000).coerceIn(5_000, 80_000)
-        val lvl = ((t.reputation - 35) / 7).coerceIn(1, 9)
-        t.trainingFac = lvl
-        t.youthFac = lvl
-        t.medicalFac = lvl
+        // Gerçek kulüplerin stadyumu veriden gelir; tesisler yine itibara göre kurulur
+        if (t.stadium <= 0) t.stadium = ((baseFans(t) * 0.9 / 1000).roundToInt() * 1000).coerceIn(5_000, 80_000)
+        if (t.trainingFac <= 0) {
+            val lvl = ((t.reputation - 35) / 7).coerceIn(1, 9)
+            t.trainingFac = lvl
+            t.youthFac = lvl
+            t.medicalFac = lvl
+        }
         if (t.stadiumName.isEmpty()) t.stadiumName = t.name.substringBefore(" ") + " Arena"
     }
 
@@ -182,7 +184,7 @@ object Facilities {
         val count = 1 + us.youthFac / 4
         val names = mutableListOf<String>()
         repeat(count) {
-            if (g.squad(us.id).size >= 30) return@repeat
+            if (g.squad(us.id).size >= 34) return@repeat
             val pos = com.supermenajer.game.model.Pos.entries.random(rnd)
             val y = Generator.youth(g, us, pos, rnd)
             y.age = rnd.nextInt(16, 18)
