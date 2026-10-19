@@ -81,6 +81,7 @@ object Season {
         Facilities.ensureAll(g)
         Roles.ensureAllNumbers(g)
         Positions.ensureAll(g)
+        ManagerMarket.ensure(g, rnd)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
         Sponsors.refreshOffers(g, rnd)
@@ -204,6 +205,14 @@ object Season {
             g.addNews(
                 "Güncelleme: v1.4 · Detaylı mevkiler ve oyuncu özellikleri",
                 "Her oyuncunun artık detaylı mevkisi (KL, SLB, SĞB, STP, DOS, MO, OOS, SLK, SĞK, SF), tercih ettiği ayağı ve oyun özelliği var (ör. kanat bek, topla oynayan stoper, oyun kurucu). Oyuncular kendi mevkisinde ve özelliğine uygun rolde daha verimli oynar. İlk 11'in yeni sisteme göre otomatik dizildi.",
+            )
+        }
+        if (g.saveVersion < 15) {
+            g.saveVersion = 15
+            ManagerMarket.ensure(g)
+            g.addNews(
+                "Güncelleme: v1.5 · Kariyer derinleşiyor",
+                "Bireysel antrenman ve yeni mevki öğretme, takım dinamikleri (liderler, gruplar, uyum), seçimli beklenmedik olaylar, menajer pazarı (kovulan hocalar, iş başvurusu) ve menajer yetenek ağacı geldi!",
             )
         }
     }
@@ -414,6 +423,10 @@ object Season {
                 Sponsors.weekly(g)
                 Fans.weekly(g, rnd)
                 Assistant.weekly(g, d.number, rnd)
+                Development.weekly(g, rnd)
+                Dynamics.weekly(g)
+                Events.weekly(g, rnd)
+                ManagerMarket.weekly(g, d.number, rnd)
                 if (d.number % 6 == 0) {
                     val leader = g.table(g.userTeam.division).first()
                     g.addNews("Lig lideri", "${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.")
@@ -462,7 +475,8 @@ object Season {
             val intensity = team?.intensity ?: 1
             val intF = when (intensity) { 0 -> 0.7; 2 -> 1.4; else -> 1.0 }
             val youthF = (if (focus == 4) (if (p.age <= 21) 1.8 else 0.7) else 1.0) * (if (p.loanFrom >= 0) 1.5 else 1.0) *
-                (if (mine) coachF else 1.0) * Facilities.trainingFactor(team) * Traits.devFactor(p)
+                (if (mine) coachF else 1.0) * Facilities.trainingFactor(team) * Traits.devFactor(p) *
+                (if (mine && p.age <= 21) Perks.youthDev(g) else 1.0)
             val gap = p.potential - p.overall
             if (p.age <= 24 && gap > 0 && rnd.nextDouble() < (0.14 + gap * 0.01) * intF * youthF) {
                 improve(p, 1, rnd, focus)
@@ -683,8 +697,15 @@ object Season {
 
     fun takeJob(g: Game, teamId: Int) {
         val old = g.userTeam.name
+        val oldId = g.userTeamId
         Sponsors.leaveClub(g, g.userTeam)
         g.userTeamId = teamId
+        g.managers.remove(teamId)
+        g.vacancies.removeAll { it.teamId == teamId }
+        g.managers[oldId] = Generator.personName(Random.Default, g.flagOf(g.team(oldId))).first
+        g.mgrSecurity[oldId] = 65.0
+        g.cohesion = 55.0
+        g.pendingEvent = null
         g.fired = false
         g.careerOffer = false
         g.jobOffers.clear()

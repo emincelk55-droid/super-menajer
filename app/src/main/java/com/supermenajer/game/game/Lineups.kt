@@ -20,7 +20,8 @@ object Lineups {
         val det = Positions.slotDet(slot)
         val fit = Positions.fit(p, det)
         val detBonus = if (Positions.det(p) == det) 40 else if (fit >= 0.95) 20 else 0
-        return p.ovrAt(slot.pos) * (0.6 + 0.4 * p.fitness / 100.0) * fit + (if (p.pos == slot.pos) 1000 else 0) + detBonus
+        val natural = p.pos == slot.pos || p.secondDet == det.ordinal
+        return p.ovrAt(slot.pos) * (0.6 + 0.4 * p.fitness / 100.0) * fit + (if (natural) 1000 else 0) + detBonus
     }
 
     /** Mevcut formasyon için en iyi 11'i seçer. */

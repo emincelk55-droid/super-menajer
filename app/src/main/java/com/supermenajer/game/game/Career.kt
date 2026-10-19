@@ -38,6 +38,7 @@ object Career {
         val a = byId[id] ?: return
         g.achievements += id
         g.managerRep = (g.managerRep + 1).coerceAtMost(100)
+        Perks.addXp(g, 25)
         g.addNews("🏅 Başarım: ${a.name}", "${a.icon} ${a.desc} Menajer itibarın arttı.")
     }
 
@@ -55,6 +56,7 @@ object Career {
         val label = "$ourGoals-$theirGoals $opponent (${g.season})"
         if (diff > g.recBigWinDiff) { g.recBigWinDiff = diff; g.recBigWin = label }
         if (-diff > g.recLossDiff) { g.recLossDiff = -diff; g.recLoss = label }
+        Perks.addXp(g, if (won) 6 else if (diff == 0) 2 else 0)
         if (won) unlock(g, "first_win")
         if (diff >= 5) unlock(g, "big_win")
         if (won && derby) unlock(g, "derby")
@@ -85,6 +87,7 @@ object Career {
         if (g.userTeam.lost == 0 && g.userTeam.played > 0) unlock(g, "unbeaten")
         g.managerRep = (g.managerRep + (if (champion) 6 else 0) + (if (cup) 3 else 0) + (if (euro) 8 else 0) +
             (if (metObjective) 2 else 0) - (if (missedBadly) 3 else 0)).coerceIn(10, 100)
+        Perks.addXp(g, (if (champion) 120 else 0) + (if (cup) 80 else 0) + (if (euro) 150 else 0) + (if (metObjective) 60 else 0))
         g.seasonsAtClub++
         if (g.seasonsAtClub >= 5) unlock(g, "loyal")
     }

@@ -53,3 +53,10 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Detaylı mevkiler (KL, SLB, SĞB, STP, DOS, MO, OOS, SLK, SĞK, SF) ve tercih edilen ayak
 - Oyuncu özellikleri: kaleci / libero kaleci, stoper / topla oynayan stoper, bek / kanat bek, defansif / iki yönlü / ofansif orta saha, oyun kurucu, kanat, fırsatçı golcü, hedef santrfor, sahte 9, kanat forvet
 - Mevki uyumu ve doğal rol maç performansını etkiler; otomatik 11 detaylı mevkiye göre dizer
+
+### v1.5
+- Bireysel antrenman (özellik odağı) ve oyunculara yeni mevki öğretme (2. mevki)
+- Takım dinamikleri: soyunma odası hiyerarşisi, oyuncu grupları ve maça etki eden takım uyumu
+- Beklenmedik olaylar: disiplin, ev özlemi, yatırımcı, emeklilik, transfer söylentisi, genç yetenek — kararları senin
+- Hoca pazarı: rakip hocaların koltuk güvencesi, kovulmalar ve boş koltuklara başvuru
+- Menajer seviyesi ve 8 dallı yetenek ağacı (pazarlık, gençler, taktik, motivasyon, ekonomi, gözlemci, disiplin, halkla ilişkiler)

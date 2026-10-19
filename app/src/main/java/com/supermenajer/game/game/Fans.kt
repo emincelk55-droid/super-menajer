@@ -24,6 +24,7 @@ object Fans {
 
     fun change(g: Game, delta: Double, reason: String) {
         if (g.fired || delta == 0.0) return
+        val delta = if (delta > 0) delta * Perks.fanBoost(g) else delta
         g.fans = (g.fans + delta).coerceIn(0.0, 100.0)
         val d = delta.roundToInt()
         if (d == 0) return

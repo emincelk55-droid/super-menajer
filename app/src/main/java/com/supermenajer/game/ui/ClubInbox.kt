@@ -44,14 +44,15 @@ import com.supermenajer.game.model.News
 /** Kulüp menüsü: teknik ekip, tesisler, sponsorlar, finans ve taraftar. */
 @Composable
 fun ClubTab(g: Game) {
-    val modes = listOf("👔 Teknik Ekip", "🏟️ Tesisler", "💼 Sponsorlar", "💰 Finans", "📣 Taraftar", "🏆 Kariyer")
+    val modes = listOf("👔 Teknik Ekip", "🏟️ Tesisler", "💼 Sponsorlar", "💰 Finans", "📣 Taraftar", "🏆 Kariyer", "⭐ Yetenekler", "📋 Hoca Pazarı")
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.horizontalScroll(rememberScrollState()).padding(start = 10.dp, end = 10.dp, top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             modes.forEachIndexed { i, n ->
-                val dot = i == 2 && g.sponsorOffers.isNotEmpty()
+                val dot = (i == 2 && g.sponsorOffers.isNotEmpty()) || (i == 6 && com.supermenajer.game.game.Perks.points(g) > 0) ||
+                    (i == 7 && g.vacancies.any { !it.applied })
                 Chip(if (dot) "$n 🔴" else n, GameRepo.clubMode == i) { GameRepo.clubMode = i }
             }
         }
@@ -61,7 +62,9 @@ fun ClubTab(g: Game) {
             2 -> SponsorsView(g)
             3 -> TwoCards({ FinanceCard(g) }, { BudgetShiftCard(g); Spacer(Modifier.height(10.dp)); BoardRequestCard(g); Spacer(Modifier.height(10.dp)); BoardCard(g) })
             4 -> TwoCards({ FansCard(g) }, { FanInfoCard() })
-            else -> CareerView(g)
+            5 -> CareerView(g)
+            6 -> PerksView(g)
+            else -> ManagerMarketView(g)
         }
     }
 }

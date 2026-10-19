@@ -180,6 +180,10 @@ class MatchSim(
         // Kaptan sahadaysa küçük bir moral desteği
         val cap = com.supermenajer.game.game.Roles.captain(game, s.team)
         if (cap != null && s.onPitch.any { it.p.id == cap.id }) { a *= 1.01; m *= 1.01; d *= 1.01 }
+        if (s === userSide) {
+            val f = com.supermenajer.game.game.Dynamics.matchFactor(game) * com.supermenajer.game.game.Perks.tactics(game)
+            a *= f; m *= f; d *= f
+        }
         if (s === home) { a *= 1.03; m *= 1.03; d *= 1.03 }
         return Str(a.coerceAtLeast(5.0), m.coerceAtLeast(5.0), d.coerceAtLeast(5.0))
     }
@@ -342,7 +346,8 @@ class MatchSim(
     private fun foul(def: Side, atk: Side) {
         val fouler = pickW(def.onPitch) {
             when (it.slot.pos) { Pos.GK -> 0.1; Pos.DF -> 3.0; Pos.MF -> 2.0; Pos.FW -> 1.0 } * (1.4 - it.p.defending / 100.0) *
-                com.supermenajer.game.game.Traits.foulFactor(it.p) * (if (calm && def === userSide) 0.7 else 1.0)
+                com.supermenajer.game.game.Traits.foulFactor(it.p) * (if (calm && def === userSide) 0.7 else 1.0) *
+                (if (def === userSide) com.supermenajer.game.game.Perks.foul(game) else 1.0)
         } ?: return
         def.fouls++
         val r = rnd.nextDouble()
@@ -510,7 +515,8 @@ class MatchSim(
             2 -> 0.015 to "Oyuncular konsantre oldu."
             else -> { calm = true; 0.0 to "Oyuncular sakinleşti, daha kontrollü oynayacaklar." }
         }
-        us.onPitch.forEach { it.boost = (it.boost + delta).coerceIn(-0.06, 0.08) }
+        val mot = if (delta > 0) com.supermenajer.game.game.Perks.motivation(game) else 1.0
+        us.onPitch.forEach { it.boost = (it.boost + delta * mot).coerceIn(-0.06, 0.08) }
         ev(Ev.INFO, us.index, "📣 Kenar çizgisinden: " + listOf("\"Hadi çocuklar, inanın!\"", "\"Daha fazlasını istiyorum!\"", "\"Odaklanın!\"", "\"Sakin olun!\"")[kind] + " · " + msg)
         return msg
     }
@@ -525,7 +531,7 @@ class MatchSim(
         talksDone[kind] = true
         val targets = if (kind == 2) us.used else us.onPitch
         return targets.map { m ->
-            val d = base * factor + rnd.nextDouble(-2.0, 2.0)
+            val d = base * factor * com.supermenajer.game.game.Perks.motivation(game) + rnd.nextDouble(-2.0, 2.0)
             if (kind == 2) {
                 m.p.morale = (m.p.morale + d).coerceIn(5.0, 100.0)
             } else {

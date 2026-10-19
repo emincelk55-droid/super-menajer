@@ -49,6 +49,11 @@ class Player(
     var detail: Int = -1,
     var foot: Int = -1,
     var natRole: Int = -1,
+    /** Bireysel antrenman: özellik odağı (-1 yok), öğretilen yeni mevki ve ilerlemesi, öğrenilmiş ikinci mevki. */
+    var trainFocus: Int = -1,
+    var learnDet: Int = -1,
+    var learnProgress: Int = 0,
+    var secondDet: Int = -1,
     /** Forma numarası (0 = atanmadı). */
     var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */
@@ -317,6 +322,14 @@ class Sponsor(
     var yearsLeft: Int,
 )
 
+/** Seçenekli beklenmedik olay (ana sayfada kart olarak çıkar). */
+@Serializable
+class GameEvent(val kind: Int, val playerId: Int, val title: String, val text: String, val options: List<String>, val amount: Long = 0)
+
+/** Boş teknik direktörlük koltuğu. */
+@Serializable
+class Vacancy(val teamId: Int, val until: Long, var applied: Boolean = false)
+
 /** Maç sonrası basın toplantısı sorusu. */
 @Serializable
 class PressQuestion(val text: String, val answers: List<String>, val kind: Int)
@@ -376,6 +389,15 @@ class Game(
     /** Kullanıcının kulübünün sponsorları ve bekleyen teklifler. */
     var sponsors: MutableList<Sponsor> = mutableListOf(),
     var sponsorOffers: MutableList<Sponsor> = mutableListOf(),
+    /** Takım uyumu (0-100), bekleyen olay, menajer pazarı, menajer deneyimi ve yetenekleri. */
+    var cohesion: Double = 60.0,
+    var pendingEvent: GameEvent? = null,
+    var investorDone: Boolean = false,
+    var managers: MutableMap<Int, String> = mutableMapOf(),
+    var mgrSecurity: MutableMap<Int, Double> = mutableMapOf(),
+    var vacancies: MutableList<Vacancy> = mutableListOf(),
+    var managerXp: Int = 0,
+    var perks: MutableMap<String, Int> = mutableMapOf(),
     /** Kariyer: başarımlar, menajer itibarı (0-100), kupa dolabı, kulüp rekorları, yönetim istekleri. */
     var achievements: MutableSet<String> = mutableSetOf(),
     var managerRep: Int = 40,

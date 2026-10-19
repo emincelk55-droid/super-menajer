@@ -122,7 +122,7 @@ object Sponsors {
     fun weekly(g: Game) {
         if (g.fired || g.sponsors.isEmpty()) return
         val weeks = g.calendar.count { it.type == 0 }.coerceAtLeast(1)
-        Economy.earn(g.userTeam, Economy.SPONSOR, g.sponsors.sumOf { it.base / weeks })
+        Economy.earn(g.userTeam, Economy.SPONSOR, (g.sponsors.sumOf { it.base / weeks } * Perks.income(g)).toLong())
     }
 
     /** Lig galibiyeti primi. */

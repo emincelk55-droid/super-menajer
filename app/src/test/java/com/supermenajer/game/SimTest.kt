@@ -93,7 +93,7 @@ class SimTest {
         assertEquals(36, g.teams.size)
         assertTrue(g.worldUpgradePending)
         assertEquals(9 * 9, g.fixtures.count { it.comp == Comp.FIRST && it.played })
-        assertEquals(14, g.saveVersion)
+        assertEquals(15, g.saveVersion)
         assertTrue(g.euroTeams.isEmpty())
         while (!g.seasonOver) playDay(g, rnd)
         Season.newSeason(g, rnd)

@@ -47,8 +47,9 @@ object Scouting {
         if (known(g, p)) return "Bu oyuncuyu zaten tanıyoruz."
         if (requested(g, p)) return "Gözlemci zaten bu oyuncuyu izliyor."
         val us = g.userTeam
-        if (us.budget < COST) return "Gözlem için bütçe yetersiz."
-        Economy.earn(us, Economy.SCOUTING, -COST)
+        val cost = (COST * Perks.scoutCost(g)).toLong()
+        if (us.budget < cost) return "Gözlem için bütçe yetersiz."
+        Economy.earn(us, Economy.SCOUTING, -cost)
         g.scoutQueue += p.id
         return null
     }
@@ -90,7 +91,7 @@ object Scouting {
             p.teamId != g.userTeamId && p.loanFrom < 0 && p.id !in g.scouted &&
                 (if (p.teamId < 0) true else g.teamOrNull(p.teamId)?.let { g.countryOf(it) == country } == true)
         }
-        repeat(StaffLogic.scoutReports(g)) { weeklyPick(g, country, str, pool.filter { it.id !in g.scouted }, rnd) }
+        repeat(StaffLogic.scoutReports(g) + Perks.extraScout(g)) { weeklyPick(g, country, str, pool.filter { it.id !in g.scouted }, rnd) }
     }
 
     private fun weeklyPick(g: Game, country: String, str: Double, pool: List<Player>, rnd: Random) {

@@ -64,7 +64,13 @@ import kotlin.math.roundToLong
 
 @Composable
 fun SquadTab(g: Game) {
-    PlayersList(g)
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("👥 Oyuncular", GameRepo.squadMode == 0) { GameRepo.squadMode = 0 }
+            Chip("🤝 Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", GameRepo.squadMode == 1) { GameRepo.squadMode = 1 }
+        }
+        if (GameRepo.squadMode == 1) DynamicsView(g) else PlayersList(g)
+    }
 }
 
 @Composable
@@ -377,6 +383,7 @@ fun PlayerDialog(g: Game, p: Player) {
                         "${com.supermenajer.game.game.Positions.det(p).label} · Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}",
                         color = Gold, fontSize = 12.sp,
                     )
+                    if (p.secondDet >= 0) Text("2. mevki: ${com.supermenajer.game.game.Positions.Det.entries[p.secondDet].label}", color = Blue, fontSize = 12.sp)
                     Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 13.sp)
                 }
             }
@@ -408,6 +415,7 @@ fun PlayerDialog(g: Game, p: Player) {
                         Stat("Asist", "${p.assists}")
                         Stat("Ort. Puan", if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
                     }
+                    if (own && p.loanFrom < 0) TrainingBox(p)
                 }
                 Column(Modifier.weight(1f)) {
                     if (!own && !loaned) { actions(); Spacer(Modifier.height(10.dp)) }
@@ -575,6 +583,39 @@ private fun FlowChips(content: @Composable () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) { content() }
+}
+
+/** Bireysel antrenman + yeni mevki öğretme. */
+@Composable
+private fun TrainingBox(p: Player) {
+    val dev = com.supermenajer.game.game.Development
+    Spacer(Modifier.height(12.dp))
+    Text("BİREYSEL ANTRENMAN", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    Text("Seçilen özellik haftalık antrenmanlarda öne çıkar.", color = TextDim, fontSize = 11.sp)
+    Spacer(Modifier.height(4.dp))
+    FlowChips {
+        dev.focusNames.forEachIndexed { i, n ->
+            if (i == 6 && p.pos != Pos.GK) return@forEachIndexed
+            Chip(n, p.trainFocus == i) { GameRepo.setFocus(p, i) }
+        }
+    }
+    val opts = dev.learnable(p).filter { it.ordinal != p.secondDet }
+    if (opts.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Text("YENİ MEVKİ ÖĞRET", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        FlowChips {
+            opts.forEach { d -> Chip(d.code + " · " + d.label, p.learnDet == d.ordinal) { GameRepo.setLearn(p, d.ordinal) } }
+        }
+        if (p.learnDet >= 0) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Bar(p.learnProgress / 100f, Blue, Modifier.weight(1f), 7.dp)
+                Text("  %${p.learnProgress}", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Text("Genç oyuncular yeni mevkiyi daha hızlı öğrenir.", color = TextDim, fontSize = 11.sp)
+        }
+    }
 }
 
 /** Sözleşme uzatma kutusu. */

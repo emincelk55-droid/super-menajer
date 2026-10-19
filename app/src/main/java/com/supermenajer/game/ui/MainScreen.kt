@@ -248,6 +248,7 @@ private fun SettingsDialog() {
 private fun HomeTab(g: Game) {
     Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         LazyColumn(Modifier.weight(1.1f).fillMaxHeight(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (!g.fired) item { EventCard(g) }
             when {
                 g.fired -> item { FiredCard(g) }
                 g.seasonOver -> item { SeasonEndCard(g) }
@@ -295,6 +296,7 @@ private fun ClubStatusCard(g: Game) {
         val c = g.confidence
         StatusBar("Yönetim", c / 100, "${c.toInt()}%", when { c >= 60 -> Green; c >= 30 -> Gold; else -> Red })
         StatusBar("Taraftar", g.fans / 100, com.supermenajer.game.game.Fans.mood(g.fans), when { g.fans >= 70 -> Green; g.fans >= 40 -> Gold; else -> Red })
+        StatusBar("Uyum", g.cohesion / 100, com.supermenajer.game.game.Dynamics.cohesionText(g.cohesion), when { g.cohesion >= 65 -> Green; g.cohesion >= 40 -> Gold; else -> Red })
         val squad = g.squad(t.id)
         val morale = if (squad.isEmpty()) 60.0 else squad.sumOf { it.morale } / squad.size
         StatusBar("Soyunma odası", morale / 100, moraleText(morale), when { morale >= 65 -> Green; morale >= 45 -> Gold; else -> Red })

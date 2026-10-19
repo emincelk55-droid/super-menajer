@@ -66,7 +66,9 @@ class ScreensTest {
         shot("03a_staff")
         GameRepo.tab = GameRepo.TAB_SQUAD
         shot("03a_squad")
-        GameRepo.selectedPlayer = g.squad(g.userTeamId).filter { it.age <= 21 }.minBy { it.overall }
+        GameRepo.selectedPlayer = g.squad(g.userTeamId).filter { it.age <= 21 }.minBy { it.overall }.also {
+            GameRepo.setFocus(it, 3); GameRepo.setLearn(it, com.supermenajer.game.game.Development.learnable(it).first().ordinal); it.learnProgress = 35
+        }
         shot("03b_own_player")
         GameRepo.selectedPlayer = null
         advance(4)
@@ -99,6 +101,20 @@ class ScreensTest {
         GameRepo.tacticsPanel = 2; shot("10c_roles"); GameRepo.tacticsPanel = 0
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
         GameRepo.clubMode = 3; shot("10e_finance")
+        // v1.5: dinamikler, yetenek ağacı, hoca pazarı, olay kartı
+        GameRepo.tab = GameRepo.TAB_SQUAD; GameRepo.squadMode = 1; shot("17_dynamics"); GameRepo.squadMode = 0
+        com.supermenajer.game.game.Perks.addXp(g, 420)
+        GameRepo.upgradePerk("tactic"); GameRepo.upgradePerk("nego")
+        GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 6; shot("18_perks")
+        val rival = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }
+        g.vacancies += com.supermenajer.game.model.Vacancy(rival.id, g.date + 14)
+        g.managers[rival.id] = "Geçici: " + (g.managers[rival.id] ?: "")
+        GameRepo.clubMode = 7; shot("19_manager_market")
+        g.vacancies.clear()
+        val ev = g.squad(g.userTeamId).first()
+        g.pendingEvent = com.supermenajer.game.model.GameEvent(0, ev.id, "⚠️ Disiplin sorunu", "${ev.name} antrenmana geç kaldı ve yardımcı antrenörle tartıştı. Soyunma odası tepkini bekliyor.", listOf("Para cezası kes", "Özel olarak uyar", "Görmezden gel"))
+        GameRepo.tab = 0; shot("20_event")
+        g.pendingEvent = null
         // canlı maç, devre arası
         while (g.todayUserFixture() == null && !g.seasonOver && !g.fired) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)

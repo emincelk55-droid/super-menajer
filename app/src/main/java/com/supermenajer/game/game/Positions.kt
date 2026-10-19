@@ -110,6 +110,7 @@ object Positions {
     fun fit(p: Player, slot: Det): Double {
         val d = det(p)
         if (d == slot) return 1.0
+        if (p.secondDet == slot.ordinal) return 0.98
         val both = p.foot == 2
         fun pair(a: Det, b: Det) = (d == a && slot == b) || (d == b && slot == a)
         return when {

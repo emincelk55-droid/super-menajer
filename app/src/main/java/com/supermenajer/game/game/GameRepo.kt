@@ -96,7 +96,7 @@ object GameRepo {
         }
         val fresh = g.news.takeWhile { it !== newsBefore }
         val important = fresh.any { n -> importantWords.any { it in n.title.lowercase() } }
-        return g.offers.size > offers || g.press != null || g.careerOffer || g.fired || g.seasonOver ||
+        return g.offers.size > offers || g.press != null || g.careerOffer || g.fired || g.seasonOver || g.pendingEvent != null ||
             important || g.todayUserFixture() != null
     }
 
@@ -106,6 +106,7 @@ object GameRepo {
         when {
             advancing -> advancing = false
             g.fired -> tab = TAB_HOME
+            g.pendingEvent != null -> tab = TAB_HOME
             g.seasonOver -> startNewSeason()
             g.todayUserFixture() != null -> playMatch(live = true)
             else -> {
@@ -118,6 +119,7 @@ object GameRepo {
                         kotlinx.coroutines.delay(170)
                     }
                     advancing = false
+                    if (g.pendingEvent != null) tab = TAB_HOME
                     save(force = true)
                     bump()
                 }
@@ -128,6 +130,7 @@ object GameRepo {
     fun continueLabel(g: Game): String = when {
         advancing -> "⏸ DURDUR"
         g.fired -> "TEKLİFLER"
+        g.pendingEvent != null -> "⚡ KARAR VER"
         g.seasonOver -> "YENİ SEZON ▶"
         g.todayUserFixture() != null -> "MAÇA ÇIK ▶"
         else -> "DEVAM ▶"
@@ -520,6 +523,11 @@ object GameRepo {
     fun secretTraining(): String { val g = game ?: return ""; val m = Matchday.secretTraining(g); changed(); return m }
     fun friendly(): String { val g = game ?: return ""; val m = Matchday.friendly(g); changed(); return m }
     fun setWinBonus(v: Int) { game?.userTeam?.winBonus = v; changed() }
+    fun setFocus(p: Player, f: Int) { Development.setFocus(p, f); changed() }
+    fun setLearn(p: Player, d: Int) { Development.setLearn(p, d); changed() }
+    fun resolveEvent(choice: Int): String { val g = game ?: return ""; val m = Events.resolve(g, choice); changed(); return m }
+    fun applyJob(teamId: Int): String { val g = game ?: return ""; val m = ManagerMarket.apply(g, teamId); changed(); return m }
+    fun upgradePerk(id: String): String { val g = game ?: return ""; val m = Perks.upgrade(g, id); changed(); return m }
     fun boardRequest(kind: Int): String { val g = game ?: return ""; val m = Career.request(g, kind); changed(); return m }
 
     fun setPressing(v: Int) {
@@ -596,7 +604,7 @@ object GameRepo {
         val seller = g.team(p.teamId)
         val key = p.id in seller.lineup
         val needsMoney = if (seller.budget < 0) 0.9 else 1.0
-        return r25k(p.value * (if (key) 1.35 else 1.1) * needsMoney)
+        return r25k(p.value * (if (key) 1.35 else 1.1) * needsMoney * Perks.askingFactor(g))
     }
 
     fun counterFor(p: Player): Long? = talks[p.id]?.second?.takeIf { it > 0 }
@@ -754,6 +762,7 @@ object GameRepo {
         Economy.earn(buyer, Economy.BUYS, -price)
         TransferTalks.paySellOn(g, p, price, us.id)
         Career.sale(g, p.name, price)
+        Dynamics.soldPlayer(g, p)
         p.listed = false
         p.squadRole = -1
         g.movePlayer(p, buyer.id)

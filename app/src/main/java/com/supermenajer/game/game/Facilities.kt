@@ -60,7 +60,8 @@ object Facilities {
 
     fun ticketIncome(g: Game, f: Fixture): Long {
         val h = g.team(f.home)
-        return (f.attendance * perFan(h)).roundToLong()
+        val perk = if (h.id == g.userTeamId) Perks.income(g) else 1.0
+        return (f.attendance * perFan(h) * perk).roundToLong()
     }
 
     /** Maç sonrası: seyirci kaydı. */
