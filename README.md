@@ -84,3 +84,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Çoklu mevki: her gerçek oyuncunun oynayabildiği tüm mevkiler (ör. Barış Alper SĞK/SLK/SF/SĞB/SLB, Arda Gülar OOS/SĞK/MO/SLK)
 - Otomatik 11, maç gücü, oyuncu değişiklikleri ve taktik ekranı mevki listesine göre çalışır; kanat forvetleri kanat orta sahada da doğal oynar
 - Talimatlar ve Roller & Görevler tam ekran; saha ve kadro listesi yalnızca Diziliş sekmesinde
+
+### v2.0
+- Mobil düzen: Kulüp menüsü tek satırda kısa sekmeler (Ekip, Tesisler, Sponsor, Finans, Taraftar, Kariyer, Yetenek, Hocalar; bildirimler kırmızı noktayla)
+- Kadro ve maç anlatım/istatistik geçişleri sekme şeridi; maç kontrolleri eşit genişlikte, taşmıyor
+- Talimatlar ve Roller iki sütun

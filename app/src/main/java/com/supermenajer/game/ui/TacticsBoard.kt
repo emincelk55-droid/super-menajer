@@ -393,7 +393,7 @@ private fun RolesPanel(g: Game) {
     val fk = R.freeKickTaker(g, t, onPitch)
     val cor = R.cornerTaker(g, t, onPitch)
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-        GridCells.Adaptive(400.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
+        GridCells.Adaptive(340.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
         contentPadding = PaddingValues(bottom = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -458,7 +458,7 @@ private val instrs = listOf(
 private fun InstructionsPanel(g: Game) {
     val t = g.userTeam
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-        GridCells.Adaptive(420.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
+        GridCells.Adaptive(340.dp), Modifier.fillMaxSize().padding(horizontal = 12.dp),
         contentPadding = PaddingValues(bottom = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -504,6 +504,6 @@ private fun InstrCard(title: String, options: List<String>, value: Int, info: Li
             options.forEachIndexed { i, o -> Chip(o, value == i, Modifier.weight(1f)) { onSelect(i) } }
         }
         Spacer(Modifier.height(6.dp))
-        Text(info.getOrElse(value) { "" }, color = TextDim, fontSize = 12.sp, minLines = 2)
+        Text(info.getOrElse(value) { "" }, color = TextDim, fontSize = 12.sp, minLines = 2, maxLines = 2)
     }
 }

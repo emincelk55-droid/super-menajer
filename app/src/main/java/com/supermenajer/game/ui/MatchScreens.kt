@@ -77,8 +77,8 @@ import kotlin.math.roundToInt
 private class Pace(val label: String, val minute: Long, val suspense: Long, val pause: Long, val scale: Float)
 
 private val paces = listOf(
-    Pace("▶ Normal", 650, 1500, 900, 1.0f),
-    Pace("⏩ Hızlı", 220, 750, 350, 1.5f),
+    Pace("▶ 1x", 650, 1500, 900, 1.0f),
+    Pace("⏩ 3x", 220, 750, 350, 1.5f),
     Pace("⚡ Özet", 60, 1400, 900, 1.9f),
 )
 
@@ -177,31 +177,30 @@ fun MatchScreen() {
         Column(Modifier.weight(1f).fillMaxHeight().background(Bg)) {
             LiveStrip(sim, homeC, awayC)
             if (!sim.finished) {
+                // Telefonda taşmasın: tüm kontroller eşit genişlikte satırlarda
                 Row(
-                    Modifier.fillMaxWidth().background(Surface1).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 6.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    Chip(if (running) "⏸" else "▶", false) { running = !running }
-                    paces.forEachIndexed { i, pc -> Chip(pc.label, speed == i) { speed = i } }
+                    SmallChip(if (running) "⏸" else "▶", false, Modifier.weight(0.8f)) { running = !running }
+                    paces.forEachIndexed { i, pc -> SmallChip(pc.label, speed == i, Modifier.weight(1f)) { speed = i } }
                     val us = sim.userSide
-                    Chip("🔁 ${us?.subsLeft ?: 0}", false) { running = false; showSubs = true }
+                    SmallChip("🔁 ${us?.subsLeft ?: 0}", false, Modifier.weight(0.9f)) { running = false; showSubs = true }
                 }
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     val t = sim.userSide?.team
                     listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s ->
-                        Chip(s, t?.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i); tick++ }
+                        SmallChip(s, t?.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i); tick++ }
                     }
                 }
                 if (sim.userSide != null) {
                     Row(
-                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
+                        Modifier.fillMaxWidth().padding(horizontal = 6.dp).alpha(if (sim.canShout) 1f else 0.45f),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(if (sim.canShout) "Bağır:" else "Bağır (${10 - (sim.minute - sim.lastShout)}')", color = TextDim, fontSize = 11.sp)
-                        listOf("📣 Cesaret", "😠 Daha fazla", "🎯 Odaklan", "🧘 Sakin ol").forEachIndexed { i, s ->
-                            Box(Modifier.alpha(if (sim.canShout) 1f else 0.4f)) {
-                                Chip(s, false) { if (sim.canShout) { sim.shout(i); revealed = sim.events.size; tick++ } }
-                            }
+                        Text(if (sim.canShout) "Bağır" else "${10 - (sim.minute - sim.lastShout)}'", color = TextDim, fontSize = 11.sp, modifier = Modifier.width(34.dp))
+                        listOf("📣 Coş", "😠 Bas!", "🎯 Odak", "🧘 Sakin").forEachIndexed { i, s ->
+                            SmallChip(s, false, Modifier.weight(1f)) { if (sim.canShout) { sim.shout(i); revealed = sim.events.size; tick++ } }
                         }
                     }
                 }
@@ -231,11 +230,8 @@ fun MatchScreen() {
                     Text("⏭ Sonuca git", color = TextDim)
                 }
             }
-            Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Chip("Anlatım", tab == 0) { tab = 0 }
-                Chip("İstatistik", tab == 1) { tab = 1 }
-                Chip("Oyuncular", tab == 2) { tab = 2 }
-            }
+            Spacer(Modifier.height(4.dp))
+            FmTabs(listOf("Anlatım", "İstatistik", "Oyuncular"), tab) { tab = it }
             Box(Modifier.weight(1f)) {
                 when (tab) {
                     0 -> Commentary(sim, homeC, awayC, shown)

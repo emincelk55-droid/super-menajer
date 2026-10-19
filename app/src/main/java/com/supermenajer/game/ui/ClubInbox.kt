@@ -44,18 +44,15 @@ import com.supermenajer.game.model.News
 /** Kulüp menüsü: teknik ekip, tesisler, sponsorlar, finans ve taraftar. */
 @Composable
 fun ClubTab(g: Game) {
-    val modes = listOf("👔 Teknik Ekip", "🏟️ Tesisler", "💼 Sponsorlar", "💰 Finans", "📣 Taraftar", "🏆 Kariyer", "⭐ Yetenekler", "📋 Hoca Pazarı")
+    // Telefonda tüm bölümler tek satırda görünsün diye kısa adlı sekmeler
+    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar")
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.horizontalScroll(rememberScrollState()).padding(start = 10.dp, end = 10.dp, top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            modes.forEachIndexed { i, n ->
-                val dot = (i == 2 && g.sponsorOffers.isNotEmpty()) || (i == 6 && com.supermenajer.game.game.Perks.points(g) > 0) ||
-                    (i == 7 && g.vacancies.any { !it.applied })
-                Chip(if (dot) "$n 🔴" else n, GameRepo.clubMode == i) { GameRepo.clubMode = i }
-            }
+        val dots = buildSet {
+            if (g.sponsorOffers.isNotEmpty()) add(2)
+            if (com.supermenajer.game.game.Perks.points(g) > 0) add(6)
+            if (g.vacancies.any { !it.applied }) add(7)
         }
+        FmTabs(modes, GameRepo.clubMode, dots = dots) { GameRepo.clubMode = it }
         when (GameRepo.clubMode) {
             0 -> StaffView(g)
             1 -> FacilitiesView(g)

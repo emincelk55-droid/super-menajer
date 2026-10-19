@@ -259,7 +259,7 @@ fun WideDialog(onDismissRequest: () -> Unit, maxWidth: Dp = 600.dp, content: @Co
 
 /** FM tarzı sekme şeridi: seçili sekmenin altında renkli çizgi. */
 @Composable
-fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
+fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, dots: Set<Int> = emptySet(), onSelect: (Int) -> Unit) {
     androidx.compose.foundation.layout.Row(
         modifier.fillMaxWidth().background(Surface1).border(1.dp, Line.copy(alpha = 0.5f)),
     ) {
@@ -270,10 +270,31 @@ fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, onS
                     .clickable { onSelect(i) }.padding(top = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(n, fontSize = 13.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = if (sel) TextMain else TextDim, maxLines = 1)
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        n, fontSize = 13.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = if (sel) TextMain else TextDim,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (i in dots) Box(Modifier.padding(start = 4.dp).size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Red))
+                }
                 Spacer(Modifier.height(7.dp))
                 Box(Modifier.fillMaxWidth().height(3.dp).background(if (sel) Green else Color.Transparent))
             }
         }
+    }
+}
+
+/** Dar alanlar için küçük, ortalı seçim düğmesi (eşit genişlikte satırlarda kullanılır). */
+@Composable
+fun SmallChip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.clip(RoundedCornerShape(16.dp)).background(if (selected) Green else Surface2)
+            .clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text, color = if (selected) Color.Black else TextMain, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
     }
 }
