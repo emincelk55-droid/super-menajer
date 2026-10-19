@@ -119,10 +119,32 @@ class ScreensTest {
         while (g.todayUserFixture() == null && !g.seasonOver && !g.fired) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)
         shot("10b_prematch")
-        repeat(30) { GameRepo.match!!.step() }
+        fun playAnim(steps: Int, extraSec: Float) {
+            val sim = GameRepo.match!!
+            val an = GameRepo.pitchFor(sim)
+            repeat(steps) {
+                val b = sim.events.size
+                sim.step()
+                for (e in sim.events.subList(b, sim.events.size).toList()) {
+                    val o = an.outcomes
+                    an.play(e)
+                    var w = 0
+                    while (e.buildUp.isNotEmpty() && an.outcomes == o && w++ < 300) an.update(1f / 30f)
+                }
+                repeat(20) { an.update(1f / 30f) }
+            }
+            repeat((extraSec * 30).toInt()) { an.update(1f / 30f) }
+        }
+        playAnim(30, 1.3f)
         shot("11_match_ticker")
-        repeat(15) { GameRepo.match!!.step() }
-        repeat(20) { GameRepo.match!!.step() }
+        playAnim(35, 0f)
+        // Bir atağın ortasında dur
+        run {
+            val sim = GameRepo.match!!
+            val an = GameRepo.pitchFor(sim)
+            an.play(com.supermenajer.game.engine.MatchEvent(sim.minute, com.supermenajer.game.engine.Ev.SAVE, sim.home.index, "", sim.home.onPitch.last().p.id, "x", sim.home.onPitch[6].p.id, 0))
+            repeat(60) { an.update(1f / 30f) }
+        }
         shot("12_match")
         GameRepo.finishMatch()
         shot("13_summary")

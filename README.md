@@ -60,3 +60,10 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Beklenmedik olaylar: disiplin, ev özlemi, yatırımcı, emeklilik, transfer söylentisi, genç yetenek — kararları senin
 - Hoca pazarı: rakip hocaların koltuk güvencesi, kovulmalar ve boş koltuklara başvuru
 - Menajer seviyesi ve 8 dallı yetenek ağacı (pazarlık, gençler, taktik, motivasyon, ekonomi, gözlemci, disiplin, halkla ilişkiler)
+
+### v1.6
+- FM tarzı 2D maç motoru: top oyuncudan oyuncuya pasla gider, oyuncular ivmelenerek akıcı koşar, rakip pres yapar ve top kapar
+- Goller, kurtarışlar, direkler, autlar, kornerler ve penaltılar sahada canlı oynanır; sonuç top ağlara/kaleciye ulaşınca açıklanır
+- Gerçek ölçülü saha, forma numaralı oyuncular, havalanan top ve gölgesi, top sürenin adı, gol kartı
+- FM tarzı oyuncu profili: başlık şeridi, mevki mini sahası, sekmeler ve 3 sütunlu detaylı nitelikler (1-20)
+- Lacivert/neon yeni renk teması

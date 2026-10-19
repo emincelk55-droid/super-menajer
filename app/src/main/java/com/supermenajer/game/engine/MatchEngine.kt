@@ -16,7 +16,11 @@ import kotlin.random.Random
 enum class Ev { KICKOFF, GOAL, SAVE, MISS, POST, CORNER, YELLOW, RED, INJURY, SUB, INFO, HALF, FULL }
 
 /** buildUp: pozisyonun gerilimli girişi ("Sağdan orta... kafa..."); arayüz sonucu bundan sonra açıklar. */
-class MatchEvent(val minute: Int, val type: Ev, val side: Int, val text: String, val playerId: Int = -1, val buildUp: String = "")
+class MatchEvent(
+    val minute: Int, val type: Ev, val side: Int, val text: String, val playerId: Int = -1, val buildUp: String = "",
+    /** Görsel motor için: asist yapan oyuncu ve pozisyon tipi (0 akan oyun, 1 kafa/orta, 2 penaltı, 3 serbest vuruş). */
+    val assistId: Int = -1, val style: Int = 0,
+)
 
 /** Maçtaki bir oyuncu. */
 class PIM(val p: Player, var slot: Slot) {
@@ -109,8 +113,8 @@ class MatchSim(
         s.bench += Lineups.bench(game, s.team)
     }
 
-    private fun ev(type: Ev, side: Int, text: String, pid: Int = -1, buildUp: String = "") {
-        events += MatchEvent(minute, type, side, text, pid, buildUp)
+    private fun ev(type: Ev, side: Int, text: String, pid: Int = -1, buildUp: String = "", assistId: Int = -1, style: Int = 0) {
+        events += MatchEvent(minute, type, side, text, pid, buildUp, assistId, style)
     }
 
     fun other(s: Side): Side = if (s === home) away else home
@@ -299,6 +303,8 @@ class MatchSim(
         val pGoal = (q * shootF / gkF).coerceIn(0.01, 0.92)
         if (penalty) ev(Ev.INFO, atk.index, Comms.penalty(atk.team, rnd))
         val build = Comms.buildUp(shooter.p.name, assister?.p?.name, header, penalty, setPiece, rnd)
+        val aId = assister?.p?.id ?: -1
+        val style = when { penalty -> 2; header -> 1; setPiece && assister == null -> 3; else -> 0 }
         ballX = if (atk === home) 0.93f else 0.07f
         ballY = 0.38f + rnd.nextFloat() * 0.24f
 
@@ -312,7 +318,7 @@ class MatchSim(
             ev(
                 Ev.GOAL, atk.index,
                 Comms.goal(shooter.p.name, assister?.p?.name, penalty, header, rnd) + "  (${home.goals}-${away.goals})",
-                shooter.p.id, build,
+                shooter.p.id, build, aId, style,
             )
             ballX = 0.5f; ballY = 0.5f
             return
@@ -323,15 +329,15 @@ class MatchSim(
                 atk.onTarget++
                 shooter.rating += 0.1
                 keeper?.let { it.rating += 0.3 }
-                ev(Ev.SAVE, atk.index, Comms.save(shooter.p.name, keeper?.p?.name ?: "savunma", penalty, rnd, header), shooter.p.id, build)
+                ev(Ev.SAVE, atk.index, Comms.save(shooter.p.name, keeper?.p?.name ?: "savunma", penalty, rnd, header), shooter.p.id, build, aId, style)
             }
             r2 < 0.48 -> {
                 shooter.rating += 0.05
-                ev(Ev.POST, atk.index, Comms.post(shooter.p.name, rnd), shooter.p.id, build)
+                ev(Ev.POST, atk.index, Comms.post(shooter.p.name, rnd), shooter.p.id, build, aId, style)
             }
             else -> {
                 shooter.rating -= 0.05
-                ev(Ev.MISS, atk.index, Comms.miss(shooter.p.name, penalty, rnd), shooter.p.id, build)
+                ev(Ev.MISS, atk.index, Comms.miss(shooter.p.name, penalty, rnd), shooter.p.id, build, aId, style)
             }
         }
         if (!setPiece && rnd.nextDouble() < 0.3) {

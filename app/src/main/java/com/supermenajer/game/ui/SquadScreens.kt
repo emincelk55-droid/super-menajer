@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -357,83 +358,129 @@ fun PlayerDialog(g: Game, p: Player) {
             }
         }
     }
-    WideDialog(onDismissRequest = { GameRepo.selectedPlayer = null }, maxWidth = 760.dp) {
+    var ptab by remember(p.id) { mutableIntStateOf(0) }
+    val tabs = buildList {
+        add("Nitelikler"); add("Bilgi")
+        if (own && p.loanFrom < 0) add("Antrenman")
+        add(if (own || loaned) "İşlemler" else "Transfer")
+    }
+    WideDialog(onDismissRequest = { GameRepo.selectedPlayer = null }, maxWidth = 980.dp) {
         Column(
-            Modifier.fillMaxWidth().heightIn(max = 640.dp).clip(RoundedCornerShape(18.dp)).background(Surface1)
-                .verticalScroll(rememberScrollState()).padding(18.dp),
+            Modifier.fillMaxWidth().fillMaxHeight(0.97f).clip(RoundedCornerShape(16.dp)).background(Surface1)
+                .border(1.dp, Line, RoundedCornerShape(16.dp)),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                run {
-                    val tm = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
-                    val r = com.supermenajer.game.game.Scouting.range(g, p, p.overall)
-                    PlayerCard(
-                        p, (r.first + r.last) / 2, com.supermenajer.game.game.Positions.det(p).code, 78.dp,
-                        tm?.let { Color(it.color1) } ?: Color(0xFF455A64), tm?.let { Color(it.color2) } ?: Color.White,
-                        known = r.first == r.last,
+            val tm = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
+            val r = com.supermenajer.game.game.Scouting.range(g, p, p.overall)
+            // Başlık şeridi: kart, temel bilgiler, mevki haritası
+            Row(
+                Modifier.fillMaxWidth().background(
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Purple.copy(alpha = 0.35f), Surface1)),
+                ).padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PlayerCard(
+                    p, (r.first + r.last) / 2, com.supermenajer.game.game.Positions.det(p).code, 66.dp,
+                    tm?.let { Color(it.color1) } ?: Color(0xFF455A64), tm?.let { Color(it.color2) } ?: Color.White,
+                    known = r.first == r.last,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1.3f)) {
+                    Text(
+                        (if (p.number > 0 && own) "${p.number}. " else "") + p.name,
+                        fontSize = 19.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(p.name, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         DetChip(p)
-                        Text("  ${Generator.flag(p.nation)} ${p.age} yaş · ${com.supermenajer.game.game.Positions.feet[p.foot.coerceIn(0, 2)]}", color = TextDim, fontSize = 13.sp)
+                        Text("  ${Generator.flag(p.nation)} ${p.age} yaş · ${com.supermenajer.game.game.Positions.feet[p.foot.coerceIn(0, 2)]}", color = TextDim, fontSize = 12.sp, maxLines = 1)
                     }
                     Text(
-                        "${com.supermenajer.game.game.Positions.det(p).label} · Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}",
-                        color = Gold, fontSize = 12.sp,
+                        "Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}" +
+                            (if (p.secondDet >= 0) " · 2. mevki ${com.supermenajer.game.game.Positions.Det.entries[p.secondDet].code}" else ""),
+                        color = Gold, fontSize = 12.sp, maxLines = 1,
                     )
-                    if (p.secondDet >= 0) Text("2. mevki: ${com.supermenajer.game.game.Positions.Det.entries[p.secondDet].label}", color = Blue, fontSize = 12.sp)
-                    Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 13.sp)
+                    Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name} · ${g.leagueName(it)}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 12.sp, maxLines = 1)
+                }
+                Row(Modifier.weight(1.2f), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    HeaderStat(money(p.value), "Değer")
+                    if (p.teamId >= 0) HeaderStat(money(p.wage), "Maaş/hafta")
+                    HeaderStat(if (p.teamId < 0) "–" else "${p.contractYears} sezon", "Sözleşme", if (p.contractYears == 1 && p.teamId >= 0) Red else TextMain)
+                    HeaderStat(if (known) moraleText(p.morale).substringBefore(' ') else "?", "Moral")
+                }
+                Spacer(Modifier.width(8.dp))
+                PositionMap(p, Modifier.size(132.dp, 84.dp).clip(RoundedCornerShape(6.dp)))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "✕", fontSize = 20.sp, color = TextDim,
+                    modifier = Modifier.clip(CircleShape).clickable { GameRepo.selectedPlayer = null }.padding(8.dp),
+                )
+            }
+            // Sekmeler
+            Row(Modifier.fillMaxWidth().background(Bg.copy(alpha = 0.5f)).padding(horizontal = 10.dp)) {
+                tabs.forEachIndexed { i, n ->
+                    val sel = ptab == i
+                    Column(
+                        Modifier.weight(1f).clickable { ptab = i }.padding(top = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(n, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = if (sel) TextMain else TextDim, fontSize = 13.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Box(Modifier.fillMaxWidth(0.6f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(if (sel) Green else Color.Transparent))
+                    }
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                Column(Modifier.weight(1f)) {
-                    InfoLine("Potansiyel", com.supermenajer.game.game.Scouting.potText(g, p))
-                    if (!known) InfoLine("Bilgi", "Gözlemci raporu yok", Gold)
-                    else if (!own && !loaned && p.id in g.scouted) Text(com.supermenajer.game.game.Scouting.report(g, p), color = TextDim, fontSize = 12.sp)
-                    InfoLine("Değer", money(p.value))
-                    if (p.teamId >= 0) {
-                        InfoLine("Maaş", "${money(p.wage)}/hafta")
-                        InfoLine("Sözleşme", if (p.contractYears == 1) "Sezon sonunda bitiyor" else "${p.contractYears} sezon", if (p.contractYears == 1) Red else TextMain)
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                message?.takeIf { ptab == 0 }?.let { Text(it, color = Gold, fontSize = 13.sp); Spacer(Modifier.height(6.dp)) }
+                when (tabs[ptab.coerceIn(0, tabs.lastIndex)]) {
+                    "Nitelikler" -> {
+                        if (!known) Text("🔍 Gözlemci raporu yok: değerler tahmini. Transfer sekmesinden gözlemci gönderebilirsin.", color = Gold, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                        AttributeTable(
+                            p, known,
+                            extra = listOf(
+                                "Kondisyon" to "${p.fitness.toInt()}%",
+                                "Moral" to if (known) moraleText(p.morale) else "?",
+                                "Ort. Puan" to if (p.apps > 0) "%.2f".format(p.avgRating) else "–",
+                            ),
+                        )
                     }
-                    if (!own) InfoLine("Maaş talebi", "${money(p.demandWage)}/hafta")
-                    InfoLine("Kondisyon", "${p.fitness.toInt()}%")
-                    InfoLine("Moral", moraleText(p.morale))
-                    InfoLine("Kişilik", if (known) com.supermenajer.game.game.Traits.name(p) else "? (gözlemci raporu gerekli)")
-                    if (known) Text(com.supermenajer.game.game.Traits.info[com.supermenajer.game.game.Traits.of(p)], color = TextDim, fontSize = 11.sp)
-                    if (p.squadRole >= 0 && p.teamId == g.userTeamId) InfoLine("Söz verilen rol", com.supermenajer.game.game.TransferTalks.roleNames[p.squadRole])
-                    if (p.injuredWeeks > 0) InfoLine("Sakatlık", "${p.injuredWeeks} hafta", Red)
-                    if (p.suspended > 0) InfoLine("Ceza", "${p.suspended} maç", Red)
-                    Spacer(Modifier.height(10.dp))
-                    Text("BU SEZON", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(6.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        Stat("Maç", "${p.apps}")
-                        Stat("Gol", "${p.goals}")
-                        Stat("Asist", "${p.assists}")
-                        Stat("Ort. Puan", if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
+                    "Bilgi" -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            InfoLine("Potansiyel", com.supermenajer.game.game.Scouting.potText(g, p))
+                            if (!known) InfoLine("Bilgi", "Gözlemci raporu yok", Gold)
+                            else if (!own && !loaned && p.id in g.scouted) Text(com.supermenajer.game.game.Scouting.report(g, p), color = TextDim, fontSize = 12.sp)
+                            InfoLine("Mevki", com.supermenajer.game.game.Positions.det(p).label)
+                            if (!own) InfoLine("Maaş talebi", "${money(p.demandWage)}/hafta")
+                            InfoLine("Kişilik", if (known) com.supermenajer.game.game.Traits.name(p) else "? (gözlemci raporu gerekli)")
+                            if (known) Text(com.supermenajer.game.game.Traits.info[com.supermenajer.game.game.Traits.of(p)], color = TextDim, fontSize = 11.sp)
+                            if (p.squadRole >= 0 && p.teamId == g.userTeamId) InfoLine("Söz verilen rol", com.supermenajer.game.game.TransferTalks.roleNames[p.squadRole])
+                            if (p.injuredWeeks > 0) InfoLine("Sakatlık", "${p.injuredWeeks} hafta", Red)
+                            if (p.suspended > 0) InfoLine("Ceza", "${p.suspended} maç", Red)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("BU SEZON", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                                Stat("Maç", "${p.apps}")
+                                Stat("Gol", "${p.goals}")
+                                Stat("Asist", "${p.assists}")
+                                Stat("Ort. Puan", if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text("ANA ÖZELLİKLER (1-20)", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(6.dp))
+                            val rg = { v: Int -> com.supermenajer.game.game.Scouting.range(g, p, v) }
+                            if (p.pos == Pos.GK) Attr("Kalecilik", p.goalkeeping, rg(p.goalkeeping))
+                            Attr("Hız", p.pace, rg(p.pace))
+                            Attr("Şut", p.shooting, rg(p.shooting))
+                            Attr("Pas", p.passing, rg(p.passing))
+                            Attr("Teknik", p.dribbling, rg(p.dribbling))
+                            Attr("Savunma", p.defending, rg(p.defending))
+                            Attr("Fizik", p.physical, rg(p.physical))
+                        }
                     }
-                    if (own && p.loanFrom < 0) TrainingBox(p)
-                }
-                Column(Modifier.weight(1f)) {
-                    if (!own && !loaned) { actions(); Spacer(Modifier.height(10.dp)) }
-                    Text("ÖZELLİKLER (1-20)", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(6.dp))
-                    val rg = { v: Int -> com.supermenajer.game.game.Scouting.range(g, p, v) }
-                    if (p.pos == Pos.GK) Attr("Kalecilik", p.goalkeeping, rg(p.goalkeeping))
-                    Attr("Hız", p.pace, rg(p.pace))
-                    Attr("Şut", p.shooting, rg(p.shooting))
-                    Attr("Pas", p.passing, rg(p.passing))
-                    Attr("Teknik", p.dribbling, rg(p.dribbling))
-                    Attr("Savunma", p.defending, rg(p.defending))
-                    Attr("Fizik", p.physical, rg(p.physical))
-                    Spacer(Modifier.height(10.dp))
-                    if (own || loaned) actions()
+                    "Antrenman" -> TrainingBox(p)
+                    else -> Box(Modifier.fillMaxWidth(0.6f)) { actions() }
                 }
             }
-            TextButton(onClick = { GameRepo.selectedPlayer = null }, modifier = Modifier.align(Alignment.End)) { Text("Kapat") }
         }
     }
 }

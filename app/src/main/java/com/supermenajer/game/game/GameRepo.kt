@@ -40,6 +40,10 @@ object GameRepo {
     var leagueSel by mutableIntStateOf(-1)
     var reportOpen by mutableStateOf(false)
     var squadMode by mutableIntStateOf(0)
+    /** Canlı maçın 2D sahnesi (ekran yeniden oluşsa da kaybolmasın). */
+    var pitch: com.supermenajer.game.engine.Pitch2D? = null
+    fun pitchFor(sim: com.supermenajer.game.engine.MatchSim) =
+        pitch?.takeIf { it.sim === sim } ?: com.supermenajer.game.engine.Pitch2D(sim).also { pitch = it }
     /** Kulüp sekmesi: 0 teknik ekip, 1 tesisler, 2 sponsorlar, 3 finans, 4 taraftar. */
     var clubMode by mutableIntStateOf(0)
     var inboxCat by mutableIntStateOf(0)

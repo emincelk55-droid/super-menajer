@@ -70,15 +70,16 @@ import com.supermenajer.game.model.Comp
 import com.supermenajer.game.model.Player
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /** Hız modları: dakika süresi, gerilim süresi, önemli olay sonrası bekleme (ms). */
-private class Pace(val label: String, val minute: Long, val suspense: Long, val pause: Long)
+private class Pace(val label: String, val minute: Long, val suspense: Long, val pause: Long, val scale: Float)
 
 private val paces = listOf(
-    Pace("▶ Normal", 650, 1500, 900),
-    Pace("⏩ Hızlı", 220, 750, 350),
-    Pace("⚡ Özet", 60, 1400, 900),
+    Pace("▶ Normal", 650, 1500, 900, 1.0f),
+    Pace("⏩ Hızlı", 220, 750, 350, 1.5f),
+    Pace("⚡ Özet", 60, 1400, 900, 1.9f),
 )
 
 /** CM tarzı büyük anlatım satırı. kind: 0 normal, 1 gerilim, 2 gol */
@@ -103,6 +104,7 @@ fun MatchScreen() {
     val haptic = LocalHapticFeedback.current
     BackHandler { running = false }
 
+    val anim = remember(sim) { GameRepo.pitchFor(sim) }
     LaunchedEffect(running, speed) {
         val pace = paces[speed]
         // Duraklatılınca bekleyen olayları göster
@@ -111,12 +113,20 @@ fun MatchScreen() {
             delay(pace.minute)
             val before = sim.events.size
             sim.step()
+            val hm = sim.strength(sim.home).mid.pow(2)
+            val am = sim.strength(sim.away).mid.pow(2)
+            anim.bias = (hm / (hm + am)).toFloat()
             tick++
             val new = sim.events.subList(before, sim.events.size).toList()
             for ((k, e) in new.withIndex()) {
+                val shotBefore = anim.outcomes
+                anim.play(e)
                 if (e.buildUp.isNotEmpty()) {
                     ticker = Ticker(e.minute, e.buildUp, e.side, 1)
-                    delay(pace.suspense)
+                    // Atak sahada oynanır; sonuç top ağlara/kaleciye ulaşınca açıklanır
+                    var waited = 0L
+                    while (anim.outcomes == shotBefore && waited < 9000) { delay(40); waited += 40 }
+                    delay(250)
                 }
                 revealed = before + k + 1
                 val isGoal = e.type == Ev.GOAL
@@ -132,7 +142,7 @@ fun MatchScreen() {
         revealed = sim.events.size
     }
     LaunchedEffect(goalFlash) {
-        if (goalFlash != null) { delay(1800); goalFlash = null }
+        if (goalFlash != null) { delay(2600); goalFlash = null }
     }
     tick // yeniden çizim tetikleyicisi
     val shown = revealed.coerceAtMost(sim.events.size)
@@ -144,31 +154,28 @@ fun MatchScreen() {
     val awayC = Color(sim.away.team.color1).let { if (colorDistance(it, homeC) < 0.5f) Color(sim.away.team.color2) else it }
 
     Row(Modifier.fillMaxSize()) {
-        // Sol: skor, saha ve son olay
-        Column(Modifier.weight(1.1f).fillMaxHeight()) {
-            ScoreBoard(sim, scoreH, scoreA, shown >= sim.events.size)
-            LiveStrip(sim, homeC, awayC)
-            Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF1F7A3A)), contentAlignment = Alignment.Center) {
-                LivePitch(
-                    sim, homeC, awayC, paces[speed].minute.toInt().coerceAtLeast(250),
-                    Modifier.fillMaxHeight().aspectRatio(1.7f, matchHeightConstraintsFirst = true),
+        // Sol: FM tarzı 2D saha, skor ve son olay
+        Column(Modifier.weight(1.75f).fillMaxHeight()) {
+            Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF256F3B)), contentAlignment = Alignment.Center) {
+                val gkH = keeperColor(homeC, awayC, Color(0xFF26C6DA))
+                val gkA = keeperColor(homeC, awayC, Color(0xFFFF7043))
+                MatchPitch(
+                    anim, homeC, awayC, gkH, gkA, running, paces[speed].scale,
+                    Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true),
                 )
+                ScoreBug(sim, scoreH, scoreA, homeC, awayC, shown >= sim.events.size, Modifier.align(Alignment.TopStart).padding(8.dp))
                 androidx.compose.animation.AnimatedVisibility(
                     visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp),
                 ) {
-                    val side = goalFlash?.side ?: 0
-                    val c = if (side == 0) homeC else awayC
-                    Text(
-                        "GOOOL!", fontSize = 46.sp, fontWeight = FontWeight.Black, color = contentOn(c),
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(c.copy(alpha = 0.92f)).padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
+                    goalFlash?.let { GoalCard(sim, it, if (it.side == 0) homeC else awayC) }
                 }
             }
             TickerBox(ticker, homeC, awayC)
         }
         // Sağ: kontroller, devre arası ve anlatım
         Column(Modifier.weight(1f).fillMaxHeight().background(Bg)) {
+            LiveStrip(sim, homeC, awayC)
             if (!sim.finished) {
                 Row(
                     Modifier.fillMaxWidth().background(Surface1).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp),
@@ -240,7 +247,7 @@ fun MatchScreen() {
     }
     if (showSubs) {
         val us = sim.userSide
-        if (us != null) SubDialog(sim, us, onClose = { showSubs = false; tick++ })
+        if (us != null) SubDialog(sim, us, onClose = { showSubs = false; anim.sync(); tick++ })
     }
     if (sim.minute == 0 && !running && sim.userSide != null && !showSubs) {
         PreMatchDialog(sim, preResult, onTalk = { preResult = Talks.talk(sim, Talks.PRE, it); tick++ }, onStart = { running = true })
@@ -370,101 +377,6 @@ private fun LiveStrip(sim: MatchSim, homeC: Color, awayC: Color) {
         Text("${100 - (hp * 100).roundToInt()}%", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(34.dp), textAlign = TextAlign.End)
         Spacer(Modifier.width(8.dp))
         Text("Şut ${h.shots}-${a.shots}", fontSize = 11.sp, color = TextDim)
-    }
-}
-
-/** Oyuncuların her dakika hedef konumu: dizilişe göre, topa ve hücum yönüne göre kayar. */
-private fun targets(sim: MatchSim): Map<Int, Offset> {
-    val res = HashMap<Int, Offset>()
-    val bx = sim.ballX
-    val by = sim.ballY
-    val shift = (bx - 0.5f) * 0.32f
-    val attackingHome = bx >= 0.5f
-    for (s in sim.sides) {
-        val home = s === sim.home
-        val attacking = attackingHome == home
-        s.onPitch.forEachIndexed { i, m ->
-            val depth = m.slot.y * 0.46f
-            val push = if (attacking) 0.05f else -0.02f
-            var x = (if (home) 0.04f + depth + push else 0.96f - depth - push) + shift
-            var y = 0.08f + (if (home) m.slot.x else 1f - m.slot.x) * 0.84f
-            y += (by - 0.5f) * 0.18f * (1f - m.slot.y * 0.3f)
-            // küçük doğal oynama
-            val seed = (m.p.id * 31 + sim.minute * 17) % 97
-            x += ((seed % 11) - 5) * 0.004f
-            y += ((seed % 7) - 3) * 0.006f
-            if (m.slot.pos == com.supermenajer.game.model.Pos.GK) x = if (home) 0.05f + shift * 0.15f else 0.95f + shift * 0.15f
-            res[m.p.id] = Offset(x.coerceIn(0.03f, 0.97f), y.coerceIn(0.06f, 0.94f))
-        }
-        // Topa en yakın oyuncu topa gider
-        if (attacking) {
-            s.onPitch.filter { it.slot.pos != com.supermenajer.game.model.Pos.GK }
-                .minByOrNull { res[it.p.id]?.let { o -> (o.x - bx) * (o.x - bx) + (o.y - by) * (o.y - by) } ?: 9f }
-                ?.let { res[it.p.id] = Offset((bx - if (home) 0.015f else -0.015f).coerceIn(0.03f, 0.97f), by) }
-        }
-    }
-    return res
-}
-
-@Composable
-private fun LivePitch(sim: MatchSim, homeC: Color, awayC: Color, stepMs: Int, modifier: Modifier = Modifier.fillMaxWidth().aspectRatio(1.7f)) {
-    val dur = (stepMs * 0.9f).toInt().coerceAtLeast(60)
-    var from by remember { mutableStateOf(emptyMap<Int, Offset>()) }
-    var to by remember { mutableStateOf(targets(sim)) }
-    var ballFrom by remember { mutableStateOf(Offset(sim.ballX, sim.ballY)) }
-    var ballTo by remember { mutableStateOf(Offset(sim.ballX, sim.ballY)) }
-    val progress = remember { Animatable(1f) }
-    val minute = sim.minute
-    val evCount = sim.events.size
-    LaunchedEffect(minute, evCount) {
-        from = to
-        to = targets(sim)
-        ballFrom = ballTo
-        ballTo = Offset(sim.ballX, sim.ballY)
-        progress.snapTo(0f)
-        progress.animateTo(1f, tween(dur))
-    }
-    val last = sim.events.lastOrNull()
-    val flash = last?.takeIf { it.minute == sim.minute && it.type in setOf(Ev.SAVE, Ev.POST, Ev.MISS, Ev.YELLOW, Ev.RED, Ev.INJURY, Ev.SUB) }
-    Box(modifier) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawPitch(vertical = false)
-            val w = size.width
-            val h = size.height
-            val r = 6.dp.toPx()
-            val t = progress.value
-            fun lerp(a: Offset, b: Offset) = Offset(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
-            for (s in sim.sides) {
-                val home = s === sim.home
-                val c = if (home) homeC else awayC
-                val border = if (home) Color(s.team.color2) else Color.White
-                for (m in s.onPitch) {
-                    val end = to[m.p.id] ?: continue
-                    val p = lerp(from[m.p.id] ?: end, end)
-                    drawCircle(c, r, Offset(p.x * w, p.y * h))
-                    drawCircle(border, r, Offset(p.x * w, p.y * h), style = Stroke(1.5.dp.toPx()))
-                }
-            }
-            val b = lerp(ballFrom, ballTo)
-            drawCircle(Color.Black.copy(alpha = 0.35f), 4.5.dp.toPx(), Offset(b.x * w + 2, b.y * h + 2))
-            drawCircle(Color.White, 4.dp.toPx(), Offset(b.x * w, b.y * h))
-        }
-        if (flash != null) {
-            val label = when (flash.type) {
-                Ev.SAVE -> "🧤 KURTARIŞ!"
-                Ev.POST -> "🥅 DİREK!"
-                Ev.MISS -> "↗️ AUT"
-                Ev.YELLOW -> "🟨 SARI KART"
-                Ev.RED -> "🟥 KIRMIZI KART!"
-                Ev.INJURY -> "🚑 SAKATLIK"
-                else -> "🔁 DEĞİŞİKLİK"
-            }
-            Text(
-                label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 10.dp, vertical = 4.dp),
-            )
-        }
     }
 }
 
@@ -722,6 +634,54 @@ private fun PostTalkCard(sim: MatchSim) {
             r.reactions.forEach { Text("• $it", fontSize = 12.sp, color = TextDim) }
         } else {
             Text("Konuşma yapıldı.", color = TextDim, fontSize = 13.sp)
+        }
+    }
+}
+
+private fun keeperColor(homeC: Color, awayC: Color, want: Color): Color =
+    if (colorDistance(want, homeC) < 0.6f || colorDistance(want, awayC) < 0.6f) Color(0xFF212121) else want
+
+/** FM tarzı sol üst skor rozeti. */
+@Composable
+private fun ScoreBug(sim: MatchSim, hg: Int, ag: Int, homeC: Color, awayC: Color, revealedAll: Boolean, modifier: Modifier) {
+    Row(modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xE60E1426)), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (sim.finished && revealedAll) "MS" else "${sim.minute}:00".padStart(5, '0'),
+            color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            modifier = Modifier.background(Color(0xFF3B2A78)).padding(horizontal = 8.dp, vertical = 5.dp),
+        )
+        Text(
+            sim.home.team.short, color = contentOn(homeC), fontWeight = FontWeight.Black, fontSize = 13.sp,
+            modifier = Modifier.background(homeC).padding(horizontal = 8.dp, vertical = 5.dp),
+        )
+        Text("$hg - $ag", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(
+            sim.away.team.short, color = contentOn(awayC), fontWeight = FontWeight.Black, fontSize = 13.sp,
+            modifier = Modifier.background(awayC).padding(horizontal = 8.dp, vertical = 5.dp),
+        )
+        if (sim.penHome >= 0 && revealedAll) Text(" (P ${sim.penHome}-${sim.penAway}) ", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Gol kartı: atan oyuncu ve sezondaki gol sayısı. */
+@Composable
+private fun GoalCard(sim: MatchSim, e: MatchEvent, c: Color) {
+    val side = sim.sides[e.side.coerceIn(0, 1)]
+    val pim = side.used.firstOrNull { it.p.id == e.playerId }
+    Row(
+        Modifier.clip(RoundedCornerShape(10.dp)).background(Color.White).heightIn(min = 54.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(58.dp).height(58.dp).background(c), contentAlignment = Alignment.Center) {
+            Text("⚽\n${side.team.short}", color = contentOn(c), fontWeight = FontWeight.Black, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 15.sp)
+        }
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
+            Text(
+                (pim?.p?.number?.takeIf { it > 0 }?.let { "$it " } ?: "") + (pim?.p?.name ?: "GOL!"),
+                color = Color(0xFF1A1A2E), fontWeight = FontWeight.Black, fontSize = 17.sp,
+            )
+            val n = (pim?.p?.goals ?: 0) + (pim?.goals ?: 0)
+            Text(if (pim != null) "Sezonun $n. golü" else "", color = Color(0xFF5A5A70), fontSize = 13.sp)
         }
     }
 }

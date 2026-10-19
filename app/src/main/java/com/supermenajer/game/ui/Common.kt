@@ -33,16 +33,17 @@ import androidx.compose.ui.unit.sp
 import com.supermenajer.game.model.Pos
 import com.supermenajer.game.model.Team
 
-val Bg = Color(0xFF0D1117)
-val Surface1 = Color(0xFF161B22)
-val Surface2 = Color(0xFF21262D)
-val Line = Color(0xFF30363D)
-val Green = Color(0xFF2EC27E)
+val Bg = Color(0xFF0A1022)
+val Surface1 = Color(0xFF121B33)
+val Surface2 = Color(0xFF1C2747)
+val Line = Color(0xFF2B3A63)
+val Green = Color(0xFF19E3A1)
+val Purple = Color(0xFF8B6CFF)
 val Gold = Color(0xFFF5C542)
 val Red = Color(0xFFE5534B)
-val Blue = Color(0xFF58A6FF)
-val TextMain = Color(0xFFE6EDF3)
-val TextDim = Color(0xFF8B949E)
+val Blue = Color(0xFF5B8CFF)
+val TextMain = Color(0xFFE8ECF8)
+val TextDim = Color(0xFF8E9AB8)
 
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
@@ -190,7 +191,8 @@ fun Bar(value: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 
 @Composable
 fun SectionCard(title: String? = null, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Surface1).padding(14.dp),
+        modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Surface1)
+            .border(1.dp, Line.copy(alpha = 0.55f), RoundedCornerShape(14.dp)).padding(14.dp),
     ) {
         if (title != null) {
             Text(title.uppercase(), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
