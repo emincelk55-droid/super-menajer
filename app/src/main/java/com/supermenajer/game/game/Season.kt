@@ -80,6 +80,7 @@ object Season {
         g.press = null
         Facilities.ensureAll(g)
         Roles.ensureAllNumbers(g)
+        Positions.ensureAll(g)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
         Sponsors.refreshOffers(g, rnd)
@@ -192,6 +193,17 @@ object Season {
             g.addNews(
                 "Güncelleme: v1.3 · Menajerlik derinleşiyor",
                 "Oyuncu kişilikleri, FM tarzı roller, kaptan ve duran top kullanıcıları, forma numaraları, maçta kenar çizgisi talimatları, antrenman kampı, gizli antrenman, galibiyet primi, hazırlık maçları, yönetimden istekler, başarımlar, kupa dolabı ve kulüp rekorları geldi!",
+            )
+        }
+        if (g.saveVersion < 14) {
+            g.saveVersion = 14
+            g.reindex()
+            Positions.ensureAll(g, fresh = true)
+            g.teams.forEach { it.roles.clear() }
+            if (g.userTeamId >= 0) Lineups.autoPick(g, g.userTeam)
+            g.addNews(
+                "Güncelleme: v1.4 · Detaylı mevkiler ve oyuncu özellikleri",
+                "Her oyuncunun artık detaylı mevkisi (KL, SLB, SĞB, STP, DOS, MO, OOS, SLK, SĞK, SF), tercih ettiği ayağı ve oyun özelliği var (ör. kanat bek, topla oynayan stoper, oyun kurucu). Oyuncular kendi mevkisinde ve özelliğine uygun rolde daha verimli oynar. İlk 11'in yeni sisteme göre otomatik dizildi.",
             )
         }
     }

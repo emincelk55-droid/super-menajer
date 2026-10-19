@@ -573,7 +573,7 @@ object GameRepo {
         t.lineup[i] = -1
         val slots = com.supermenajer.game.model.Formations.slots(t.formation)
         val best = g.squad(t.id).filter { it.available && it.id !in t.lineup && it.id != p.id }
-            .maxByOrNull { Lineups.score(it, slots[i].pos) }
+            .maxByOrNull { Lineups.score(it, slots[i]) }
         if (best != null) t.lineup[i] = best.id else t.lineup[i] = p.id
         changed()
     }

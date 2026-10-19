@@ -551,7 +551,7 @@ private fun SeasonEndCard(g: Game) {
             Spacer(Modifier.height(10.dp))
             Text("📝 Sözleşmesi biten ve yeni sezonda ayrılacak oyuncular:", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             expiring.forEach { p ->
-                Text("• ${p.name} (${p.pos.short}, ${p.overall}) · uzatmak için dokun", fontSize = 13.sp,
+                Text("• ${p.name} (${com.supermenajer.game.game.Positions.det(p).code}, ${p.overall}) · uzatmak için dokun", fontSize = 13.sp,
                     modifier = Modifier.clickable { GameRepo.selectedPlayer = p }.padding(vertical = 3.dp))
             }
         }

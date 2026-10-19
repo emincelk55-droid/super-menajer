@@ -115,6 +115,26 @@ fun PlayerOvrBadge(g: com.supermenajer.game.model.Game, p: com.supermenajer.game
     }
 }
 
+/** Oyuncunun detaylı mevkisi (SLB, STP, DOS...). */
+@Composable
+fun DetChip(p: com.supermenajer.game.model.Player, small: Boolean = false) {
+    Text(
+        com.supermenajer.game.game.Positions.det(p).code, color = Color.White, fontSize = if (small) 8.sp else 11.sp, fontWeight = FontWeight.Bold,
+        lineHeight = if (small) 9.sp else 13.sp,
+        modifier = Modifier.background(posColor(p.pos), RoundedCornerShape(4.dp)).padding(horizontal = if (small) 3.dp else 6.dp, vertical = if (small) 0.dp else 2.dp),
+    )
+}
+
+/** Sahadaki yerin detaylı mevkisi. */
+@Composable
+fun SlotChip(slot: com.supermenajer.game.model.Slot, small: Boolean = false) {
+    Text(
+        com.supermenajer.game.game.Positions.slotDet(slot).code, color = Color.White, fontSize = if (small) 8.sp else 11.sp, fontWeight = FontWeight.Bold,
+        lineHeight = if (small) 9.sp else 13.sp,
+        modifier = Modifier.background(posColor(slot.pos), RoundedCornerShape(4.dp)).padding(horizontal = if (small) 3.dp else 6.dp, vertical = if (small) 0.dp else 2.dp),
+    )
+}
+
 @Composable
 fun PosChip(pos: Pos, small: Boolean = false) {
     Text(

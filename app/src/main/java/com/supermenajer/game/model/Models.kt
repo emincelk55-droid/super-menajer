@@ -45,6 +45,10 @@ class Player(
     var contractYears: Int = 0,
     /** Sözleşmedeki haftalık maaş (0 ise talep edilen maaş kullanılır). */
     var salary: Long = 0,
+    /** Detaylı mevki (Positions.Det sırası, -1 atanmadı), ayak (0 sağ, 1 sol, 2 iki ayaklı), doğal rol (Roles indeksi). */
+    var detail: Int = -1,
+    var foot: Int = -1,
+    var natRole: Int = -1,
     /** Forma numarası (0 = atanmadı). */
     var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */

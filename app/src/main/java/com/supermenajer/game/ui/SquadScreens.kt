@@ -184,7 +184,7 @@ private fun PlayersList(g: Game) {
         }
         if (sort == 0) {
             for (pos in Pos.entries) {
-                val list = squad.filter { it.pos == pos }.sortedByDescending { it.overall }
+                val list = squad.filter { it.pos == pos }.sortedWith(compareBy<Player> { com.supermenajer.game.game.Positions.det(it).ordinal }.thenByDescending { it.overall })
                 item(key = "h$pos", span = full) {
                     Text(
                         pos.label.uppercase() + " (${list.size})", color = posColor(pos), fontWeight = FontWeight.Bold, fontSize = 12.sp,
@@ -229,7 +229,7 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
         val team = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
         Box {
             PlayerFace(p, 40.dp, team?.let { Color(it.color1) } ?: Color(0xFF455A64), team?.let { Color(it.color2) } ?: Color.White)
-            Box(Modifier.align(Alignment.BottomEnd)) { PosChip(p.pos, small = true) }
+            Box(Modifier.align(Alignment.BottomEnd)) { DetChip(p, small = true) }
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -361,7 +361,7 @@ fun PlayerDialog(g: Game, p: Player) {
                     val tm = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
                     val r = com.supermenajer.game.game.Scouting.range(g, p, p.overall)
                     PlayerCard(
-                        p, (r.first + r.last) / 2, p.pos.short, 78.dp,
+                        p, (r.first + r.last) / 2, com.supermenajer.game.game.Positions.det(p).code, 78.dp,
                         tm?.let { Color(it.color1) } ?: Color(0xFF455A64), tm?.let { Color(it.color2) } ?: Color.White,
                         known = r.first == r.last,
                     )
@@ -370,9 +370,13 @@ fun PlayerDialog(g: Game, p: Player) {
                 Column(Modifier.weight(1f)) {
                     Text(p.name, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        PosChip(p.pos)
-                        Text("  ${Generator.flag(p.nation)} ${p.age} yaş", color = TextDim, fontSize = 13.sp)
+                        DetChip(p)
+                        Text("  ${Generator.flag(p.nation)} ${p.age} yaş · ${com.supermenajer.game.game.Positions.feet[p.foot.coerceIn(0, 2)]}", color = TextDim, fontSize = 13.sp)
                     }
+                    Text(
+                        "${com.supermenajer.game.game.Positions.det(p).label} · Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}",
+                        color = Gold, fontSize = 12.sp,
+                    )
                     Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 13.sp)
                 }
             }

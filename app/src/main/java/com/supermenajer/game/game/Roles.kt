@@ -16,27 +16,43 @@ object Roles {
     val byPos: Map<Pos, List<Role>> = mapOf(
         Pos.GK to listOf(
             Role("Kaleci", "Kalesini korur, riske girmez.", 0.0, 0.0, 0.0, 1.0, 1.0),
-            Role("Libero kaleci", "Oyun kurulumuna katılır; biraz risk alır.", 0.0, 0.05, -0.03, 1.0, 1.2),
+            Role("Libero kaleci", "Oyun kurulumuna katılır, çizgiden çıkar.", 0.0, 0.05, -0.03, 1.0, 1.2),
         ),
         Pos.DF to listOf(
-            Role("Stoper", "Savunmaya odaklanır.", -0.05, 0.0, 0.1, 0.8, 0.8, 1.2),
-            Role("Libero", "Arkadan oyun kurar.", 0.0, 0.12, -0.05, 0.8, 1.3),
-            Role("Kanat beki", "Hücuma bindirir, orta yapar.", 0.15, 0.0, -0.1, 1.0, 1.4),
+            Role("Stoper", "Savunmaya odaklanır, top kapar.", -0.05, 0.0, 0.1, 0.8, 0.8, 1.2),
+            Role("Topla oynayan stoper", "Arkadan pasla oyun kurar.", 0.0, 0.12, -0.04, 0.8, 1.3),
+            Role("Bek", "Önce savunma, fırsatta bindirme.", 0.05, 0.02, 0.04, 0.9, 1.1),
+            Role("Kanat bek", "Sürekli hücuma bindirir, orta yapar.", 0.15, 0.0, -0.1, 1.0, 1.4),
         ),
         Pos.MF to listOf(
-            Role("Box-to-box", "Her iki yönde de çalışır.", 0.0, 0.0, 0.0, 1.0, 1.0),
-            Role("Ön libero", "Savunmanın önünde kalkan.", -0.15, 0.0, 0.2, 0.6, 0.8),
+            Role("İki yönlü orta saha", "Ceza sahasından ceza sahasına koşar.", 0.03, 0.03, 0.03, 1.0, 1.0),
+            Role("Defansif orta saha", "Savunmanın önünde kalkan.", -0.15, 0.0, 0.2, 0.6, 0.8),
             Role("Oyun kurucu", "Pasın merkezi; asist arar.", 0.0, 0.15, -0.1, 0.8, 1.6),
             Role("Kanat", "Çizgiye iner, orta ve şut.", 0.15, -0.1, -0.1, 1.3, 1.3),
+            Role("Ofansif orta saha", "Forvet arkasında 10 numara.", 0.12, 0.05, -0.15, 1.2, 1.4),
         ),
         Pos.FW to listOf(
-            Role("Fırsatçı", "Ceza sahasında golcü.", 0.05, 0.0, 0.0, 1.3, 0.8),
+            Role("Fırsatçı golcü", "Ceza sahasında golcü.", 0.05, 0.0, 0.0, 1.3, 0.8),
             Role("Hedef santrfor", "Fizik ve kafa vuruşu.", 0.0, 0.05, 0.0, 1.0, 1.0, 1.7),
             Role("Sahte 9", "Geriye gelip oyunu bağlar.", -0.1, 0.2, 0.0, 0.7, 1.5),
+            Role("Kanat forvet", "Kanattan içeri kat eder.", 0.1, -0.05, -0.05, 1.15, 1.2),
         ),
     )
 
-    fun roleIndex(t: Team, slot: Int): Int = t.roles.getOrNull(slot)?.coerceAtLeast(0) ?: 0
+    /** Yerin detaylı mevkisine göre varsayılan rol. */
+    fun defaultRole(slot: com.supermenajer.game.model.Slot): Int = when (Positions.slotDet(slot)) {
+        Positions.Det.SLB, Positions.Det.SGB -> 2
+        Positions.Det.DOS -> 1
+        Positions.Det.OOS -> 4
+        Positions.Det.SLK, Positions.Det.SGK -> 3
+        else -> 0
+    }
+
+    fun roleIndex(t: Team, slot: Int): Int {
+        val r = t.roles.getOrNull(slot) ?: -1
+        if (r >= 0) return r
+        return Formations.slots(t.formation).getOrNull(slot)?.let { defaultRole(it) } ?: 0
+    }
 
     fun role(t: Team, slot: Int): Role {
         val pos = Formations.slots(t.formation).getOrNull(slot)?.pos ?: Pos.MF
@@ -45,7 +61,7 @@ object Roles {
     }
 
     fun setRole(t: Team, slot: Int, role: Int) {
-        while (t.roles.size < 11) t.roles += 0
+        while (t.roles.size < 11) t.roles += -1
         t.roles[slot] = role
     }
 

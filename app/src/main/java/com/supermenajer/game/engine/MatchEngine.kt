@@ -123,7 +123,8 @@ class MatchSim(
 
     private fun eff(m: PIM): Double =
         m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0) * (1.0 + m.boost) *
-            com.supermenajer.game.game.Traits.matchFactor(m.p, big)
+            com.supermenajer.game.game.Traits.matchFactor(m.p, big) *
+            com.supermenajer.game.game.Positions.fit(m.p, com.supermenajer.game.game.Positions.slotDet(m.slot))
 
     class Str(val atk: Double, val mid: Double, val def: Double)
 
@@ -138,7 +139,12 @@ class MatchSim(
                 Pos.FW -> { a += e; m += e * 0.2; d += e * 0.1 }
             }
             val r = roleOf(s, x)
-            a += e * r.atk; m += e * r.mid; d += e * r.def
+            // Oyuncunun doğal özelliğine uygun rol: küçük bir verim artışı
+            val idx = Formations.slots(s.team.formation).indexOf(x.slot)
+            val natural = idx >= 0 && x.p.pos == x.slot.pos &&
+                com.supermenajer.game.game.Roles.roleIndex(s.team, idx) == com.supermenajer.game.game.Positions.natRole(x.p)
+            val nb = if (natural) e * 0.03 else 0.0
+            a += e * r.atk + nb * 0.3; m += e * r.mid + nb * 0.4; d += e * r.def + nb * 0.3
         }
         a /= 4.3; m /= 5.4; d /= 5.9
         when (s.team.mentality) { 0 -> { a *= 0.9; d *= 1.07 }; 2 -> { a *= 1.08; d *= 0.94 } }

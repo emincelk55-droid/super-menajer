@@ -60,13 +60,14 @@ fun NegotiationDialog(g: Game, n: TransferTalks.Negotiation) {
             ) {
                 val r = com.supermenajer.game.game.Scouting.range(g, p, p.overall)
                 PlayerCard(
-                    p, (r.first + r.last) / 2, p.pos.short, 96.dp,
+                    p, (r.first + r.last) / 2, com.supermenajer.game.game.Positions.det(p).code, 96.dp,
                     seller?.let { Color(it.color1) } ?: Color(g.userTeam.color1), seller?.let { Color(it.color2) } ?: Color.White,
                     known = r.first == r.last,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(p.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, textAlign = TextAlign.Center)
-                Text("${Generator.flag(p.nation)} ${p.age} yaş · ${p.pos.label}", color = TextDim, fontSize = 11.sp)
+                Text("${Generator.flag(p.nation)} ${p.age} yaş · ${com.supermenajer.game.game.Positions.det(p).label}", color = TextDim, fontSize = 11.sp)
+                Text(com.supermenajer.game.game.Positions.natRoleName(p), color = Gold, fontSize = 11.sp)
                 Text(seller?.name ?: if (p.teamId < 0) "Serbest oyuncu" else g.userTeam.name, color = TextDim, fontSize = 11.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(8.dp))
                 Info("Değer", money(p.value))

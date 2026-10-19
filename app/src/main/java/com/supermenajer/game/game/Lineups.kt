@@ -16,8 +16,12 @@ object Lineups {
      * Bir oyuncunun mevkiye uygunluğu. Kendi mevkisindeki oyuncu her zaman önce gelir;
      * başka mevkiden oyuncu ancak o mevkide uygun kimse kalmadıysa seçilir.
      */
-    fun score(p: Player, pos: Pos): Double =
-        p.ovrAt(pos) * (0.6 + 0.4 * p.fitness / 100.0) + if (p.pos == pos) 1000 else 0
+    fun score(p: Player, slot: Slot): Double {
+        val det = Positions.slotDet(slot)
+        val fit = Positions.fit(p, det)
+        val detBonus = if (Positions.det(p) == det) 40 else if (fit >= 0.95) 20 else 0
+        return p.ovrAt(slot.pos) * (0.6 + 0.4 * p.fitness / 100.0) * fit + (if (p.pos == slot.pos) 1000 else 0) + detBonus
+    }
 
     /** Mevcut formasyon için en iyi 11'i seçer. */
     fun autoPick(g: Game, t: Team) {
@@ -37,7 +41,7 @@ object Lineups {
         }
         for (i in fillOrder(slots)) {
             if (lineup[i] != -1) continue
-            val best = avail.values.filter { it.id !in used }.maxByOrNull { score(it, slots[i].pos) } ?: continue
+            val best = avail.values.filter { it.id !in used }.maxByOrNull { score(it, slots[i]) } ?: continue
             lineup[i] = best.id
             used += best.id
         }
@@ -52,7 +56,7 @@ object Lineups {
         val lineup = MutableList(11) { -1 }
         // Mevcut 11'den sadece kendi mevkisine uyanlar yerleşir; kalan boşlukları kadrodan doğru mevkideki oyuncular doldurur
         for (i in fillOrder(slots)) {
-            val best = current.filter { it.pos == slots[i].pos && it.available }.maxByOrNull { score(it, slots[i].pos) } ?: continue
+            val best = current.filter { it.pos == slots[i].pos && it.available }.maxByOrNull { score(it, slots[i]) } ?: continue
             lineup[i] = best.id
             current.remove(best)
         }
@@ -85,7 +89,7 @@ object Lineups {
         var a = 0.0; var m = 0.0; var d = 0.0
         t.lineup.forEachIndexed { i, id ->
             val p = g.player(id) ?: return@forEachIndexed
-            val e = p.ovrAt(slots[i].pos).toDouble()
+            val e = p.ovrAt(slots[i].pos) * Positions.fit(p, Positions.slotDet(slots[i]))
             when (slots[i].pos) {
                 Pos.GK -> { m += e * 0.1; d += e * 0.3 }
                 Pos.DF -> { a += e * 0.12; m += e * 0.3; d += e }

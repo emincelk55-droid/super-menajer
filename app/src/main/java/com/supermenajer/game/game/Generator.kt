@@ -67,12 +67,14 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 13,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 14,
         )
         for (t in teams) fillSquad(g, t, rnd, "TR")
         addLowerDivision(g, rnd)
         WorldGen.addForeignLeagues(g, rnd)
         topUpFreeAgents(g, rnd)
+        g.reindex()
+        Positions.ensureAll(g, fresh = true)
         return g
     }
 

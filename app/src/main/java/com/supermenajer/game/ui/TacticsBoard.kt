@@ -133,7 +133,7 @@ fun TacticsBoard(g: Game) {
                             .alpha(if (dragging) 0.35f else 1f),
                         contentAlignment = Alignment.Center,
                     ) {
-                        PitchToken(g, p, s.pos, sel == i, shirt, collar)
+                        PitchToken(g, p, s, sel == i, shirt, collar)
                     }
                 }
             }
@@ -157,13 +157,17 @@ fun TacticsBoard(g: Game) {
                         when {
                             drag != null -> "Bir mevkiye bırak · sahadan buraya bırakırsan oyuncu çıkar"
                             sel >= 0 -> "Seçili: ${slots[sel].pos.label}. Bir yedeğe dokun ya da sahada başka bir oyuncuya dokun."
-                            else -> "Kartları sürükle: sahada yer değiştir, yedeği basılı tutup sahaya sürükle."
+                            else -> "Kartları sürükle: sahada yer değiştir, yedeği basılı tutup sahaya sürükle. Sarı çerçeve: yakın mevki, kırmızı: yabancı mevki."
                         },
                         color = if (sel >= 0 || drag != null) Gold else TextDim, fontSize = 11.sp, maxLines = 2,
                     )
                     val pos = if (sel >= 0) slots[sel].pos else null
+                    val selSlot = if (sel >= 0) slots[sel] else null
                     val pool = g.squad(t.id).filter { it.id !in t.lineup }
-                        .sortedWith(compareByDescending<Player> { pos != null && it.pos == pos }.thenBy { it.pos.ordinal }.thenByDescending { if (pos != null) it.ovrAt(pos) else it.overall })
+                        .sortedWith(
+                            if (selSlot != null) compareByDescending<Player> { Lineups.score(it, selSlot) }
+                            else compareBy<Player> { it.pos.ordinal }.thenBy { com.supermenajer.game.game.Positions.det(it).ordinal }.thenByDescending { it.overall },
+                        )
                     LazyVerticalGrid(
                         GridCells.Adaptive(66.dp),
                         Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(10.dp))
@@ -191,7 +195,8 @@ fun TacticsBoard(g: Game) {
                                     }
                                     .alpha(if (!p.available) 0.45f else if (drag?.player?.id == p.id) 0.35f else 1f),
                             ) {
-                                PlayerCard(p, ovr, p.pos.short, 62.dp, shirt, collar, highlight = if (pos != null && p.pos == pos) Green else Color.Transparent)
+                                val exact = selSlot != null && com.supermenajer.game.game.Positions.det(p) == com.supermenajer.game.game.Positions.slotDet(selSlot)
+                                PlayerCard(p, ovr, com.supermenajer.game.game.Positions.det(p).code, 62.dp, shirt, collar, highlight = if (exact) Green else if (pos != null && p.pos == pos) Gold else Color.Transparent)
                                 if (p.injuredWeeks > 0) Text("🚑", fontSize = 12.sp, modifier = Modifier.align(Alignment.TopEnd))
                                 else if (p.suspended > 0) Text("🟥", fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd))
                             }
@@ -213,7 +218,7 @@ fun TacticsBoard(g: Game) {
             Box(
                 Modifier.offset { IntOffset((d.pos.x - rootPos.x - half).roundToInt(), (d.pos.y - rootPos.y - half * 1.3f).roundToInt()) },
             ) {
-                PlayerCard(d.player, d.player.overall, d.player.pos.short, 62.dp, shirt, collar, highlight = Gold)
+                PlayerCard(d.player, d.player.overall, com.supermenajer.game.game.Positions.det(d.player).code, 62.dp, shirt, collar, highlight = Gold)
             }
         }
     }
@@ -221,12 +226,14 @@ fun TacticsBoard(g: Game) {
 
 /** Sahadaki küçük oyuncu göstergesi: yüz, güç rozeti ve soyadı. */
 @Composable
-private fun PitchToken(g: Game, p: Player?, pos: com.supermenajer.game.model.Pos, selected: Boolean, shirt: Color, collar: Color) {
+private fun PitchToken(g: Game, p: Player?, slot: com.supermenajer.game.model.Slot, selected: Boolean, shirt: Color, collar: Color) {
+    val pos = slot.pos
+    val fit = p?.let { if (it.pos != pos) 0.0 else com.supermenajer.game.game.Positions.fit(it, com.supermenajer.game.game.Positions.slotDet(slot)) } ?: 1.0
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box {
             Box(
                 Modifier.size(36.dp).clip(CircleShape)
-                    .border(2.dp, if (selected) Color.White else if (p != null && p.pos != pos) Red else Color.Transparent, CircleShape),
+                    .border(2.dp, if (selected) Color.White else if (fit < 0.93) Red else if (fit < 1.0) Gold else Color.Transparent, CircleShape),
             ) {
                 if (p != null) PlayerFace(p, 36.dp, shirt, collar) else Box(Modifier.fillMaxSize().background(Color.DarkGray))
             }
@@ -236,6 +243,7 @@ private fun PitchToken(g: Game, p: Player?, pos: com.supermenajer.game.model.Pos
                     .background(if (ovr == null) Color.Gray else ovrColor(ovr)).padding(horizontal = 3.dp),
             ) { Text(ovr?.toString() ?: "?", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 10.sp, lineHeight = 12.sp) }
             if (p != null && !p.available) Text("🚑", fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
+            Box(Modifier.align(Alignment.TopStart).offset(x = (-8).dp, y = (-3).dp)) { SlotChip(slot, small = true) }
         }
         Text(
             (p?.number?.takeIf { it > 0 }?.let { "$it " } ?: "") + (p?.name?.substringAfterLast(' ') ?: "Boş"), fontSize = 9.sp, lineHeight = 10.sp, color = Color.White, maxLines = 1,
@@ -258,7 +266,7 @@ private fun RolesPanel(g: Game) {
     val cor = R.cornerTaker(g, t, onPitch)
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         item {
-            Text("C: kaptan · P: penaltı · F: frikik · K: korner. Rol, oyuncunun hücum/savunma katkısını değiştirir.", color = TextDim, fontSize = 11.sp)
+            Text("C: kaptan · P: penaltı · F: frikik · K: korner. ⭐ oyuncunun doğal özelliği: o rolde %3 daha verimli oynar.", color = TextDim, fontSize = 11.sp)
         }
         items(slots.size) { i ->
             val p = g.player(t.lineup.getOrNull(i) ?: -1)
@@ -266,7 +274,7 @@ private fun RolesPanel(g: Game) {
             val cur = R.roleIndex(t, i).coerceIn(0, roles.size - 1)
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    PosChip(slots[i].pos, small = true)
+                    SlotChip(slots[i], small = true)
                     Text(
                         " ${p?.number?.takeIf { it > 0 }?.let { "#$it " } ?: ""}${p?.name ?: "Boş"}",
                         fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
@@ -282,9 +290,10 @@ private fun RolesPanel(g: Game) {
                     }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val nat = p?.let { if (it.pos == slots[i].pos) com.supermenajer.game.game.Positions.natRole(it) else -1 } ?: -1
                     roles.forEachIndexed { r, role ->
                         Text(
-                            role.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                            (if (r == nat) "⭐ " else "") + role.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                             color = if (r == cur) Color.Black else TextMain,
                             modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (r == cur) Green else Surface2)
                                 .clickable { GameRepo.setRole(i, r) }.padding(horizontal = 8.dp, vertical = 3.dp),

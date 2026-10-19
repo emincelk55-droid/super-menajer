@@ -610,7 +610,7 @@ private fun SubDialog(sim: MatchSim, side: Side, onClose: () -> Unit) {
                         }.padding(vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        PosChip(p.pos)
+                        DetChip(p)
                         Spacer(Modifier.width(8.dp))
                         Text(p.name, modifier = Modifier.weight(1f), fontSize = 14.sp)
                         Text("Bu mevkide ", color = TextDim, fontSize = 12.sp)

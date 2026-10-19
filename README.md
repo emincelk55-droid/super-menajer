@@ -48,3 +48,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - FM tarzı roller, kaptan, penaltı/frikik/korner kullanıcıları, forma numaraları
 - Maçta kenar çizgisi talimatları, antrenman kampı, gizli antrenman, galibiyet primi, hazırlık maçları
 - Yönetimden istekler, başarımlar, kupa dolabı, menajer itibarı, kulüp rekorları, transfer döneminin son günü
+
+### v1.4
+- Detaylı mevkiler (KL, SLB, SĞB, STP, DOS, MO, OOS, SLK, SĞK, SF) ve tercih edilen ayak
+- Oyuncu özellikleri: kaleci / libero kaleci, stoper / topla oynayan stoper, bek / kanat bek, defansif / iki yönlü / ofansif orta saha, oyun kurucu, kanat, fırsatçı golcü, hedef santrfor, sahte 9, kanat forvet
+- Mevki uyumu ve doğal rol maç performansını etkiler; otomatik 11 detaylı mevkiye göre dizer
