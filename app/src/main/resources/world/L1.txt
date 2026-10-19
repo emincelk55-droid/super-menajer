@@ -262,7 +262,7 @@ P|18|Braian Samudio|1995|PY|SF|-|R|63|63|70,64,52,62,26,70|SF
 P|52|Yusuf Özyurt|2004|TR|SF|-|R|51|61|66,50,40,50,20,56|SF
 P|88|Altin Zeqiri|2000|XK|SGK|SLK|R|60|62|76,56,54,64,26,56|SGK,SLK
 P|99|Pape Habib Guèye|1999|SN|SF|-|R|61|62|70,61,46,56,24,70|SF
-TEAM|Iğdır FK|IGD|Iğdır|Iğdır Şehir Stadyumu|2700|Kenan Koçak|TR|#0057B8|#FFFFFF|46
+TEAM|Iğdır FK|IGD|Iğdır|Iğdır Şehir Stadyumu|2700|Kenan Koçak|TR|#0057B8|#FFFFFF|52
 P|1|Muhammet Taha Tepe|2002|TR|KL|-|R|57|63|44,15,46,30,18,58|KL
 P|29|Jakub Szumski|1992|PL|KL|-|R|62|62|40,15,48,28,18,64|KL
 P|35|Eren Karataş|2004|TR|KL|-|R|50|61|40,12,40,26,15,52|KL

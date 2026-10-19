@@ -546,24 +546,9 @@ fun SummaryScreen() {
     Row(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).fillMaxHeight()) {
             ScoreBoard(sim)
+            ScorersStrip(sim, motm)
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (sim.userSide != null) item { PostTalkCard(sim) }
-                item {
-                    SectionCard("Goller") {
-                        val goals = sim.events.filter { it.type == Ev.GOAL }
-                        if (goals.isEmpty()) Text("Gol yok.", color = TextDim)
-                        goals.forEach { e ->
-                            val name = (sim.home.used + sim.away.used).firstOrNull { it.p.id == e.playerId }?.p?.name ?: ""
-                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                                if (e.side == 0) {
-                                    Text("⚽ $name ${e.minute}'", modifier = Modifier.weight(1f), maxLines = 1)
-                                } else {
-                                    Text("${e.minute}' $name ⚽", modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1)
-                                }
-                            }
-                        }
-                    }
-                }
                 com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
                     item {
                         val us = sim.home.team.id == g.userTeamId
@@ -571,23 +556,10 @@ fun SummaryScreen() {
                         Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
                     }
                 }
-                if (motm != null) item {
-                    SectionCard("Maçın oyuncusu") {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("⭐", fontSize = 28.sp)
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(motm.p.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                                Text(g.team(if (motm in sim.home.used) sim.home.team.id else sim.away.team.id).name, color = TextDim, fontSize = 13.sp)
-                            }
-                            Text("%.1f".format(motm.rating), color = ratingColor(motm.rating), fontWeight = FontWeight.Black, fontSize = 24.sp)
-                        }
-                    }
-                }
             }
             Button(
                 onClick = { GameRepo.closeSummary() },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).height(48.dp), shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp).height(44.dp), shape = RoundedCornerShape(12.dp),
             ) { Text("DEVAM", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         }
         LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -678,6 +650,30 @@ private fun GoalCard(sim: MatchSim, e: MatchEvent, c: Color) {
             )
             val n = (pim?.p?.goals ?: 0) + (pim?.goals ?: 0)
             Text(if (pim != null) "Sezonun $n. golü" else "", color = Color(0xFF5A5A70), fontSize = 13.sp)
+        }
+    }
+}
+
+/** FM tarzı skor altı şerit: ev sahibi golleri solda, deplasman sağda, maçın oyuncusu ortada. */
+@Composable
+private fun ScorersStrip(sim: MatchSim, motm: PIM?) {
+    val goals = sim.events.filter { it.type == Ev.GOAL }
+    fun name(e: MatchEvent) = (sim.home.used + sim.away.used).firstOrNull { it.p.id == e.playerId }?.p?.name?.substringAfterLast(' ') ?: ""
+    Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                goals.filter { it.side == 0 }.forEach { Text("⚽ ${name(it)} ${it.minute}'", fontSize = 12.sp, maxLines = 1) }
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                goals.filter { it.side == 1 }.forEach { Text("${it.minute}' ${name(it)} ⚽", fontSize = 12.sp, maxLines = 1) }
+            }
+        }
+        if (motm != null) {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Text("⭐ Maçın oyuncusu: ", color = TextDim, fontSize = 12.sp)
+                Text(motm.p.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("  %.1f".format(motm.rating), color = ratingColor(motm.rating), fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }
         }
     }
 }

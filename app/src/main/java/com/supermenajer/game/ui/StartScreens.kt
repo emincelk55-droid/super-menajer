@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.supermenajer.game.game.Difficulty
 import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Generator
 import com.supermenajer.game.game.Lineups
@@ -75,7 +76,7 @@ fun TitleScreen() {
             Text("MENAJER", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Green, letterSpacing = 6.sp)
             Text("Futbol Menajerlik Oyunu", color = TextDim, fontSize = 15.sp)
             Spacer(Modifier.height(12.dp))
-            Text("v2.0", color = TextDim, fontSize = 12.sp)
+            Text("v2.1", color = TextDim, fontSize = 12.sp)
         }
         Column(Modifier.width(380.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("KAYIT YUVALARI", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -129,15 +130,15 @@ fun NewGameScreen() {
     var world by remember { mutableStateOf(GameRepo.takePreparedWorld()) }
     LaunchedEffect(Unit) {
         if (world == null) {
-            world = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                Generator.newWorld().also { Season.computeExpectations(it) }
-            }
+            world = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { GameRepo.awaitWorld() }
         }
     }
     var name by remember { mutableStateOf("") }
     var selected by remember { mutableIntStateOf(-1) }
     var country by remember { mutableStateOf("Türkiye") }
     var div by remember { mutableIntStateOf(0) }
+    var difficulty by remember { mutableIntStateOf(1) }
+    var noFiring by remember { mutableStateOf(false) }
     val hasSave = remember { GameRepo.slots().getOrNull(GameRepo.slot - 1)?.exists == true }
     BackHandler { GameRepo.screen = Screen.TITLE }
     val w = world
@@ -177,6 +178,17 @@ fun NewGameScreen() {
                         Chip(lg.name + if (lg.tier == 2) " (zor mod)" else "", div == lg.id) { div = lg.id; selected = -1 }
                     }
                 }
+                Spacer(Modifier.height(10.dp))
+                Text("Zorluk", color = TextDim, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.height(6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Difficulty.names.forEachIndexed { i, n -> Chip(n, difficulty == i) { difficulty = i } }
+                    Chip("🛡 Kovulma yok", noFiring) { noFiring = !noFiring }
+                }
+                Text(
+                    Difficulty.descriptions[difficulty] + if (noFiring) " Serbest mod: yönetim seni kovmaz." else "",
+                    color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp),
+                )
                 if (hasSave) {
                     Spacer(Modifier.height(10.dp))
                     Text("Not: ${GameRepo.slot}. yuvadaki kayıt silinir.", color = Gold, fontSize = 12.sp)
@@ -184,7 +196,7 @@ fun NewGameScreen() {
             }
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = { w?.let { GameRepo.newCareer(it, name, selected) } },
+                onClick = { w?.let { GameRepo.newCareer(it, name, selected, difficulty, noFiring) } },
                 enabled = selected >= 0 && w != null,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp),

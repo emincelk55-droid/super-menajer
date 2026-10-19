@@ -318,13 +318,14 @@ object Season {
 
     fun transferWindowOpen(g: Game): Boolean {
         if (g.seasonOver) return true
-        val w = g.leagueWeekAt(g.week)
+        // Son OYNANAN lig haftasına göre: son gün (4. / 19. hafta arifesi) dönem hâlâ açık
+        val w = g.leagueWeekAt(g.week - 1)
         return w < 4 || w in 16..18
     }
 
     fun windowText(g: Game): String = when {
-        transferWindowOpen(g) -> "Transfer dönemi AÇIK" + if (!g.seasonOver) " (${if (g.leagueWeekAt(g.week) < 4) "4" else "19"}. haftaya kadar)" else ""
-        g.leagueWeekAt(g.week) < 16 -> "Transfer dönemi kapalı · Ara transfer 17. haftada açılır"
+        transferWindowOpen(g) -> "Transfer dönemi AÇIK" + if (!g.seasonOver) " (${if (g.leagueWeekAt(g.week - 1) < 4) "4" else "19"}. haftaya kadar)" else ""
+        g.leagueWeekAt(g.week - 1) < 16 -> "Transfer dönemi kapalı · Ara transfer 17. haftada açılır"
         else -> "Transfer dönemi kapalı · Sezon sonunda açılır"
     }
 
@@ -394,6 +395,8 @@ object Season {
                 else -> -2.0
             }
         }
+        // Zorluk: kötü sonuçlarda yönetimin sabrı
+        if (delta < 0) delta *= Difficulty.patience(g)
         g.confidence = (g.confidence + delta).coerceIn(0.0, 100.0)
         if (rnd.nextDouble() < 0.35) g.press = Press.question(us.goals - them.goals, them.team.name, euro, sim.isCup, rnd)
     }
@@ -448,7 +451,8 @@ object Season {
         g.date = maxOf(g.date, GameCalendar.dateOf(g, g.week) + 1)
         g.week++
         if (g.week > g.totalDays) seasonEnd(g)
-        if (!g.fired && g.confidence <= 5 && (g.seasonOver || g.leagueWeekAt(g.week) >= 8)) fire(g, rnd)
+        if (g.noFiring) g.confidence = g.confidence.coerceAtLeast(10.0)
+        else if (!g.fired && g.confidence <= 5 && (g.seasonOver || g.leagueWeekAt(g.week) >= 8)) fire(g, rnd)
     }
 
     private fun recovery(g: Game, p: Player): Double {
@@ -839,25 +843,58 @@ object Season {
                 p.age <= 27 && gap > 0 -> improve(p, rnd.nextInt(0, 3), rnd)
                 p.age >= 31 -> decline(p, rnd.nextInt(1, 2 + (p.age - 30)), rnd)
             }
-            if (p.age >= 36 || (p.age >= 33 && rnd.nextDouble() < 0.25 + (p.age - 33) * 0.15)) {
+            // Emeklilik: 33'ten itibaren artar, iyi oyuncular daha uzun oynar
+            val retireChance = when {
+                p.age >= 40 || p.id in g.retiring -> 1.0
+                p.age >= 33 -> (doubleArrayOf(0.08, 0.18, 0.32, 0.5, 0.7, 0.88, 0.95)[p.age - 33]) * (if (p.overall >= 80) 0.5 else if (p.overall >= 72) 0.8 else 1.0)
+                else -> 0.0
+            }
+            if (rnd.nextDouble() < retireChance) {
                 retired += p
                 continue
+            }
+            if (p.apps > 0) {
+                val club = g.teamOrNull(p.teamId)?.name ?: "-"
+                p.career += "${g.season}|$club|${p.apps}|${p.goals}|${p.assists}|${"%.2f".format(java.util.Locale.US, p.avgRating)}"
             }
             p.apps = 0; p.goals = 0; p.assists = 0; p.ratingSum = 0.0
             p.yellowCards = 0; p.suspended = 0; p.fitness = 100.0
         }
+        g.retiring.clear()
         for (p in retired) if (p.teamId == g.userTeamId) g.addNews("Jübile", "${p.name} ${p.age} yaşında futbolu bıraktı.")
         g.removePlayers(retired)
         val retiredIds = retired.map { it.id }.toSet()
         g.teams.forEach { t -> t.lineup.replaceAll { if (it in retiredIds) -1 else it } }
+        // Yapay zekâ kulüpleri önce serbest oyuncularla, sonra altyapıdan kadrosunu tamamlar
+        val minByPos = mapOf(Pos.GK to 3, Pos.DF to 7, Pos.MF to 7, Pos.FW to 4)
         for (t in g.teams) {
             var sq = g.squad(t.id)
-            while (sq.size < 22) {
-                val pos = Generator.squadPlan.maxBy { (pos, n) -> n - sq.count { it.pos == pos } }.key
-                val y = Generator.youth(g, t, pos, rnd)
-                g.addPlayer(y)
-                if (t.id == g.userTeamId) g.addNews("Altyapıdan yeni yetenek", "${y.name} (${y.age}, ${pos.label}) A takıma yükseldi. Potansiyeli: ${y.potential}.")
+            fun need(): Pos? = minByPos.entries.firstOrNull { (pos, n) -> sq.count { it.pos == pos } < n }?.key
+                ?: if (sq.size < 24) Generator.squadPlan.maxBy { (pos, n) -> n - sq.count { it.pos == pos } }.key else null
+            var guard = 0
+            while (guard++ < 20) {
+                val pos = need() ?: break
+                val str = Lineups.strength(g, t)
+                val free = if (t.id == g.userTeamId) null else g.squad(-1)
+                    .filter { it.pos == pos && it.overall in (str - 12).toInt()..(str + 2).toInt() && it.age <= 33 }
+                    .maxByOrNull { it.overall - (it.age - 26).coerceAtLeast(0) }
+                if (free != null) {
+                    g.movePlayer(free, t.id)
+                    free.contractYears = rnd.nextInt(1, 4)
+                    free.salary = free.demandWage
+                } else {
+                    val y = Generator.youth(g, t, pos, rnd)
+                    g.addPlayer(y)
+                    if (t.id == g.userTeamId) g.addNews("Altyapıdan yeni yetenek", "${y.name} (${y.age}, ${pos.label}) A takıma yükseldi. Potansiyeli: ${y.potential}.")
+                }
                 sq = g.squad(t.id)
+            }
+            // Her yapay zekâ kulübü yılda 1-2 genci A takıma alır (dünya yenilensin, yeni yıldızlar doğsun)
+            if (t.id != g.userTeamId && sq.size < 30) {
+                repeat(if (sq.size < 27) 2 else 1) {
+                    val pos = Generator.squadPlan.maxBy { (pos, n) -> n - g.squad(t.id).count { it.pos == pos } }.key
+                    g.addPlayer(Generator.youth(g, t, pos, rnd))
+                }
             }
         }
         Facilities.youthIntake(g, rnd)

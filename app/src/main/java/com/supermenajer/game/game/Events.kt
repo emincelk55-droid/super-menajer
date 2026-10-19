@@ -57,6 +57,10 @@ object Events {
         g.pendingEvent = null
         val p = g.player(e.playerId)
         val us = g.userTeam
+        // Karar verilmeden oyuncu ayrıldıysa (satış, kiralık, fesih) olay düşer
+        if (e.kind != INVESTOR && (p == null || p.teamId != us.id)) {
+            return "Oyuncu artık kulüpte olmadığı için konu kapandı."
+        }
         val msg = when (e.kind) {
             DISCIPLINE -> when (choice) {
                 0 -> { p?.let { it.morale = (it.morale - 10).coerceAtLeast(5.0) }; g.cohesion = (g.cohesion + 3).coerceAtMost(100.0); "Ceza kesildi. ${p?.name} kırgın ama takım disiplinin önemini anladı." }
@@ -85,8 +89,8 @@ object Events {
                 p.morale = (p.morale + 5).coerceAtMost(100.0)
                 "${p.name} ikna oldu, bir sezon daha oynayacak!"
             } else {
-                p?.contractYears = 1
-                "${p?.name} sezon sonunda veda edecek. Onu iyi uğurlayalım."
+                p?.let { if (it.id !in g.retiring) g.retiring += it.id }
+                "${p?.name} sezon sonunda futbolu bırakacak. Onu iyi uğurlayalım."
             }
             RUMOUR -> when (choice) {
                 0 -> { Fans.change(g, 3.0, "\"Satılık değil\" açıklaması"); p?.let { it.morale = (it.morale + if (Traits.of(it) == Traits.AMBITIOUS) -6 else 4).coerceIn(5.0, 100.0) }; "Taraftar mesajını sevdi." }

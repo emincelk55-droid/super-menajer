@@ -60,7 +60,7 @@ P|20|Oliver Edvardsen|2000|NO|SLK|SGK|R|71|72|78,66,64,72,30,64|SLK,SGK
 P|23|Steven Berghuis|1991|NL|SGK|OOS|L|75|75|64,76,78,76,38,66|SGK,OOS,MO
 P|38|Marcos Leonardo|2003|BR|SF|-|R|76|80|78,79,60,74,28,70|SF
 P|99|Tolu Arokodare|2000|NG|SF|-|R|74|75|68,74,56,64,30,86|SF
-TEAM|Feyenoord|FEY|Rotterdam|De Kuip|47500|Giovanni van Bronckhorst|NL|#E30613|#FFFFFF|82
+TEAM|Feyenoord|FEY|Rotterdam|De Kuip|47500|Giovanni van Bronckhorst|NL|#E30613|#FFFFFF|78
 P|1|Tjark Ernst|2003|DE|KL|-|R|74|79|48,16,64,36,22,72|KL
 P|33|Florian Kastenmeier|1997|DE|KL|-|R|71|71|46,16,58,34,22,70|KL
 P|37|Mannou Berger|2006|NL|KL|-|R|56|70|40,12,46,28,18,58|KL

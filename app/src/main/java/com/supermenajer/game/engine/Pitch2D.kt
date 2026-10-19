@@ -114,6 +114,8 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         }
         val gone = agents.filter { it.id !in ids }
         if (owner in gone) owner = null
+        if (shooter in gone) shooter = null
+        steps.removeAll(gone.toSet())
         agents.removeAll(gone.toSet())
     }
 
@@ -347,11 +349,23 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
 
     private fun attackLogic(dt: Float) {
         stepWait += dt
+        if (flight != null && owner == null) return
+        val atk = cur?.side
+        // Top sahipsiz kaldıysa (ör. topu süren oyuncu oyundan çıktı) ya da rakipteyse
+        // atak takımının en yakın oyuncusu topu alır; yoksa sahne takılır ve şut hiç gelmez.
+        if (atk != null && owner?.side != atk) {
+            val n = agents.filter { it.side == atk && !it.gk }.minByOrNull { dist(it.x, it.y, ballX, ballY) }
+            if (n == null) { looseBall(); return }
+            owner = n
+            possSide = atk
+            ballZ = 0f
+            hold = 0f
+            steps.remove(n)
+        }
         val o = owner ?: run {
-            if (flight == null) looseBall()
+            looseBall()
             return
         }
-        if (o.side != (cur?.side ?: o.side)) return
         val next = steps.firstOrNull()
         if (next == null) {
             if (hold > 0.35f) shoot(o)

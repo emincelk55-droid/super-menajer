@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -127,7 +128,10 @@ private fun NavRail(g: Game) {
         navItems.forEach { item ->
             val sel = GameRepo.tab == item.tab
             Column(
-                Modifier.clip(RoundedCornerShape(12.dp)).clickable { GameRepo.tab = item.tab }.padding(horizontal = 4.dp, vertical = 1.dp),
+                // En az 48dp dokunma alanı
+                Modifier.clip(RoundedCornerShape(12.dp)).clickable { GameRepo.tab = item.tab }
+                    .sizeIn(minWidth = 62.dp, minHeight = 46.dp).padding(horizontal = 2.dp, vertical = 1.dp),
+                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box {
@@ -135,7 +139,7 @@ private fun NavRail(g: Game) {
                         Modifier.clip(RoundedCornerShape(14.dp)).background(if (sel) Green else Color.Transparent)
                             .padding(horizontal = 12.dp, vertical = 2.dp),
                     ) {
-                        Icon(item.icon, contentDescription = item.label, tint = if (sel) Color.Black else TextDim, modifier = Modifier.size(20.dp))
+                        Icon(item.icon, contentDescription = item.label, tint = if (sel) Color.Black else TextDim, modifier = Modifier.size(22.dp))
                     }
                     val badge = if (item.tab == GameRepo.TAB_INBOX) g.unread else 0
                     if (badge > 0) {
@@ -145,7 +149,7 @@ private fun NavRail(g: Game) {
                         ) { Text(if (badge > 9) "9+" else "$badge", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
-                Text(item.label, fontSize = 9.sp, lineHeight = 11.sp, color = if (sel) Green else TextDim, maxLines = 1)
+                Text(item.label, fontSize = 10.sp, lineHeight = 12.sp, color = if (sel) Green else TextDim, maxLines = 1)
             }
         }
     }
@@ -229,9 +233,10 @@ private fun SettingsDialog() {
                         OutlinedButton(onClick = { confirm = 0 }, modifier = Modifier.weight(1f)) { Text("Vazgeç") }
                         Button(
                             onClick = {
+                                GameRepo.advancing = false
                                 GameRepo.save(force = true)
                                 GameRepo.settingsOpen = false
-                                if (confirm == 1) GameRepo.screen = Screen.TITLE
+                                if (confirm == 1) GameRepo.closeCareer()
                                 else { GameRepo.flush(); (ctx as? android.app.Activity)?.finishAndRemoveTask() }
                             },
                             modifier = Modifier.weight(1f),
@@ -512,7 +517,7 @@ private fun IncomingOffersCard(g: Game) {
             }
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Button(onClick = { GameRepo.acceptIncoming(o); msg = null }, modifier = Modifier.weight(1f)) { Text("Sat", fontSize = 13.sp) }
+                Button(onClick = { msg = GameRepo.acceptIncoming(o) }, modifier = Modifier.weight(1f)) { Text("Sat", fontSize = 13.sp) }
                 OutlinedButton(onClick = { msg = GameRepo.counterIncoming(o) }, modifier = Modifier.weight(1f)) { Text("+%20 iste", fontSize = 13.sp) }
                 OutlinedButton(onClick = { GameRepo.rejectIncoming(o); msg = null }, modifier = Modifier.weight(1f)) { Text("Reddet", fontSize = 13.sp) }
             }

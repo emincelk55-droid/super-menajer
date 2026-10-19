@@ -89,3 +89,15 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Mobil düzen: Kulüp menüsü tek satırda kısa sekmeler (Ekip, Tesisler, Sponsor, Finans, Taraftar, Kariyer, Yetenek, Hocalar; bildirimler kırmızı noktayla)
 - Kadro ve maç anlatım/istatistik geçişleri sekme şeridi; maç kontrolleri eşit genişlikte, taşmıyor
 - Talimatlar ve Roller iki sütun
+
+### v2.1
+- Çoklu ajan testi: oyun dengesi (3 sezon simülasyonu), kod hataları, arayüz ve gerçek veri kalitesi denetlendi.
+- Zorluk seçimi (Kolay / Normal / Zor) ve "Kovulma yok" serbest modu.
+- Oyuncu kariyer geçmişi: her sezonun maç/gol/asist/puan kaydı profilde.
+- Dünya dengesi: AI sözleşme yenileme, gerçekçi emeklilik eğrisi, eksik mevkilerin dolması, gol oranı ayarı.
+- Maç sonu ekranında golcüler ve maçın oyuncusu üstte; yan menü dokunma alanları büyüdü.
+- Hata düzeltmeleri: ana menüye dönünce ilerlemenin sürmesi ve başka yuvaya kayıt, kiralık oyuncuyu tekrar kiralama,
+  transfer son gününün hiç gelmemesi, 2D motorun oyuncu değişikliğinde takılması, saha çiziminde çökme,
+  ayrılan oyuncuya ait olay kartları, bekletilen satış tekliflerinin denetimsiz kabulü, gün atlamada boş günlerin yaşanmaması,
+  penaltı atışlarında sonsuz döngü, dünyanın iki kez üretilmesi.
+- Veri: Bundesliga kaleci değerleri, yıldız güçleri, takım itibarları ve çift kayıtlı oyuncular düzeltildi.

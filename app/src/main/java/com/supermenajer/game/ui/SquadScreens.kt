@@ -298,7 +298,7 @@ fun PlayerDialog(g: Game, p: Player) {
                 Spacer(Modifier.height(6.dp))
                 if (p.loanFrom < 0) ContractBox(g, p) { message = it }
                 else Text("Kiralık oyuncu · ${g.teamOrNull(p.loanFrom)?.name ?: ""} kulübünden", color = Blue, fontSize = 12.sp)
-                if (p.age <= 23 && p.id !in t.lineup) {
+                if (p.age <= 23 && p.loanFrom < 0 && p.id !in t.lineup) {
                     Spacer(Modifier.height(6.dp))
                     OutlinedButton(onClick = { GameRepo.loanOut(p)?.let { message = it } }, modifier = Modifier.fillMaxWidth()) { Text("🔁 Kiralık gönder (gelişsin)") }
                 }
@@ -322,7 +322,7 @@ fun PlayerDialog(g: Game, p: Player) {
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { GameRepo.acceptOffer(o) }, modifier = Modifier.weight(1f),
+                            onClick = { GameRepo.acceptOffer(o)?.let { message = it; offer = null } }, modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Gold),
                         ) { Text("Kabul Et") }
                         OutlinedButton(onClick = { offer = null }, modifier = Modifier.weight(1f)) { Text("Reddet") }
@@ -460,6 +460,20 @@ fun PlayerDialog(g: Game, p: Player) {
                                 Stat("Gol", "${p.goals}")
                                 Stat("Asist", "${p.assists}")
                                 Stat("Ort. Puan", if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
+                            }
+                            if (p.career.isNotEmpty()) {
+                                Spacer(Modifier.height(12.dp))
+                                Text("KARİYER GEÇMİŞİ", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                for (line in p.career.takeLast(8).reversed()) {
+                                    val c = line.split("|")
+                                    if (c.size < 6) continue
+                                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                        Text("${c[0]}-${(c[0].toIntOrNull()?.plus(1) ?: 0) % 100}", color = TextDim, fontSize = 12.sp, modifier = Modifier.width(56.dp))
+                                        Text(c[1], fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                                        Text("${c[2]}M ${c[3]}G ${c[4]}A · ${c[5]}", color = TextDim, fontSize = 12.sp)
+                                    }
+                                }
                             }
                             Spacer(Modifier.height(12.dp))
                             Text("ANA ÖZELLİKLER (1-20)", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)

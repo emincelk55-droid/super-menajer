@@ -185,7 +185,8 @@ class MatchSim(
         val cap = com.supermenajer.game.game.Roles.captain(game, s.team)
         if (cap != null && s.onPitch.any { it.p.id == cap.id }) { a *= 1.01; m *= 1.01; d *= 1.01 }
         if (s === userSide) {
-            val f = com.supermenajer.game.game.Dynamics.matchFactor(game) * com.supermenajer.game.game.Perks.tactics(game)
+            val f = com.supermenajer.game.game.Dynamics.matchFactor(game) * com.supermenajer.game.game.Perks.tactics(game) *
+                com.supermenajer.game.game.Difficulty.matchFactor(game)
             a *= f; m *= f; d *= f
         }
         if (s === home) { a *= 1.03; m *= 1.03; d *= 1.03 }
@@ -208,7 +209,8 @@ class MatchSim(
         ballX = 0.5f + dir * (0.05f + rnd.nextFloat() * 0.3f)
         ballY = 0.2f + rnd.nextFloat() * 0.6f
 
-        var pShot = (0.2 * (sA.atk / sD.def).pow(1.6)).coerceIn(0.05, 0.45)
+        // Güç farkının etkisi yumuşatıldı: gerçekçi gol ortalaması (~2.7) ve daha az farklı skor
+        var pShot = (0.185 * (sA.atk / sD.def).pow(1.25)).coerceIn(0.06, 0.36)
         when (atk.team.tempo) { 0 -> pShot *= 0.93; 2 -> pShot *= 1.08 }
         // Önde olan takım zaman geçiriyorsa oyun yavaşlar
         val leader = if (home.goals > away.goals) home else if (away.goals > home.goals) away else null
@@ -283,7 +285,7 @@ class MatchSim(
         }
         val shooter = designated?.let { d -> atk.onPitch.firstOrNull { it.p.id == d.id } } ?: pickW(outfield) {
             val r = roleOf(atk, it)
-            shotW(it.slot.pos) * (if (header) r.header else r.shot) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(2)
+            shotW(it.slot.pos) * (if (header) r.header else r.shot) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(1.5)
         } ?: return
         val assister = if (!penalty && (header || rnd.nextDouble() < 0.72)) {
             val corner = if (header) R.cornerTaker(game, atk.team, onPitchPlayers)?.let { c -> atk.onPitch.firstOrNull { it.p.id == c.id && it !== shooter } } else null
@@ -481,11 +483,13 @@ class MatchSim(
             if (a > h + (4 - i) || h > a + (4 - i)) break
         }
         var i = 5
-        while (h == a) {
+        while (h == a && i < 40) {
             if (kick(home, i)) h++
             if (kick(away, i)) a++
             i++
         }
+        // Güvenlik: sahada vurucu kalmadıysa yazı-tura
+        if (h == a) { if (rnd.nextBoolean()) h++ else a++ }
         penHome = h
         penAway = a
         val w = if (h > a) home else away

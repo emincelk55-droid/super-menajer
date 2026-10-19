@@ -142,10 +142,19 @@ object Economy {
             p.contractYears--
             if (p.contractYears > 0) continue
             val t = g.teamOrNull(p.teamId) ?: continue
-            if (t.id != g.userTeamId && p.age <= 31 && p.overall >= Lineups.strength(g, t) - 8 && rnd.nextDouble() < 0.8) {
-                p.contractYears = rnd.nextInt(2, 5)
-                p.salary = p.demandWage
-                continue
+            if (t.id != g.userTeamId) {
+                // Yapay zekâ kulüpleri kadrosunu korur: işe yarayan oyuncuyla uzatır, yaşlılara 1 yıl verir
+                val str = Lineups.strength(g, t)
+                val keep = when {
+                    p.age >= 34 -> p.overall >= str - 4 && rnd.nextDouble() < 0.6
+                    p.age <= 21 -> p.potential >= str - 6 || rnd.nextDouble() < 0.5
+                    else -> p.overall >= str - 12 && rnd.nextDouble() < 0.88
+                }
+                if (keep) {
+                    p.contractYears = if (p.age >= 32) 1 else rnd.nextInt(2, 5)
+                    p.salary = p.demandWage
+                    continue
+                }
             }
             if (t.id == g.userTeamId) left += p.name
             t.lineup.replaceAll { if (it == p.id) -1 else it }

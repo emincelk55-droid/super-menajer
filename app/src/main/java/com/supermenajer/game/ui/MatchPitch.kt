@@ -58,6 +58,7 @@ fun MatchPitch(
     val numCache = remember { HashMap<String, TextLayoutResult>() }
     Canvas(modifier) {
         frame // her karede yeniden çiz
+        if (size.minDimension <= 0f) return@Canvas
         val sx = size.width / (L + 2 * M)
         val sy = size.height / (W + 2 * M)
         fun px(x: Float) = (x + M) * sx
@@ -89,8 +90,8 @@ fun MatchPitch(
                 focus.name,
                 TextStyle(color = Color.White, fontSize = (r * 0.85f / density / fontScale).sp, fontWeight = FontWeight.Bold),
             )
-            val tx = (px(focus.x) - tl.size.width / 2f).coerceIn(2f, size.width - tl.size.width - 2f)
-            val ty = (py(focus.y) + r * 1.25f).coerceAtMost(size.height - tl.size.height - 2f)
+            val tx = (px(focus.x) - tl.size.width / 2f).coerceIn(2f, (size.width - tl.size.width - 2f).coerceAtLeast(2f))
+            val ty = (py(focus.y) + r * 1.25f).coerceAtMost(size.height - tl.size.height - 2f).coerceAtLeast(0f)
             drawRoundRect(
                 Color.Black.copy(alpha = 0.55f), Offset(tx - 6f, ty - 1f), Size(tl.size.width + 12f, tl.size.height + 2f),
                 cornerRadius = CornerRadius(8f, 8f),

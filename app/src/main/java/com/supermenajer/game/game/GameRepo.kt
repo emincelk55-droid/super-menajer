@@ -77,6 +77,22 @@ object GameRepo {
     /** Gün gün ilerlerken true; DEVAM düğmesi "DURDUR" olur. */
     var advancing by mutableStateOf(false)
     private val scope by lazy { kotlinx.coroutines.MainScope() }
+    private var advanceJob: kotlinx.coroutines.Job? = null
+
+    /** Ana menüye dönerken açık kariyeri kapatır: ilerleme durur, başka yuvanın üstüne yazılmaz. */
+    fun closeCareer() {
+        advancing = false
+        advanceJob?.cancel()
+        advanceJob = null
+        screen = Screen.TITLE
+        settingsOpen = false
+        selectedPlayer = null
+        negotiation = null
+        match = null
+        pitch = null
+        game = null
+        bump()
+    }
 
     private val importantWords = listOf("teklif", "sakatl", "talep", "kovul", "kariyer", "inşaat tamamlandı", "altyapı seçmeleri", "sözleşme", "protesto", "ödül", "şampiyon")
 
@@ -115,13 +131,15 @@ object GameRepo {
             g.todayUserFixture() != null -> playMatch(live = true)
             else -> {
                 advancing = true
-                scope.launch {
-                    while (advancing) {
+                advanceJob?.cancel()
+                advanceJob = scope.launch {
+                    while (advancing && game === g) {
                         val stop = advanceDay()
                         bump()
                         if (stop) break
                         kotlinx.coroutines.delay(170)
                     }
+                    if (game !== g) return@launch
                     advancing = false
                     if (g.pendingEvent != null) tab = TAB_HOME
                     save(force = true)
@@ -148,12 +166,26 @@ object GameRepo {
     @Volatile
     var preparedWorld: Game? = null
 
+    @Volatile
+    private var preparing = false
+
     fun prepareWorldAsync() {
-        if (preparedWorld != null) return
+        if (preparedWorld != null || preparing) return
+        preparing = true
         Thread {
-            val w = Generator.newWorld().also { Season.computeExpectations(it) }
-            if (preparedWorld == null) preparedWorld = w
+            try {
+                val w = Generator.newWorld().also { Season.computeExpectations(it) }
+                if (preparedWorld == null) preparedWorld = w
+            } finally {
+                preparing = false
+            }
         }.start()
+    }
+
+    /** Hazırlanan dünyayı alır; hazırlık sürüyorsa ikinci kez üretmek yerine onu bekler (arka planda çağrılmalı). */
+    fun awaitWorld(): Game {
+        while (preparedWorld == null && preparing) Thread.sleep(50)
+        return takePreparedWorld() ?: Generator.newWorld().also { Season.computeExpectations(it) }
     }
 
     fun takePreparedWorld(): Game? = preparedWorld.also { preparedWorld = null }
@@ -182,6 +214,7 @@ object GameRepo {
     }
 
     fun deleteSlot(n: Int) {
+        if (n == slot && screen == Screen.TITLE) game = null
         slotFile(n).delete()
         metaFile(n).delete()
         bump()
@@ -225,21 +258,29 @@ object GameRepo {
     }
 
     fun load(n: Int = slot): Boolean = runCatching {
-        slot = n
-        val g = json.decodeFromString(Game.serializer(), saveFile.readText())
+        advancing = false
+        advanceJob?.cancel()
+        // Yuva ancak dosya sorunsuz okunursa değişir: bozuk kayıt başka kariyerle ezilmesin
+        val g = json.decodeFromString(Game.serializer(), slotFile(n).readText())
         Season.migrate(g)
+        slot = n
         game = g
         save(force = true)
         bump()
         true
     }.getOrDefault(false)
 
-    fun newCareer(g: Game, manager: String, teamId: Int) {
+    fun newCareer(g: Game, manager: String, teamId: Int, difficulty: Int = 1, noFiring: Boolean = false) {
+        g.difficulty = difficulty
+        g.noFiring = noFiring
+        advancing = false
+        advanceJob?.cancel()
         g.managerName = manager.ifBlank { "Menajer" }
         g.userTeamId = teamId
         Season.start(g)
         StaffLogic.hireDefaults(g)
         val t = g.userTeam
+        t.budget = (t.budget * Difficulty.budgetFactor(g)).toLong()
         g.addNews(
             "Hoş geldin hocam!",
             "${t.name} yönetimi seni yeni teknik direktör olarak açıkladı. Yönetimin bu sezonki hedefi: ${Season.objectiveText(t)}. Bütçen: ${money(t.budget)}.",
@@ -284,7 +325,8 @@ object GameRepo {
     /** Kullanıcının maçı olmayan günü (ör. kupadan elendiyse) geçer. */
     fun skipDay() {
         val g = game ?: return
-        if (!g.isMatchDay) g.date = GameCalendar.dateOf(g, g.week)
+        // Aradaki boş günler de yaşanır (dinlenme, gözlemci raporları, transferler)
+        while (!g.isMatchDay) { g.date++; Season.freeDay(g) }
         if (g.fired || g.seasonOver || g.todayUserFixture() != null) return
         Season.simulateRest(g, g.week)
         Season.endDay(g)
@@ -364,6 +406,7 @@ object GameRepo {
         val g = game ?: return "Oyun yok"
         val us = g.userTeam
         if (p.teamId != us.id) return "Oyuncu takımında değil."
+        if (p.loanFrom >= 0) return "Kiralık oyuncu tekrar kiralanamaz."
         if (p.age > 23) return "Sadece 23 yaş ve altı oyuncular kiralık gönderilebilir."
         if (!Season.transferWindowOpen(g)) return "Transfer dönemi kapalı."
         if (g.squad(us.id).size <= 18) return "Kadro çok dar, kiralık gönderemezsin."
@@ -754,14 +797,24 @@ object GameRepo {
         return Offer(p, buyer, price)
     }
 
-    fun acceptOffer(o: Offer) {
-        sellPlayer(o.player, o.buyer, o.price)
-    }
+    fun acceptOffer(o: Offer): String? = sellPlayer(o.player, o.buyer, o.price)
 
-    private fun sellPlayer(p: Player, buyer: Team, price: Long) {
-        val g = game ?: return
+    /** Satışı yapar; teklif bekletildiyse koşullar yeniden denetlenir. Olmazsa nedenini döner. */
+    private fun sellPlayer(p: Player, buyer: Team, price: Long): String? {
+        val g = game ?: return "Oyun yok"
         val us = g.userTeam
-        if (p.teamId != us.id) return
+        if (p.teamId != us.id) return "Oyuncu artık takımında değil."
+        val stale = when {
+            !Season.transferWindowOpen(g) -> "Transfer dönemi kapandı, teklif geçersiz."
+            buyer.budget < price -> "${buyer.name} artık bu parayı ödeyemiyor, teklif geri çekildi."
+            g.squad(us.id).size <= 16 -> "Kadro çok dar, satış yapılamaz."
+            else -> null
+        }
+        if (stale != null) {
+            g.offers.removeAll { it.playerId == p.id && it.teamId == buyer.id }
+            changed()
+            return stale
+        }
         Economy.earn(us, Economy.SALES, price)
         Economy.earn(buyer, Economy.BUYS, -price)
         TransferTalks.paySellOn(g, p, price, us.id)
@@ -778,6 +831,7 @@ object GameRepo {
         g.addNews("Satış", "${p.name}, ${money(price)} karşılığında ${buyer.name} takımına satıldı.")
         selectedPlayer = null
         changed()
+        return null
     }
 
     /** Sözleşme uzatma. Hata mesajı döner; başarılıysa null. */
@@ -797,10 +851,11 @@ object GameRepo {
         return null
     }
 
-    fun acceptIncoming(o: IncomingOffer) {
-        val g = game ?: return
-        val p = g.player(o.playerId) ?: return
-        sellPlayer(p, g.team(o.teamId), o.price)
+    fun acceptIncoming(o: IncomingOffer): String? {
+        val g = game ?: return null
+        val p = g.player(o.playerId) ?: return null
+        val buyer = g.teamOrNull(o.teamId) ?: run { g.offers.remove(o); changed(); return "Teklif yapan kulüp bulunamadı." }
+        return sellPlayer(p, buyer, o.price)
     }
 
     fun rejectIncoming(o: IncomingOffer) {

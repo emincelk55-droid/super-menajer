@@ -18,7 +18,7 @@ class CalendarTest {
     fun dayByDay() {
         GameRepo.init(Files.createTempDirectory("sm12").toFile())
         val world = Generator.newWorld(Random(12)).also { Season.computeExpectations(it) }
-        GameRepo.newCareer(world, "Test", world.divisionTeams(0)[5].id)
+        GameRepo.newCareer(world, "Test", world.divisionTeams(0)[5].id, noFiring = true)
         val g = GameRepo.game!!
         g.confidence = 100.0
         val dates = GameCalendar.dates(g)

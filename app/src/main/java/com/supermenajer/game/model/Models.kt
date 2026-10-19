@@ -56,6 +56,8 @@ class Player(
     var secondDet: Int = -1,
     /** Gerçek veride oyuncunun oynayabildiği diğer mevkiler (Positions.Det sıraları). */
     var extraDets: MutableList<Int> = mutableListOf(),
+    /** Geçmiş sezonlar: "sezon|kulüp|maç|gol|asist|ort. puan". */
+    var career: MutableList<String> = mutableListOf(),
     /** Forma numarası (0 = atanmadı). */
     var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */
@@ -355,6 +357,12 @@ class Game(
     /** Yönetimin güveni (0-100). 0'a inerse kovulursun. */
     var confidence: Double = 60.0,
     var fired: Boolean = false,
+    /** Zorluk: 0 Kolay, 1 Normal, 2 Zor. */
+    var difficulty: Int = 1,
+    /** Serbest mod: yönetim seni asla kovmaz. */
+    var noFiring: Boolean = false,
+    /** Sezon sonunda futbolu bırakacağını açıklayan oyuncular. */
+    var retiring: MutableList<Int> = mutableListOf(),
     var jobOffers: MutableList<Int> = mutableListOf(),
     val offers: MutableList<IncomingOffer> = mutableListOf(),
     var cupWinner: Int = -1,
