@@ -109,6 +109,9 @@ fun MatchPitch(
     }
 }
 
+/** Kenar paylı gerçek ölçülü saha: tüm çizim alanına sığar (oran [PITCH_RATIO]). */
+fun DrawScope.drawFmPitch() = drawMetricPitch(size.width / (L + 2 * M), size.height / (W + 2 * M))
+
 /** Gerçek ölçülerle saha (105x68 m): çim şeritleri, ceza sahaları, kaleler. */
 private fun DrawScope.drawMetricPitch(sx: Float, sy: Float) {
     fun px(x: Float) = (x + M) * sx

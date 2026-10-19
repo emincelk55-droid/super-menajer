@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,10 +67,14 @@ import kotlin.math.roundToInt
 
 private class DragState(val fromSlot: Int, val player: Player, val pos: Offset)
 
+/** Rol adının FM tarzı kısaltması: "Kanat forvet" → "KF", "Sahte 9" → "S9". */
+fun roleAbbr(name: String): String =
+    name.split(' ').filter { it.isNotBlank() }.joinToString("") { it.first().toString().uppercase(java.util.Locale.forLanguageTag("tr")) }
+
 /**
- * OSM / FM tarzı taktik tahtası: sahadaki oyuncu kartlarını sürükleyip yer değiştir,
- * yedeklerden kartı (basılı tutup) sahaya sürükle, sahadan yedek alanına sürükleyerek çıkar.
- * Dokunarak seçme de çalışır.
+ * FM tarzı taktik ekranı: solda gerçek ölçülü saha ve forma şeklinde oyuncular (üstte rol),
+ * sağda kadro listesi. Oyuncuları sahada sürükleyip yer değiştir, listeden basılı tutup
+ * sahaya sürükle, sahadan listeye sürükleyerek çıkar. Dokunarak seçme de çalışır.
  */
 @Composable
 fun TacticsBoard(g: Game) {
@@ -85,6 +89,7 @@ fun TacticsBoard(g: Game) {
     val shirt = Color(t.color1)
     val collar = Color(t.color2)
     val density = LocalDensity.current
+    val R = com.supermenajer.game.game.Roles
 
     fun drop(d: DragState) {
         val target = slotRects.entries.firstOrNull { it.value.contains(d.pos) }?.key
@@ -100,19 +105,19 @@ fun TacticsBoard(g: Game) {
         Row(Modifier.fillMaxSize().padding(start = 10.dp, bottom = 8.dp)) {
             // Saha
             BoxWithConstraints(
-                Modifier.fillMaxHeight().aspectRatio(1.4f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(12.dp)),
+                Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(10.dp)),
             ) {
                 val bw = maxWidth
                 val bh = maxHeight
                 val maxDepth = slots.maxOf { it.y }.coerceAtLeast(0.1f)
-                Canvas(Modifier.fillMaxSize()) { drawPitch(vertical = false) }
+                Canvas(Modifier.fillMaxSize()) { drawFmPitch() }
                 slots.forEachIndexed { i, s ->
                     val p = g.player(t.lineup.getOrNull(i) ?: -1)
-                    val cx = bw * (0.08f + s.y / maxDepth * 0.82f)
-                    val cy = bh * (0.1f + s.x * 0.8f)
+                    val cx = bw * (0.07f + s.y / maxDepth * 0.8f)
+                    val cy = bh * (0.11f + s.x * 0.78f)
                     val dragging = drag?.fromSlot == i
                     Box(
-                        Modifier.offset(x = cx - 30.dp, y = cy - 24.dp).width(60.dp)
+                        Modifier.offset(x = cx - 36.dp, y = cy - 30.dp).width(72.dp)
                             .onGloballyPositioned { slotRects[i] = it.boundsInRoot() }
                             .pointerInput(i, p?.id) {
                                 if (p == null) return@pointerInput
@@ -133,86 +138,113 @@ fun TacticsBoard(g: Game) {
                             .alpha(if (dragging) 0.35f else 1f),
                         contentAlignment = Alignment.Center,
                     ) {
-                        PitchToken(g, p, s, sel == i, shirt, collar)
+                        val roles = R.byPos.getValue(s.pos)
+                        val role = roles[R.roleIndex(t, i).coerceIn(0, roles.size - 1)]
+                        PitchToken(g, p, s, sel == i, shirt, collar, roleAbbr(role.name))
                     }
                 }
             }
-            // Sağ panel: yedekler / talimatlar
+            // Sağ panel
             Column(Modifier.weight(1f).fillMaxHeight().padding(start = 10.dp, end = 10.dp)) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Formations.names.forEach { f -> Chip(f, t.formation == f) { sel = -1; GameRepo.setFormation(f) } }
                 }
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Chip("👥 Yedekler", GameRepo.tacticsPanel == 0) { GameRepo.tacticsPanel = 0 }
-                    Chip("📋 Talimat", GameRepo.tacticsPanel == 1) { GameRepo.tacticsPanel = 1 }
-                    Chip("🎭 Roller", GameRepo.tacticsPanel == 2) { GameRepo.tacticsPanel = 2 }
-                    Spacer(Modifier.weight(1f))
-                    val (atk, mid, def) = Lineups.lineStrength(g, t)
-                    Text("H $atk · O $mid · S $def", color = TextDim, fontSize = 11.sp)
+                // Takım gücü ve kimya
+                val (atk, mid, def) = Lineups.lineStrength(g, t)
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(horizontal = 10.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    MiniStat("Hücum", "$atk", ovrColor(atk))
+                    MiniStat("Orta saha", "$mid", ovrColor(mid))
+                    MiniStat("Savunma", "$def", ovrColor(def))
+                    MiniStat("Takım kimyası", "${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", if (g.cohesion >= 65) Green else if (g.cohesion >= 40) Gold else Red)
                 }
                 Spacer(Modifier.height(6.dp))
-                if (GameRepo.tacticsPanel == 0) {
-                    Text(
-                        when {
-                            drag != null -> "Bir mevkiye bırak · sahadan buraya bırakırsan oyuncu çıkar"
-                            sel >= 0 -> "Seçili: ${slots[sel].pos.label}. Bir yedeğe dokun ya da sahada başka bir oyuncuya dokun."
-                            else -> "Kartları sürükle: sahada yer değiştir, yedeği basılı tutup sahaya sürükle. Sarı çerçeve: yakın mevki, kırmızı: yabancı mevki."
-                        },
-                        color = if (sel >= 0 || drag != null) Gold else TextDim, fontSize = 11.sp, maxLines = 2,
-                    )
-                    val pos = if (sel >= 0) slots[sel].pos else null
-                    val selSlot = if (sel >= 0) slots[sel] else null
-                    val pool = g.squad(t.id).filter { it.id !in t.lineup }
-                        .sortedWith(
-                            if (selSlot != null) compareByDescending<Player> { Lineups.score(it, selSlot) }
-                            else compareBy<Player> { it.pos.ordinal }.thenBy { com.supermenajer.game.game.Positions.det(it).ordinal }.thenByDescending { it.overall },
+                when (GameRepo.tacticsPanel) {
+                    1 -> InstructionsPanel(g)
+                    2 -> RolesPanel(g)
+                    else -> {
+                        Text(
+                            when {
+                                drag != null -> "Bir mevkiye bırak · sahadan listeye bırakırsan oyuncu çıkar"
+                                sel >= 0 -> "Seçili: ${com.supermenajer.game.game.Positions.slotDet(slots[sel]).label}. Listeden bir oyuncuya dokun ya da sahada başka bir oyuncuya dokun."
+                                else -> "Oyuncuyu sürükle ya da dokunup seç. Listedeki oyuncuyu basılı tutup sahaya sürükle. ⓘ profili açar."
+                            },
+                            color = if (sel >= 0 || drag != null) Gold else TextDim, fontSize = 11.sp, maxLines = 2,
                         )
-                    LazyVerticalGrid(
-                        GridCells.Adaptive(66.dp),
-                        Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(10.dp))
-                            .background(if (drag?.fromSlot?.let { it >= 0 } == true) Red.copy(alpha = 0.15f) else Surface1)
-                            .onGloballyPositioned { benchRect = it.boundsInRoot() },
-                        contentPadding = PaddingValues(6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        items(pool, key = { it.id }) { p ->
-                            var myRect by remember { mutableStateOf(Rect.Zero) }
-                            val ovr = if (pos != null) p.ovrAt(pos) else p.overall
-                            Box(
-                                Modifier.onGloballyPositioned { myRect = it.boundsInRoot() }
-                                    .pointerInput(p.id) {
-                                        detectDragGesturesAfterLongPress(
-                                            onDragStart = { off -> drag = DragState(-1, p, myRect.topLeft + off) },
-                                            onDrag = { ch, amt -> ch.consume(); drag = drag?.let { DragState(it.fromSlot, it.player, it.pos + amt) } },
-                                            onDragEnd = { drag?.let { drop(it) }; drag = null },
-                                            onDragCancel = { drag = null },
-                                        )
-                                    }
-                                    .clickable {
-                                        if (sel >= 0 && p.available) { GameRepo.putInSlot(sel, p.id); sel = -1 } else GameRepo.selectedPlayer = p
-                                    }
-                                    .alpha(if (!p.available) 0.45f else if (drag?.player?.id == p.id) 0.35f else 1f),
-                            ) {
+                        val selSlot = if (sel >= 0) slots[sel] else null
+                        val xi = slots.indices.mapNotNull { i -> g.player(t.lineup.getOrNull(i) ?: -1)?.let { i to it } }
+                        val pool = g.squad(t.id).filter { it.id !in t.lineup }
+                            .sortedWith(
+                                if (selSlot != null) compareByDescending<Player> { Lineups.score(it, selSlot) }
+                                else compareBy<Player> { it.pos.ordinal }.thenBy { com.supermenajer.game.game.Positions.det(it).ordinal }.thenByDescending { it.overall },
+                            )
+                        LazyColumn(
+                            Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(10.dp))
+                                .background(if (drag?.fromSlot?.let { it >= 0 } == true) Red.copy(alpha = 0.15f) else Surface1)
+                                .onGloballyPositioned { benchRect = it.boundsInRoot() },
+                        ) {
+                            item {
+                                Row(
+                                    Modifier.fillMaxWidth().background(Purple).padding(horizontal = 10.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text("İlk 11", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White, modifier = Modifier.weight(1f))
+                                    Text("Güç", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White, modifier = Modifier.width(40.dp), textAlign = TextAlign.Center)
+                                    Text("Rol", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White, modifier = Modifier.width(44.dp), textAlign = TextAlign.Center)
+                                }
+                            }
+                            items(xi, key = { "x" + it.second.id }) { (i, p) ->
+                                val roles = R.byPos.getValue(slots[i].pos)
+                                val role = roles[R.roleIndex(t, i).coerceIn(0, roles.size - 1)]
+                                SquadLine(
+                                    p, p.ovrAt(slots[i].pos), roleAbbr(role.name), selected = sel == i,
+                                    onClick = { sel = if (sel == i) -1 else if (sel >= 0) { GameRepo.swapSlots(sel, i); -1 } else i },
+                                    dragMod = Modifier,
+                                )
+                            }
+                            item {
+                                Text(
+                                    "YEDEKLER VE KADRO (${pool.size})", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = TextDim,
+                                    modifier = Modifier.fillMaxWidth().background(Surface2).padding(horizontal = 10.dp, vertical = 5.dp),
+                                )
+                            }
+                            items(pool, key = { it.id }) { p ->
+                                var myRect by remember { mutableStateOf(Rect.Zero) }
                                 val exact = selSlot != null && com.supermenajer.game.game.Positions.det(p) == com.supermenajer.game.game.Positions.slotDet(selSlot)
-                                PlayerCard(p, ovr, com.supermenajer.game.game.Positions.det(p).code, 62.dp, shirt, collar, highlight = if (exact) Green else if (pos != null && p.pos == pos) Gold else Color.Transparent)
-                                if (p.injuredWeeks > 0) Text("🚑", fontSize = 12.sp, modifier = Modifier.align(Alignment.TopEnd))
-                                else if (p.suspended > 0) Text("🟥", fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd))
+                                Box(
+                                    Modifier.onGloballyPositioned { myRect = it.boundsInRoot() }
+                                        .background(if (exact) Green.copy(alpha = 0.12f) else Color.Transparent)
+                                        .alpha(if (!p.available) 0.45f else if (drag?.player?.id == p.id) 0.35f else 1f),
+                                ) {
+                                    SquadLine(
+                                        p, if (selSlot != null) p.ovrAt(selSlot.pos) else p.overall, null, selected = false,
+                                        onClick = { if (sel >= 0 && p.available) { GameRepo.putInSlot(sel, p.id); sel = -1 } else GameRepo.selectedPlayer = p },
+                                        dragMod = Modifier.pointerInput(p.id) {
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = { off -> drag = DragState(-1, p, myRect.topLeft + off) },
+                                                onDrag = { ch, amt -> ch.consume(); drag = drag?.let { DragState(it.fromSlot, it.player, it.pos + amt) } },
+                                                onDragEnd = { drag?.let { drop(it) }; drag = null },
+                                                onDragCancel = { drag = null },
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                            item {
+                                OutlinedButton(
+                                    onClick = { sel = -1; GameRepo.autoLineup() },
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                ) { Text("🪄 Otomatik en iyi 11") }
                             }
                         }
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            OutlinedButton(onClick = { sel = -1; GameRepo.autoLineup() }, modifier = Modifier.fillMaxWidth()) { Text("🪄 Otomatik en iyi 11") }
-                        }
                     }
-                } else if (GameRepo.tacticsPanel == 1) {
-                    InstructionsPanel(g)
-                } else {
-                    RolesPanel(g)
                 }
             }
         }
-        // Sürüklenen kart parmağı takip eder
+        // Sürüklenen oyuncu parmağı takip eder
         drag?.let { d ->
             val half = with(density) { 31.dp.toPx() }
             Box(
@@ -224,32 +256,122 @@ fun TacticsBoard(g: Game) {
     }
 }
 
-/** Sahadaki küçük oyuncu göstergesi: yüz, güç rozeti ve soyadı. */
 @Composable
-private fun PitchToken(g: Game, p: Player?, slot: com.supermenajer.game.model.Slot, selected: Boolean, shirt: Color, collar: Color) {
+private fun MiniStat(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, color = color, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 14.sp)
+        Text(label, color = TextDim, fontSize = 9.sp, lineHeight = 10.sp)
+    }
+}
+
+/** FM tarzı kadro satırı: mevki, kondisyon halkası, isim, güç ve rol. */
+@Composable
+private fun SquadLine(p: Player, ovr: Int, role: String?, selected: Boolean, onClick: () -> Unit, dragMod: Modifier) {
+    val det = com.supermenajer.game.game.Positions.det(p)
+    Row(
+        Modifier.fillMaxWidth().background(if (selected) Gold.copy(alpha = 0.18f) else Color.Transparent)
+            .then(dragMod).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.width(40.dp).clip(RoundedCornerShape(4.dp)).background(posColor(p.pos)).padding(vertical = 3.dp),
+            contentAlignment = Alignment.Center,
+        ) { Text(det.code, color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp) }
+        Spacer(Modifier.width(8.dp))
+        // Kondisyon halkası
+        Canvas(Modifier.size(18.dp)) {
+            val sw = 3.dp.toPx()
+            drawCircle(Color.White.copy(alpha = 0.15f), size.minDimension / 2 - sw / 2, style = androidx.compose.ui.graphics.drawscope.Stroke(sw))
+            drawArc(
+                fitColor(p.fitness), -90f, (p.fitness / 100 * 360).toFloat(), false,
+                topLeft = Offset(sw / 2, sw / 2), size = androidx.compose.ui.geometry.Size(size.width - sw, size.height - sw),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(sw),
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                (if (p.number > 0) "${p.number}. " else "") + p.name + when {
+                    p.injuredWeeks > 0 -> " 🚑"
+                    p.suspended > 0 -> " 🟥"
+                    else -> ""
+                },
+                fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                det.label + (if (p.secondDet >= 0) " · ${com.supermenajer.game.game.Positions.Det.entries[p.secondDet].code}" else "") +
+                    " · ${com.supermenajer.game.game.Positions.natRoleName(p)}",
+                fontSize = 10.sp, color = TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) { OvrBadge(ovr, 26.dp) }
+        Box(Modifier.width(44.dp), contentAlignment = Alignment.Center) {
+            if (role != null) Text(
+                role, color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp,
+                modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Purple).padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+            else Text(
+                "ⓘ", color = TextDim, fontSize = 16.sp,
+                modifier = Modifier.clip(CircleShape).clickable { GameRepo.selectedPlayer = p }.padding(4.dp),
+            )
+        }
+    }
+}
+
+/** Sahadaki oyuncu: forma, rol kısaltması, güç ve isim. Çerçeve rengi mevki uyumunu gösterir. */
+@Composable
+private fun PitchToken(g: Game, p: Player?, slot: com.supermenajer.game.model.Slot, selected: Boolean, shirt: Color, collar: Color, role: String) {
     val pos = slot.pos
     val fit = p?.let { if (it.pos != pos) 0.0 else com.supermenajer.game.game.Positions.fit(it, com.supermenajer.game.game.Positions.slotDet(slot)) } ?: 1.0
+    val fitC = if (fit < 0.93) Red else if (fit < 1.0) Gold else Green
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box {
-            Box(
-                Modifier.size(36.dp).clip(CircleShape)
-                    .border(2.dp, if (selected) Color.White else if (fit < 0.93) Red else if (fit < 1.0) Gold else Color.Transparent, CircleShape),
-            ) {
-                if (p != null) PlayerFace(p, 36.dp, shirt, collar) else Box(Modifier.fillMaxSize().background(Color.DarkGray))
-            }
+        Text(
+            role, color = if (fitC == Green) Color.Black else Color.Black, fontWeight = FontWeight.Black, fontSize = 9.sp, lineHeight = 10.sp,
+            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(fitC).padding(horizontal = 4.dp, vertical = 1.dp),
+        )
+        Box(Modifier.padding(top = 1.dp)) {
+            Shirt(shirt, collar, p?.number?.takeIf { it > 0 }?.toString() ?: "", selected, Modifier.size(35.dp, 31.dp))
             val ovr = p?.ovrAt(pos)
             Box(
-                Modifier.align(Alignment.BottomEnd).offset(x = 8.dp, y = 2.dp).clip(RoundedCornerShape(5.dp))
+                Modifier.align(Alignment.TopEnd).offset(x = 14.dp, y = 6.dp).clip(RoundedCornerShape(5.dp))
                     .background(if (ovr == null) Color.Gray else ovrColor(ovr)).padding(horizontal = 3.dp),
             ) { Text(ovr?.toString() ?: "?", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 10.sp, lineHeight = 12.sp) }
-            if (p != null && !p.available) Text("🚑", fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
-            Box(Modifier.align(Alignment.TopStart).offset(x = (-8).dp, y = (-3).dp)) { SlotChip(slot, small = true) }
+            if (p != null && !p.available) Text("🚑", fontSize = 10.sp, modifier = Modifier.align(Alignment.TopStart).offset(x = (-10).dp))
         }
         Text(
-            (p?.number?.takeIf { it > 0 }?.let { "$it " } ?: "") + (p?.name?.substringAfterLast(' ') ?: "Boş"), fontSize = 9.sp, lineHeight = 10.sp, color = Color.White, maxLines = 1,
+            p?.name?.substringAfterLast(' ') ?: "Boş", fontSize = 10.sp, lineHeight = 11.sp, color = Color.White, maxLines = 1,
             overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 1.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(horizontal = 3.dp),
+            modifier = Modifier.padding(top = 1.dp).background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
         )
+    }
+}
+
+/** Forma çizimi: gövde, kollar ve yaka; ortada numara. */
+@Composable
+fun Shirt(body: Color, trim: Color, number: String, selected: Boolean, modifier: Modifier) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w * 0.32f, 0f)
+                lineTo(w * 0.68f, 0f)
+                lineTo(w, h * 0.2f)
+                lineTo(w * 0.88f, h * 0.45f)
+                lineTo(w * 0.78f, h * 0.38f)
+                lineTo(w * 0.78f, h)
+                lineTo(w * 0.22f, h)
+                lineTo(w * 0.22f, h * 0.38f)
+                lineTo(w * 0.12f, h * 0.45f)
+                lineTo(0f, h * 0.2f)
+                close()
+            }
+            drawPath(path, Color.Black.copy(alpha = 0.3f), style = androidx.compose.ui.graphics.drawscope.Fill)
+            drawPath(path, body)
+            drawPath(path, if (selected) Color.White else trim, style = androidx.compose.ui.graphics.drawscope.Stroke(if (selected) 3.dp.toPx() else 1.5.dp.toPx()))
+            drawArc(trim, 0f, 180f, false, Offset(w * 0.38f, -h * 0.1f), androidx.compose.ui.geometry.Size(w * 0.24f, h * 0.22f), style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+        }
+        Text(number, color = contentOn(body), fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.offset(y = 2.dp))
     }
 }
 

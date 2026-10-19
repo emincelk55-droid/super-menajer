@@ -256,3 +256,24 @@ fun WideDialog(onDismissRequest: () -> Unit, maxWidth: Dp = 600.dp, content: @Co
         ) { content() }
     }
 }
+
+/** FM tarzı sekme şeridi: seçili sekmenin altında renkli çizgi. */
+@Composable
+fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        modifier.fillMaxWidth().background(Surface1).border(1.dp, Line.copy(alpha = 0.5f)),
+    ) {
+        tabs.forEachIndexed { i, n ->
+            val sel = i == selected
+            Column(
+                Modifier.weight(1f).background(if (sel) Purple.copy(alpha = 0.22f) else Color.Transparent)
+                    .clickable { onSelect(i) }.padding(top = 9.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(n, fontSize = 13.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = if (sel) TextMain else TextDim, maxLines = 1)
+                Spacer(Modifier.height(7.dp))
+                Box(Modifier.fillMaxWidth().height(3.dp).background(if (sel) Green else Color.Transparent))
+            }
+        }
+    }
+}

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.supermenajer.game.ui
 
 import androidx.compose.foundation.Canvas
@@ -97,11 +99,11 @@ fun DrawScope.drawPitch(vertical: Boolean) {
 fun TacticsTab(g: Game) {
     val mode = GameRepo.tacticsMode
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Taktik", mode == 0) { GameRepo.tacticsMode = 0 }
-            Chip("Antrenman", mode == 1) { GameRepo.tacticsMode = 1 }
+        val cur = if (mode == 1) 3 else GameRepo.tacticsPanel.coerceIn(0, 2)
+        FmTabs(listOf("Diziliş", "Talimatlar", "Roller & Görevler", "Antrenman"), cur) { i ->
+            if (i == 3) GameRepo.tacticsMode = 1 else { GameRepo.tacticsMode = 0; GameRepo.tacticsPanel = i }
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
         if (mode == 0) TacticsBoard(g) else TrainingContent(g)
     }
 }
@@ -185,11 +187,7 @@ fun LeagueTab(g: Game) {
     val sel = GameRepo.leagueSel
     var day by remember { mutableIntStateOf(g.week.coerceIn(1, g.totalDays)) }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "Krallık", "Geçmiş").forEachIndexed { i, n ->
-                Chip(n, view == i) { GameRepo.leagueTab = i }
-            }
-        }
+        FmTabs(listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "İstatistik", "Geçmiş"), view) { GameRepo.leagueTab = it }
         if (view == 0 || view == 4) {
             // Lig seçici: önce ülke, sonra lig
             val country = Leagues.of(sel)?.country ?: g.userCountry
@@ -361,20 +359,28 @@ private fun CupView(g: Game, comp: Int) {
 @Composable
 private fun LeagueTable(g: Game, div: Int) {
     val table = g.table(div)
-    LazyColumn(contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 12.dp)) {
-        item {
-            Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp)) {
-                Text("#", Modifier.width(26.dp), color = TextDim, fontSize = 12.sp)
-                Text("Takım", Modifier.weight(1f), color = TextDim, fontSize = 12.sp)
-                listOf("O", "G", "B", "M", "AV").forEach { Text(it, Modifier.width(28.dp), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center) }
-                Text("P", Modifier.width(32.dp), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.End)
+    val lgDef = com.supermenajer.game.model.Leagues.of(div)
+    val relegation = lgDef != null && lgDef.tier == 1 && com.supermenajer.game.model.Leagues.second(lgDef.country) != null
+    val cols = listOf("O", "G", "B", "M", "A", "Y", "AV")
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 10.dp).clip(RoundedCornerShape(10.dp)).background(Surface1),
+        contentPadding = PaddingValues(bottom = 12.dp),
+    ) {
+        stickyHeader {
+            Row(
+                Modifier.fillMaxWidth().background(Color(0xFF241B4D)).padding(horizontal = 8.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("#", Modifier.width(34.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("TAKIM", Modifier.weight(1f).padding(start = 32.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                cols.forEach { Text(it, Modifier.width(34.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
+                Text("P", Modifier.width(40.dp), color = TextMain, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text("FORM", Modifier.width(118.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
         }
         items(table.size) { i ->
             val t = table[i]
             val me = t.id == g.userTeamId
-            val lgDef = com.supermenajer.game.model.Leagues.of(div)
-            val relegation = lgDef != null && lgDef.tier == 1 && com.supermenajer.game.model.Leagues.second(lgDef.country) != null
             val zone = if (lgDef?.tier != 2) when {
                 i == 0 -> Gold
                 i < 4 -> Blue
@@ -382,30 +388,50 @@ private fun LeagueTable(g: Game, div: Int) {
                 else -> Color.Transparent
             } else if (i < 3) Green else Color.Transparent
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp))
-                    .background(if (me) Green.copy(alpha = 0.15f) else Color.Transparent)
-                    .padding(horizontal = 6.dp, vertical = 7.dp),
+                Modifier.fillMaxWidth()
+                    .background(if (me) Green.copy(alpha = 0.16f) else if (i % 2 == 0) Color.White.copy(alpha = 0.025f) else Color.Transparent)
+                    .height(38.dp).padding(end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.width(3.dp).height(20.dp).background(zone))
-                Text("${i + 1}", Modifier.width(23.dp).padding(start = 5.dp), fontSize = 13.sp)
-                TeamBadge(t, 22.dp)
-                Spacer(Modifier.width(6.dp))
-                Text(t.name, Modifier.weight(1f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (me) FontWeight.Bold else FontWeight.Normal)
-                listOf(t.played, t.won, t.drawn, t.lost, t.gd).forEach {
-                    Text("$it", Modifier.width(28.dp), fontSize = 13.sp, textAlign = TextAlign.Center, color = TextDim)
+                Box(Modifier.width(4.dp).fillMaxHeight().background(zone))
+                Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
+                    Text("${i + 1}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (zone == Color.Transparent) TextDim else zone)
                 }
-                Text("${t.points}", Modifier.width(32.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+                TeamBadge(t, 24.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    t.name, Modifier.weight(1f), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (me) FontWeight.Black else FontWeight.Medium, color = if (me) Green else TextMain,
+                )
+                listOf(t.played, t.won, t.drawn, t.lost, t.gf, t.ga, t.gd).forEachIndexed { k, v ->
+                    Text(
+                        if (k == 6 && v > 0) "+$v" else "$v", Modifier.width(34.dp), fontSize = 13.sp, textAlign = TextAlign.Center,
+                        color = if (k == 6) (if (v > 0) Green else if (v < 0) Red else TextDim) else TextDim,
+                    )
+                }
+                Text("${t.points}", Modifier.width(40.dp), fontSize = 15.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Row(Modifier.width(118.dp), horizontalArrangement = Arrangement.Center) {
+                    val f = t.form.takeLast(5)
+                    repeat(5 - f.length) {
+                        Box(Modifier.padding(horizontal = 2.dp).size(18.dp).clip(RoundedCornerShape(4.dp)).background(Surface2))
+                    }
+                    f.forEach { c ->
+                        val col = when (c) { 'G' -> Green; 'B' -> Gold; else -> Red }
+                        Box(
+                            Modifier.padding(horizontal = 2.dp).size(18.dp).clip(RoundedCornerShape(4.dp)).background(col),
+                            contentAlignment = Alignment.Center,
+                        ) { Text(c.toString(), fontSize = 10.sp, color = Color.Black, fontWeight = FontWeight.Black) }
+                    }
+                }
             }
         }
         item {
-            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val lgDef = com.supermenajer.game.model.Leagues.of(div)
+            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (lgDef?.tier != 2) {
                     Legend(Gold, "Şampiyon"); Legend(Blue, "Avrupa")
-                    if (lgDef != null && com.supermenajer.game.model.Leagues.second(lgDef.country) != null) Legend(Red, "Küme düşme")
+                    if (relegation) Legend(Red, "Küme düşme")
                 } else Legend(Green, "Yükselme")
+                Text("A: atılan · Y: yenilen · AV: averaj", fontSize = 11.sp, color = TextDim)
             }
         }
     }

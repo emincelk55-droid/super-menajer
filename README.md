@@ -67,3 +67,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Gerçek ölçülü saha, forma numaralı oyuncular, havalanan top ve gölgesi, top sürenin adı, gol kartı
 - FM tarzı oyuncu profili: başlık şeridi, mevki mini sahası, sekmeler ve 3 sütunlu detaylı nitelikler (1-20)
 - Lacivert/neon yeni renk teması
+
+### v1.7
+- FM tarzı taktik ekranı: üstte sekmeler (Diziliş, Talimatlar, Roller & Görevler, Antrenman), gerçek ölçülü saha, forma şeklinde oyuncular ve üstlerinde rol kısaltmaları (uyuma göre yeşil/sarı/kırmızı)
+- Sağda FM tarzı kadro listesi: mevki, kondisyon halkası, güç ve rol; hücum/orta saha/savunma gücü ve takım kimyası
+- Yeni puan tablosu: atılan/yenilen gol, renkli averaj, son 5 maç formu, bölge renkleri ve kendi takımın vurgulu
