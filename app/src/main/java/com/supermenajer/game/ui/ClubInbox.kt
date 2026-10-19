@@ -44,7 +44,7 @@ import com.supermenajer.game.model.News
 /** Kulüp menüsü: teknik ekip, tesisler, sponsorlar, finans ve taraftar. */
 @Composable
 fun ClubTab(g: Game) {
-    val modes = listOf("👔 Teknik Ekip", "🏟️ Tesisler", "💼 Sponsorlar", "💰 Finans", "📣 Taraftar")
+    val modes = listOf("👔 Teknik Ekip", "🏟️ Tesisler", "💼 Sponsorlar", "💰 Finans", "📣 Taraftar", "🏆 Kariyer")
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.horizontalScroll(rememberScrollState()).padding(start = 10.dp, end = 10.dp, top = 8.dp),
@@ -59,8 +59,9 @@ fun ClubTab(g: Game) {
             0 -> StaffView(g)
             1 -> FacilitiesView(g)
             2 -> SponsorsView(g)
-            3 -> TwoCards({ FinanceCard(g) }, { BudgetShiftCard(g); Spacer(Modifier.height(10.dp)); BoardCard(g) })
-            else -> TwoCards({ FansCard(g) }, { FanInfoCard() })
+            3 -> TwoCards({ FinanceCard(g) }, { BudgetShiftCard(g); Spacer(Modifier.height(10.dp)); BoardRequestCard(g); Spacer(Modifier.height(10.dp)); BoardCard(g) })
+            4 -> TwoCards({ FansCard(g) }, { FanInfoCard() })
+            else -> CareerView(g)
         }
     }
 }
@@ -110,6 +111,89 @@ private fun BudgetShiftCard(g: Game) {
         }
         msg?.let { Text(it, color = Gold, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
         Text("1 haftalık maaş = ${com.supermenajer.game.game.Economy.SHIFT_RATIO} katı transfer parası. Ayar bu sezon için geçerli; yeni sezonda yönetim maaş bütçesini yeniden belirler.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+    }
+}
+
+/** Yönetimden istekler (FM tarzı). */
+@Composable
+private fun BoardRequestCard(g: Game) {
+    var msg by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val C = com.supermenajer.game.game.Career
+    SectionCard("🗣️ Yönetimden iste") {
+        Text("Her konu sezonda bir kez açılabilir. Yönetimin sana güveni ve itibarın ne kadar yüksekse kabul şansı o kadar artar; ret güveni biraz düşürür.", color = TextDim, fontSize = 11.sp)
+        Spacer(Modifier.height(6.dp))
+        C.requestNames.forEachIndexed { i, n ->
+            OutlinedButton(
+                onClick = { msg = GameRepo.boardRequest(i) }, enabled = i !in g.boardAsked,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            ) { Text(if (i in g.boardAsked) "$n ✓" else n, fontSize = 13.sp) }
+        }
+        msg?.let { Text(it, color = Gold, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
+    }
+}
+
+/** Menajer profili, kupa dolabı, kulüp rekorları ve başarımlar. */
+@Composable
+private fun CareerView(g: Game) {
+    val C = com.supermenajer.game.game.Career
+    Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SectionCard("👤 Menajer") {
+                Text(g.managerName, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text("${g.userTeam.name} · ${g.seasonsAtClub + 1}. sezon", color = TextDim, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("İtibar", color = TextDim, fontSize = 12.sp, modifier = Modifier.width(60.dp))
+                    Bar(g.managerRep / 100f, Gold, Modifier.weight(1f), 8.dp)
+                    Text(" ${g.managerRep}", color = Gold, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                Text(C.repText(g.managerRep), color = Gold, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("KUPA DOLABI", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                if (g.trophies.isEmpty()) Text("Henüz kupa yok. İlk kupa yakında!", color = TextDim, fontSize = 12.sp)
+                g.trophies.forEach { Text(it, fontSize = 13.sp, modifier = Modifier.padding(vertical = 1.dp)) }
+            }
+            SectionCard("📊 Kulüp rekorları (senin dönemin)") {
+                RecordLine("En farklı galibiyet", g.recBigWin)
+                RecordLine("En ağır yenilgi", g.recLoss)
+                RecordLine("Rekor transfer", g.recSigning)
+                RecordLine("Rekor satış", g.recSale)
+                RecordLine("Rekor seyirci", if (g.recAttendance > 0) "%,d".format(g.recAttendance).replace(',', '.') else "")
+            }
+        }
+        Column(Modifier.weight(1.2f).fillMaxHeight()) {
+            Text("BAŞARIMLAR · ${g.achievements.size}/${C.all.size}", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                androidx.compose.foundation.lazy.grid.GridCells.Adaptive(150.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(C.all.size) { i ->
+                    val a = C.all[i]
+                    val on = a.id in g.achievements
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (on) Gold.copy(alpha = 0.18f) else Surface1).padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(if (on) a.icon else "🔒", fontSize = 20.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Column {
+                            Text(a.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (on) Gold else TextMain, maxLines = 1)
+                            Text(a.desc, color = TextDim, fontSize = 10.sp, maxLines = 2, lineHeight = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecordLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Text(label, color = TextDim, fontSize = 12.sp, modifier = Modifier.width(120.dp))
+        Text(value.ifEmpty { "–" }, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -202,6 +286,7 @@ private fun MessageAction(g: Game, n: News) {
         "inşaat" in t || "altyapı" in t -> "Tesislere git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 1 }
         "teknik ekip" in t -> "Teknik ekibe git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 0 }
         "taraftar" in t -> "Taraftar durumuna git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 4 }
+        "başarım" in t -> "Kariyerime git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5 }
         "teklif" in t && "kariyer" !in t -> "Ana sayfaya git" to { GameRepo.tab = GameRepo.TAB_HOME }
         "gözlemci" in t -> "Gözlem listesine git" to { GameRepo.tab = GameRepo.TAB_TRANSFER }
         "yardımcı antrenör" in t -> "Kadroya git" to { GameRepo.tab = GameRepo.TAB_SQUAD }

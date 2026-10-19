@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -182,6 +183,19 @@ fun MatchScreen() {
                     val t = sim.userSide?.team
                     listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s ->
                         Chip(s, t?.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i); tick++ }
+                    }
+                }
+                if (sim.userSide != null) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(if (sim.canShout) "Bağır:" else "Bağır (${10 - (sim.minute - sim.lastShout)}')", color = TextDim, fontSize = 11.sp)
+                        listOf("📣 Cesaret", "😠 Daha fazla", "🎯 Odaklan", "🧘 Sakin ol").forEachIndexed { i, s ->
+                            Box(Modifier.alpha(if (sim.canShout) 1f else 0.4f)) {
+                                Chip(s, false) { if (sim.canShout) { sim.shout(i); revealed = sim.events.size; tick++ } }
+                            }
+                        }
                     }
                 }
             }

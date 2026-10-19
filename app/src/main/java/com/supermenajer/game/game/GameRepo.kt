@@ -474,6 +474,7 @@ object GameRepo {
     fun setFormation(name: String) {
         val g = game ?: return
         Lineups.changeFormation(g, g.userTeam, name)
+        g.userTeam.roles.clear()
         changed()
     }
 
@@ -496,6 +497,30 @@ object GameRepo {
         }
         changed()
     }
+
+    fun setRole(slot: Int, role: Int) {
+        val t = game?.userTeam ?: return
+        Roles.setRole(t, slot, role)
+        changed()
+    }
+
+    /** kind: 0 kaptan, 1 penaltı, 2 frikik, 3 korner. */
+    fun setDuty(kind: Int, playerId: Int) {
+        val t = game?.userTeam ?: return
+        when (kind) {
+            0 -> t.captain = playerId
+            1 -> t.penaltyTaker = playerId
+            2 -> t.fkTaker = playerId
+            else -> t.cornerTaker = playerId
+        }
+        changed()
+    }
+
+    fun camp(): String { val g = game ?: return ""; val m = Matchday.camp(g); changed(); return m }
+    fun secretTraining(): String { val g = game ?: return ""; val m = Matchday.secretTraining(g); changed(); return m }
+    fun friendly(): String { val g = game ?: return ""; val m = Matchday.friendly(g); changed(); return m }
+    fun setWinBonus(v: Int) { game?.userTeam?.winBonus = v; changed() }
+    fun boardRequest(kind: Int): String { val g = game ?: return ""; val m = Career.request(g, kind); changed(); return m }
 
     fun setPressing(v: Int) {
         game?.userTeam?.pressing = v
@@ -728,6 +753,7 @@ object GameRepo {
         Economy.earn(us, Economy.SALES, price)
         Economy.earn(buyer, Economy.BUYS, -price)
         TransferTalks.paySellOn(g, p, price, us.id)
+        Career.sale(g, p.name, price)
         p.listed = false
         p.squadRole = -1
         g.movePlayer(p, buyer.id)

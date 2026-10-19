@@ -234,6 +234,7 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (p.number > 0 && p.teamId == g.userTeamId) Text("${p.number} ", color = TextDim, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Text(p.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 val dev = p.overall - p.startOvr
                 if (p.startOvr > 0 && dev != 0) Text(if (dev > 0) "  ▲$dev" else "  ▼${-dev}", fontSize = 12.sp, color = if (dev > 0) Green else Red, fontWeight = FontWeight.Bold)
@@ -389,6 +390,9 @@ fun PlayerDialog(g: Game, p: Player) {
                     if (!own) InfoLine("Maaş talebi", "${money(p.demandWage)}/hafta")
                     InfoLine("Kondisyon", "${p.fitness.toInt()}%")
                     InfoLine("Moral", moraleText(p.morale))
+                    InfoLine("Kişilik", if (known) com.supermenajer.game.game.Traits.name(p) else "? (gözlemci raporu gerekli)")
+                    if (known) Text(com.supermenajer.game.game.Traits.info[com.supermenajer.game.game.Traits.of(p)], color = TextDim, fontSize = 11.sp)
+                    if (p.squadRole >= 0 && p.teamId == g.userTeamId) InfoLine("Söz verilen rol", com.supermenajer.game.game.TransferTalks.roleNames[p.squadRole])
                     if (p.injuredWeeks > 0) InfoLine("Sakatlık", "${p.injuredWeeks} hafta", Red)
                     if (p.suspended > 0) InfoLine("Ceza", "${p.suspended} maç", Red)
                     Spacer(Modifier.height(10.dp))

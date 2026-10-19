@@ -106,6 +106,7 @@ object Sponsors {
         g.sponsorOffers.removeAll { it.slot == offer.slot }
         val us = g.userTeam
         if (offer.slot == STADIUM) us.stadiumName = "${offer.name} Arena"
+        if (g.sponsors.size >= 3) Career.unlock(g, "sponsors")
         g.addNews(
             "🤝 Sponsorluk anlaşması",
             "${offer.name} ile ${offer.yearsLeft} sezonluk ${slotNames[offer.slot].lowercase()} anlaşması imzalandı. Sezonluk ${money(offer.base)}" +

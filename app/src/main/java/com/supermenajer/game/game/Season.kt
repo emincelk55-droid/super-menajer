@@ -69,11 +69,17 @@ object Season {
         }.toMutableList()
         g.week = 1
         g.date = GameCalendar.seasonStart(g)
+        g.campUses = 0
+        g.boardAsked.clear()
+        g.campUntil = 0
+        g.friendlies = 0
+        g.secretWeek = -1
         g.seasonOver = false
         g.cupWinner = -1
         g.cupWinners = mutableMapOf()
         g.press = null
         Facilities.ensureAll(g)
+        Roles.ensureAllNumbers(g)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
         Sponsors.refreshOffers(g, rnd)
@@ -178,6 +184,14 @@ object Season {
             g.addNews(
                 "Güncelleme: v1.2 · Büyük güncelleme",
                 "Takvim artık gün gün ilerliyor; DEVAM önemli bir olayda durur. Taktikte sürükle-bırak ve yeni takım talimatları, oyuncu yüzleri ve kartları, diyaloglu transfer pazarlığı, bütçe kaydırma ve 3 kayıt yuvası geldi!",
+            )
+        }
+        if (g.saveVersion < 13) {
+            g.saveVersion = 13
+            Roles.ensureAllNumbers(g)
+            g.addNews(
+                "Güncelleme: v1.3 · Menajerlik derinleşiyor",
+                "Oyuncu kişilikleri, FM tarzı roller, kaptan ve duran top kullanıcıları, forma numaraları, maçta kenar çizgisi talimatları, antrenman kampı, gizli antrenman, galibiyet primi, hazırlık maçları, yönetimden istekler, başarımlar, kupa dolabı ve kulüp rekorları geldi!",
             )
         }
     }
@@ -304,6 +318,7 @@ object Season {
     /** Kullanıcı maçından sonra haber, yönetim güveni ve basın toplantısı. */
     fun matchNews(g: Game, sim: MatchSim, rnd: Random = Random.Default) {
         val us = sim.userSide ?: return
+        Matchday.afterMatch(g, us.goals > sim.other(us).goals || sim.fixture.winner == us.team.id)
         val them = sim.other(us)
         val h = sim.home
         val a = sim.away
@@ -311,6 +326,8 @@ object Season {
             if (sim.penHome >= 0) " (Penaltılar ${sim.penHome}-${sim.penAway})" else ""
         val won = if (sim.isCup) sim.cupWinner()?.id == us.team.id else us.goals > them.goals
         val euro = sim.fixture.comp == Comp.EURO
+        if (sim.home === us) us.team.lastAttendance = sim.fixture.attendance
+        Career.afterMatch(g, us.goals, them.goals, them.team.name, us.goals > them.goals, Talks.isDerby(g, sim.fixture), Comp.isLeague(sim.fixture.comp))
         val title = when {
             euro && sim.isCup && won -> "Avrupa'da tur atladık!"
             euro && sim.isCup -> "Avrupa'ya veda ettik"
@@ -402,6 +419,7 @@ object Season {
             makeIncomingOffer(g, rnd)
         }
         g.offers.removeAll { g.week - it.day >= 4 || g.player(it.playerId)?.teamId != g.userTeamId || g.teamOrNull(it.teamId) == null }
+        if (transferWindowOpen(g)) Roles.ensureAllNumbers(g)
         g.date = maxOf(g.date, GameCalendar.dateOf(g, g.week) + 1)
         g.week++
         if (g.week > g.totalDays) seasonEnd(g)
@@ -415,7 +433,7 @@ object Season {
 
     private fun weeklyUpdate(g: Game, rnd: Random) {
         happiness(g)
-        val coachF = StaffLogic.coachFactor(g)
+        val coachF = StaffLogic.coachFactor(g) * (if (Matchday.campActive(g)) 1.4 else 1.0)
         val physioRisk = StaffLogic.physioRisk(g)
         val physioHeal = StaffLogic.physioHeal(g)
         for (p in g.players) {
@@ -432,18 +450,18 @@ object Season {
             val intensity = team?.intensity ?: 1
             val intF = when (intensity) { 0 -> 0.7; 2 -> 1.4; else -> 1.0 }
             val youthF = (if (focus == 4) (if (p.age <= 21) 1.8 else 0.7) else 1.0) * (if (p.loanFrom >= 0) 1.5 else 1.0) *
-                (if (mine) coachF else 1.0) * Facilities.trainingFactor(team)
+                (if (mine) coachF else 1.0) * Facilities.trainingFactor(team) * Traits.devFactor(p)
             val gap = p.potential - p.overall
             if (p.age <= 24 && gap > 0 && rnd.nextDouble() < (0.14 + gap * 0.01) * intF * youthF) {
                 improve(p, 1, rnd, focus)
-            } else if (p.age in 25..29 && gap > 0 && rnd.nextDouble() < 0.05 * intF) {
+            } else if (p.age in 25..29 && gap > 0 && rnd.nextDouble() < 0.05 * intF * Traits.devFactor(p)) {
                 improve(p, 1, rnd, focus)
             } else if (p.age >= 31 && rnd.nextDouble() < (0.04 + (p.age - 31) * 0.02) / intF.coerceAtMost(1.0)) {
                 decline(p, 1, rnd)
             }
             // Antrenman sakatlığı
             if (team != null && p.injuredWeeks == 0) {
-                val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 } * (if (mine) physioRisk else 1.0) * Facilities.medicalRisk(team)
+                val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 } * (if (mine) physioRisk else 1.0) * Facilities.medicalRisk(team) * Traits.injuryFactor(p)
                 if (rnd.nextDouble() < risk) {
                     p.injuredWeeks = rnd.nextInt(1, 4)
                     if (team.id == g.userTeamId) g.addNews("Antrenmanda sakatlık", "${p.name} antrenmanda sakatlandı (${p.injuredWeeks} hafta).")
@@ -469,8 +487,10 @@ object Season {
             if (!p.available) continue
             when {
                 starting -> p.morale = (p.morale + 1.5).coerceAtMost(100.0)
-                p.overall >= str - 2 && p.age >= 21 -> p.morale = (p.morale - 5).coerceAtLeast(5.0)
+                p.overall >= str - 2 && p.age >= 21 -> p.morale = (p.morale - 5 * Traits.moraleSensitivity(p)).coerceAtLeast(5.0)
             }
+            // Sözleşmede yıldız / ilk 11 rolü verilen oyuncu yedekte kalırsa kırılır
+            if (!starting && p.squadRole in 0..1) p.morale = (p.morale - 2.5 * Traits.moraleSensitivity(p)).coerceAtLeast(5.0)
             if (!p.wantsAway && p.morale < 25 && p.overall >= str - 4) {
                 p.wantsAway = true
                 g.addNews("Transfer talebi!", "${p.name} forma bulamamaktan mutsuz ve kulüpten ayrılmak istiyor. Onunla konuşabilir, oynatabilir ya da satabilirsin.")
@@ -604,12 +624,18 @@ object Season {
     /** Maç olmayan gün: transfer döneminde kulüpler hareketli olur. */
     fun freeDay(g: Game, rnd: Random = Random.Default) {
         if (g.fired) return
+        if (Career.isDeadlineDay(g)) {
+            g.addNews("📺 Transfer döneminin son günü!", "Kulüpler son dakika transferleri için kolları sıvadı. Gece yarısı pencere kapanıyor!")
+            repeat(3) { aiTransfers(g, rnd) }
+            repeat(2) { makeIncomingOffer(g, rnd) }
+        }
         if (transferWindowOpen(g)) {
             if (rnd.nextDouble() < 0.35) aiTransfers(g, rnd)
             if (rnd.nextDouble() < 0.4) makeIncomingOffer(g, rnd)
         }
         for (p in g.players) if (p.teamId >= 0) p.fitness = (p.fitness + 4).coerceAtMost(100.0)
         Scouting.processDay(g, false, rnd)
+        if (transferWindowOpen(g)) Roles.ensureNumbers(g, g.userTeam)
     }
 
     private fun makeIncomingOffer(g: Game, rnd: Random) {
@@ -654,6 +680,7 @@ object Season {
         g.press = null
         g.confidence = 55.0
         g.projects.clear()
+        g.seasonsAtClub = 0
         Fans.reset(g)
         Facilities.ensure(g.userTeam)
         Sponsors.refreshOffers(g)
@@ -716,6 +743,10 @@ object Season {
             else -> -30.0
         }).coerceIn(0.0, 100.0)
         Fans.seasonEnd(g, titles, userPos <= target, userPos > target + 3)
+        Career.seasonEnd(
+            g, myLeague.first().id == us.id, g.cupWinners[cupComp] == us.id, g.euroWinner == us.id,
+            userPos <= target, userPos > target + 3, Leagues.of(us.division)?.name ?: "Lig", Comp.name(cupComp),
+        )
         careerOffers(g, userPos, target)
     }
 
@@ -759,7 +790,7 @@ object Season {
             down.forEach { it.division = second.id; it.reputation = (it.reputation - 4).coerceAtLeast(30) }
             up.forEach { it.division = top.id; it.reputation = (it.reputation + 4).coerceAtMost(95) }
             if (us in down) Fans.change(g, -15.0, "Küme düşme")
-            if (us in up) Fans.change(g, 15.0, "Şampiyonluk yükselişi")
+            if (us in up) { Fans.change(g, 15.0, "Şampiyonluk yükselişi"); Career.unlock(g, "promotion") }
             if (us in down) g.addNews("Küme düştük", "${us.name} gelecek sezon ${second.name}'nde mücadele edecek. Hemen geri dönmeliyiz!")
             if (us in up) g.addNews("YÜKSELDİK!", "${us.name} artık ${top.name}'nde! Tarihi bir başarı hocam!")
         }

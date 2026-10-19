@@ -145,7 +145,8 @@ fun TacticsBoard(g: Game) {
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Chip("👥 Yedekler", GameRepo.tacticsPanel == 0) { GameRepo.tacticsPanel = 0 }
-                    Chip("📋 Talimatlar", GameRepo.tacticsPanel == 1) { GameRepo.tacticsPanel = 1 }
+                    Chip("📋 Talimat", GameRepo.tacticsPanel == 1) { GameRepo.tacticsPanel = 1 }
+                    Chip("🎭 Roller", GameRepo.tacticsPanel == 2) { GameRepo.tacticsPanel = 2 }
                     Spacer(Modifier.weight(1f))
                     val (atk, mid, def) = Lineups.lineStrength(g, t)
                     Text("H $atk · O $mid · S $def", color = TextDim, fontSize = 11.sp)
@@ -199,8 +200,10 @@ fun TacticsBoard(g: Game) {
                             OutlinedButton(onClick = { sel = -1; GameRepo.autoLineup() }, modifier = Modifier.fillMaxWidth()) { Text("🪄 Otomatik en iyi 11") }
                         }
                     }
-                } else {
+                } else if (GameRepo.tacticsPanel == 1) {
                     InstructionsPanel(g)
+                } else {
+                    RolesPanel(g)
                 }
             }
         }
@@ -235,10 +238,62 @@ private fun PitchToken(g: Game, p: Player?, pos: com.supermenajer.game.model.Pos
             if (p != null && !p.available) Text("🚑", fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
         }
         Text(
-            p?.name?.substringAfterLast(' ') ?: "Boş", fontSize = 9.sp, lineHeight = 10.sp, color = Color.White, maxLines = 1,
+            (p?.number?.takeIf { it > 0 }?.let { "$it " } ?: "") + (p?.name?.substringAfterLast(' ') ?: "Boş"), fontSize = 9.sp, lineHeight = 10.sp, color = Color.White, maxLines = 1,
             overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 1.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(horizontal = 3.dp),
         )
+    }
+}
+
+/** FM tarzı roller ve görevler: her mevki için rol, kaptan ve duran top kullanıcıları. */
+@Composable
+private fun RolesPanel(g: Game) {
+    val t = g.userTeam
+    val slots = Formations.slots(t.formation)
+    val R = com.supermenajer.game.game.Roles
+    val onPitch = t.lineup.mapNotNull { g.player(it) }
+    val cap = R.captain(g, t)
+    val pen = R.penaltyTaker(g, t, onPitch)
+    val fk = R.freeKickTaker(g, t, onPitch)
+    val cor = R.cornerTaker(g, t, onPitch)
+    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        item {
+            Text("C: kaptan · P: penaltı · F: frikik · K: korner. Rol, oyuncunun hücum/savunma katkısını değiştirir.", color = TextDim, fontSize = 11.sp)
+        }
+        items(slots.size) { i ->
+            val p = g.player(t.lineup.getOrNull(i) ?: -1)
+            val roles = R.byPos.getValue(slots[i].pos)
+            val cur = R.roleIndex(t, i).coerceIn(0, roles.size - 1)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PosChip(slots[i].pos, small = true)
+                    Text(
+                        " ${p?.number?.takeIf { it > 0 }?.let { "#$it " } ?: ""}${p?.name ?: "Boş"}",
+                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                    )
+                    if (p != null) {
+                        listOf("C" to (cap?.id == p.id), "P" to (pen?.id == p.id), "F" to (fk?.id == p.id), "K" to (cor?.id == p.id)).forEachIndexed { k, (lbl, on) ->
+                            Box(
+                                Modifier.padding(start = 3.dp).size(22.dp).clip(CircleShape).background(if (on) Gold else Surface2)
+                                    .clickable { GameRepo.setDuty(k, p.id) },
+                                contentAlignment = Alignment.Center,
+                            ) { Text(lbl, fontSize = 10.sp, fontWeight = FontWeight.Black, color = if (on) Color.Black else TextDim) }
+                        }
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    roles.forEachIndexed { r, role ->
+                        Text(
+                            role.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                            color = if (r == cur) Color.Black else TextMain,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (r == cur) Green else Surface2)
+                                .clickable { GameRepo.setRole(i, r) }.padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+                Text(roles[cur].info, color = TextDim, fontSize = 10.sp)
+            }
+        }
     }
 }
 

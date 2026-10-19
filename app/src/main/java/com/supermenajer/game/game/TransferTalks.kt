@@ -245,14 +245,16 @@ object TransferTalks {
             p.morale = 82.0
             if (n.sellOn > 0 && fromId >= 0) { p.sellOnClub = fromId; p.sellOnPct = n.sellOn } else { p.sellOnClub = -1; p.sellOnPct = 0 }
             Fans.bought(g, p)
+            Career.signing(g, p.name, n.agreedFee)
             g.addNews(
                 "✍️ Transfer!",
                 "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${if (fromId >= 0) "${money(n.agreedFee)} bonservisle $fromName'dan" else "serbest olarak"} ${us.name}'a imza attı. " +
                     "${n.years} yıllık sözleşme, haftalık ${money(n.wage)}" + (if (n.installments) " · taksitli ödeme" else "") + ".",
             )
         }
+        Roles.ensureNumbers(g, us)
         n.stage = DONE
-        n.log += Line(false, "Menajer", "Anlaştık! ${p.name} imzayı atıyor. 🎉")
+        n.log += Line(false, "Menajer", "Anlaştık! ${p.name} imzayı atıyor. 🎉 Forma numarası: ${p.number}")
         GameRepo.afterTransfer()
     }
 

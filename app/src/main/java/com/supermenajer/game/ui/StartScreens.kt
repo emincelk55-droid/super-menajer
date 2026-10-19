@@ -75,7 +75,7 @@ fun TitleScreen() {
             Text("MENAJER", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Green, letterSpacing = 6.sp)
             Text("Futbol Menajerlik Oyunu", color = TextDim, fontSize = 15.sp)
             Spacer(Modifier.height(12.dp))
-            Text("v1.2", color = TextDim, fontSize = 12.sp)
+            Text("v1.3", color = TextDim, fontSize = 12.sp)
         }
         Column(Modifier.width(380.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("KAYIT YUVALARI", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

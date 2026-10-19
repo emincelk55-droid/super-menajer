@@ -138,7 +138,7 @@ object Facilities {
         val done = g.projects.filter { --it.weeksLeft <= 0 }
         for (p in done) {
             when (p.type) {
-                STADIUM -> { us.stadium += p.amount; Fans.change(g, 4.0, "Stadyum büyüdü") }
+                STADIUM -> { us.stadium += p.amount; Fans.change(g, 4.0, "Stadyum büyüdü"); Career.unlock(g, "stadium") }
                 TRAINING -> us.trainingFac = p.amount
                 YOUTH -> us.youthFac = p.amount
                 else -> us.medicalFac = p.amount
@@ -187,6 +187,7 @@ object Facilities {
             y.age = rnd.nextInt(16, 18)
             g.addPlayer(y)
             names += "${y.name} (${pos.short}, ${y.overall}, potansiyel ${y.potential}${if (y.potential >= 84) " 💎" else ""})"
+            if (y.potential >= 84) Career.unlock(g, "wonderkid")
         }
         if (names.isNotEmpty()) {
             g.addNews("🌱 Altyapı seçmeleri", "Akademimizden (seviye ${us.youthFac}/10) A takıma yükselenler: ${names.joinToString()}.")

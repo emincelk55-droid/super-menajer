@@ -373,6 +373,8 @@ private fun NextMatchCard(g: Game, f: Fixture) {
                 color = Gold, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
             )
         }
+        Spacer(Modifier.height(6.dp))
+        MatchPrep(g)
         Spacer(Modifier.height(8.dp))
         OpponentReport(g, if (f.home == g.userTeamId) a else h)
         Spacer(Modifier.height(8.dp))
@@ -386,6 +388,36 @@ private fun NextMatchCard(g: Game, f: Fixture) {
                 modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp),
             ) { Text("Hızlı sonuç", maxLines = 1) }
         }
+    }
+}
+
+/** Maç hazırlığı: gizli antrenman ve galibiyet primi (OSM tarzı). */
+@Composable
+private fun MatchPrep(g: Game) {
+    var msg by remember { mutableStateOf<String?>(null) }
+    val md = com.supermenajer.game.game.Matchday
+    val nf = g.nextUserFixture()
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val done = nf != null && g.secretWeek == nf.week
+            OutlinedButton(
+                onClick = { msg = GameRepo.secretTraining() }, enabled = !done,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp), modifier = Modifier.height(34.dp),
+            ) { Text(if (done) "🕵️ Gizli antrenman ✓" else "🕵️ Gizli antrenman ${money(md.secretCost(g))}", fontSize = 12.sp, maxLines = 1) }
+            Text("Prim:", color = TextDim, fontSize = 11.sp)
+            listOf("Yok", "Normal", "Yüksek").forEachIndexed { i, n ->
+                Text(
+                    n, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = if (g.userTeam.winBonus == i) Color.Black else TextMain,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (g.userTeam.winBonus == i) Gold else Surface2)
+                        .clickable { GameRepo.setWinBonus(i) }.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        }
+        val wb = g.userTeam.winBonus
+        Text(
+            msg ?: if (wb > 0) "Galibiyette oyunculara ${money(md.bonusCost(g, wb))} prim · maçta +%${wb} motivasyon" else "Galibiyet primi motivasyonu artırır; sadece kazanınca ödenir.",
+            color = if (msg != null) Gold else TextDim, fontSize = 11.sp, maxLines = 2,
+        )
     }
 }
 
@@ -421,6 +453,17 @@ private fun RestDayCard(g: Game) {
             }
         }
         Text("DEVAM günleri tek tek geçer; transfer teklifi, sakatlık gibi önemli bir olayda durur.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+        if (com.supermenajer.game.game.Matchday.canFriendly(g)) {
+            var fr by remember { mutableStateOf<String?>(null) }
+            OutlinedButton(onClick = { fr = GameRepo.friendly() }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                Text("🤝 Hazırlık maçı oyna (${g.friendlies}/3)")
+            }
+            fr?.let { Text("Sonuç: $it", color = Gold, fontSize = 12.sp) }
+        }
+        if (g.nextUserFixture() != null) {
+            Spacer(Modifier.height(6.dp))
+            MatchPrep(g)
+        }
     }
 }
 

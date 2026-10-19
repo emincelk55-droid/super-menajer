@@ -42,3 +42,9 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Gerçek tarihli takvim: DEVAM gün gün ilerler, önemli olaylarda durur
 - Diyaloglu transfer: kulüple bonservis (taksit, sonraki satıştan pay, kiralık) ve menajerle sözleşme (maaş, süre, imza parası, rol); satış listesi
 - Transfer bütçesi ↔ maaş bütçesi aktarımı, 3 kayıt yuvası
+
+### v1.3
+- Oyuncu kişilikleri (profesyonel, hırslı, tembel, lider, büyük maç oyuncusu, sakatlığa yatkın, sinirli, sadık)
+- FM tarzı roller, kaptan, penaltı/frikik/korner kullanıcıları, forma numaraları
+- Maçta kenar çizgisi talimatları, antrenman kampı, gizli antrenman, galibiyet primi, hazırlık maçları
+- Yönetimden istekler, başarımlar, kupa dolabı, menajer itibarı, kulüp rekorları, transfer döneminin son günü

@@ -34,6 +34,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.Button
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -137,6 +139,22 @@ private fun TrainingContent(g: Game) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(intensityInfo[t.intensity], color = TextDim, fontSize = 12.sp)
+            }
+        }
+        item {
+            var msg by remember { mutableStateOf<String?>(null) }
+            val md = com.supermenajer.game.game.Matchday
+            SectionCard("🏕️ Antrenman kampı") {
+                Text(
+                    if (md.campActive(g)) "Takım kampta! ${com.supermenajer.game.game.GameCalendar.format(g.campUntil, false)} tarihine kadar gelişim %40 daha hızlı."
+                    else "7 gün sürer: moral +8, kondisyon tam, gelişim %40 hızlı. Sezonda en fazla 2 kez (${g.campUses}/2).",
+                    color = TextDim, fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(6.dp))
+                Button(onClick = { msg = GameRepo.camp() }, enabled = !md.campActive(g) && g.campUses < 2, modifier = Modifier.fillMaxWidth()) {
+                    Text("Kampa gir · ${com.supermenajer.game.game.money(md.campCost(g))}")
+                }
+                msg?.let { Text(it, color = Gold, fontSize = 12.sp) }
             }
         }
         item { Text("BU SEZON GELİŞENLER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold) }

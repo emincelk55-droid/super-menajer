@@ -45,6 +45,8 @@ class Player(
     var contractYears: Int = 0,
     /** Sözleşmedeki haftalık maaş (0 ise talep edilen maaş kullanılır). */
     var salary: Long = 0,
+    /** Forma numarası (0 = atanmadı). */
+    var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */
     var listed: Boolean = false,
     /** Sonraki satıştan pay: hangi kulübe yüzde kaç. */
@@ -126,6 +128,14 @@ class Team(
     var counter: Boolean = false,
     var offsideTrap: Boolean = false,
     var timeWasting: Boolean = false,
+    /** İlk 11 mevkilerinin rolleri (bkz. Roles), kaptan ve duran top kullanıcıları (oyuncu id, -1 otomatik). */
+    var roles: MutableList<Int> = mutableListOf(),
+    var captain: Int = -1,
+    var penaltyTaker: Int = -1,
+    var fkTaker: Int = -1,
+    var cornerTaker: Int = -1,
+    /** Oyunculara galibiyet primi: 0 yok, 1 normal, 2 yüksek. */
+    var winBonus: Int = 0,
     var lineup: MutableList<Int> = mutableListOf(),
     var won: Int = 0,
     var drawn: Int = 0,
@@ -178,10 +188,12 @@ object Comp {
     const val FIRST = 1
     const val CUP = 2
     const val EURO = 3
+    const val FRIENDLY = 9
     fun isLeague(c: Int) = c == SUPER || c == FIRST || c in 10..29
     fun isCup(c: Int) = c == CUP || c >= 30
     fun name(c: Int) = when {
         c == EURO -> "Avrupa Kupası"
+        c == FRIENDLY -> "Hazırlık maçı"
         isCup(c) -> Leagues.cupName(c)
         else -> Leagues.of(c)?.name ?: "Lig"
     }
@@ -360,6 +372,26 @@ class Game(
     /** Kullanıcının kulübünün sponsorları ve bekleyen teklifler. */
     var sponsors: MutableList<Sponsor> = mutableListOf(),
     var sponsorOffers: MutableList<Sponsor> = mutableListOf(),
+    /** Kariyer: başarımlar, menajer itibarı (0-100), kupa dolabı, kulüp rekorları, yönetim istekleri. */
+    var achievements: MutableSet<String> = mutableSetOf(),
+    var managerRep: Int = 40,
+    var trophies: MutableList<String> = mutableListOf(),
+    var recBigWin: String = "",
+    var recBigWinDiff: Int = 0,
+    var recLoss: String = "",
+    var recLossDiff: Int = 0,
+    var recSigning: String = "",
+    var recSigningFee: Long = 0,
+    var recSale: String = "",
+    var recSaleFee: Long = 0,
+    var recAttendance: Int = 0,
+    var seasonsAtClub: Int = 0,
+    var boardAsked: MutableSet<Int> = mutableSetOf(),
+    /** Antrenman kampı (bitiş tarihi, bu sezon kullanım), gizli antrenman yapılan maç günü, hazırlık maçı sayısı. */
+    var campUntil: Long = 0,
+    var campUses: Int = 0,
+    var secretWeek: Int = -1,
+    var friendlies: Int = 0,
     /** Taksitli transferlerin gelecek sezon ödenecek kısmı. */
     var pendingPayments: Long = 0,
     /** Oyun içi tarih (epoch günü). 0 = eski kayıt, her gün maç günü sayılır. */
@@ -400,6 +432,8 @@ class Game(
         if (p.teamId != teamId) {
             p.wantsAway = false
             p.promised = false
+            p.number = 0
+            p.squadRole = -1
         }
         idx?.let {
             it.byTeam[p.teamId]?.remove(p)

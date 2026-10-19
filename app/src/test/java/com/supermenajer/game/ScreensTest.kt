@@ -95,7 +95,10 @@ class ScreensTest {
         GameRepo.leagueTab = 2; shot("08_euro")
         GameRepo.leagueTab = 3; shot("09_fixtures")
         GameRepo.tab = 2; GameRepo.tacticsMode = 0; shot("10_tactics")
-        GameRepo.tacticsPanel = 1; shot("10a_instructions"); GameRepo.tacticsPanel = 0
+        GameRepo.tacticsPanel = 1; shot("10a_instructions")
+        GameRepo.tacticsPanel = 2; shot("10c_roles"); GameRepo.tacticsPanel = 0
+        GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
+        GameRepo.clubMode = 3; shot("10e_finance")
         // canlı maç, devre arası
         while (g.todayUserFixture() == null && !g.seasonOver && !g.fired) GameRepo.skipToNextMatch()
         GameRepo.playMatch(live = true)

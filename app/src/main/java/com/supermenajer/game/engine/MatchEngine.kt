@@ -57,6 +57,7 @@ class MatchSim(
     private val autoUserSubs: Boolean,
     private val rnd: Random = Random.Default,
 ) {
+    private val big = com.supermenajer.game.game.Talks.bigMatch(game, fixture)
     val home = Side(game.team(fixture.home), 0)
     val away = Side(game.team(fixture.away), 1)
     val sides: List<Side> get() = listOf(home, away)
@@ -83,6 +84,16 @@ class MatchSim(
         ev(Ev.KICKOFF, -1, Comms.kickoff(home.team, away.team, rnd))
         if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
         Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
+        userSide?.let { us ->
+            // Gizli antrenman: rakibe özel hazırlık
+            if (game.secretWeek == fixture.week) {
+                us.onPitch.forEach { it.boost += 0.025 }
+                ev(Ev.INFO, us.index, "🕵️ Gizli antrenmanda çalışılan plan sahada! Oyuncular rakibi ezbere biliyor.")
+            }
+            // Galibiyet primi motivasyonu
+            val wb = us.team.winBonus
+            if (wb > 0) us.onPitch.forEach { it.boost += 0.01 * wb }
+        }
         val fanBoost = com.supermenajer.game.game.Fans.homeBoost(game, fixture)
         if (fanBoost > 0) {
             home.onPitch.forEach { it.boost += fanBoost }
@@ -104,8 +115,15 @@ class MatchSim(
 
     fun other(s: Side): Side = if (s === home) away else home
 
+    /** Oyuncunun ilk 11'deki mevki indeksine göre rolü. */
+    private fun roleOf(s: Side, m: PIM): com.supermenajer.game.game.Roles.Role {
+        val idx = Formations.slots(s.team.formation).indexOf(m.slot)
+        return if (idx < 0) com.supermenajer.game.game.Roles.byPos.getValue(m.slot.pos)[0] else com.supermenajer.game.game.Roles.role(s.team, idx)
+    }
+
     private fun eff(m: PIM): Double =
-        m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0) * (1.0 + m.boost)
+        m.p.ovrAt(m.slot.pos) * (0.62 + 0.38 * m.fit / 100.0) * (0.93 + 0.14 * m.p.morale / 100.0) * (1.0 + m.boost) *
+            com.supermenajer.game.game.Traits.matchFactor(m.p, big)
 
     class Str(val atk: Double, val mid: Double, val def: Double)
 
@@ -119,6 +137,8 @@ class MatchSim(
                 Pos.MF -> { a += e * 0.45; m += e; d += e * 0.4 }
                 Pos.FW -> { a += e; m += e * 0.2; d += e * 0.1 }
             }
+            val r = roleOf(s, x)
+            a += e * r.atk; m += e * r.mid; d += e * r.def
         }
         a /= 4.3; m /= 5.4; d /= 5.9
         when (s.team.mentality) { 0 -> { a *= 0.9; d *= 1.07 }; 2 -> { a *= 1.08; d *= 0.94 } }
@@ -147,6 +167,13 @@ class MatchSim(
             }
         }
         if (t.counter) m *= 0.97
+        // Sahadaki lider karakterler takımı yukarı çeker
+        val leaders = s.onPitch.count { com.supermenajer.game.game.Traits.isLeader(it.p) }
+        val lf = 1.0 + (leaders * 0.01).coerceAtMost(0.02)
+        a *= lf; m *= lf; d *= lf
+        // Kaptan sahadaysa küçük bir moral desteği
+        val cap = com.supermenajer.game.game.Roles.captain(game, s.team)
+        if (cap != null && s.onPitch.any { it.p.id == cap.id }) { a *= 1.01; m *= 1.01; d *= 1.01 }
         if (s === home) { a *= 1.03; m *= 1.03; d *= 1.03 }
         return Str(a.coerceAtLeast(5.0), m.coerceAtLeast(5.0), d.coerceAtLeast(5.0))
     }
@@ -230,13 +257,23 @@ class MatchSim(
 
     private fun shot(atk: Side, def: Side, sA: Str, sD: Str, forcedQ: Double? = null, header: Boolean = false) {
         val outfield = atk.onPitch.filter { it.slot.pos != Pos.GK }
-        val shooter = pickW(outfield) {
-            shotW(it.slot.pos) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(2)
-        } ?: return
         val setPiece = forcedQ != null
         val penalty = !setPiece && rnd.nextDouble() < 0.02
+        val onPitchPlayers = atk.onPitch.map { it.p }
+        val R = com.supermenajer.game.game.Roles
+        // Duran toplarda belirlenen kullanıcılar
+        val designated = when {
+            penalty -> R.penaltyTaker(game, atk.team, onPitchPlayers)
+            setPiece && !header -> R.freeKickTaker(game, atk.team, onPitchPlayers)
+            else -> null
+        }
+        val shooter = designated?.let { d -> atk.onPitch.firstOrNull { it.p.id == d.id } } ?: pickW(outfield) {
+            val r = roleOf(atk, it)
+            shotW(it.slot.pos) * (if (header) r.header else r.shot) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(2)
+        } ?: return
         val assister = if (!penalty && (header || rnd.nextDouble() < 0.72)) {
-            pickW(outfield.filter { it !== shooter }) { astW(it.slot.pos) * (it.p.passing / 70.0).pow(2) }
+            val corner = if (header) R.cornerTaker(game, atk.team, onPitchPlayers)?.let { c -> atk.onPitch.firstOrNull { it.p.id == c.id && it !== shooter } } else null
+            corner ?: pickW(outfield.filter { it !== shooter }) { astW(it.slot.pos) * roleOf(atk, it).assist * (it.p.passing / 70.0).pow(2) }
         } else null
         val q = when {
             penalty -> 0.76
@@ -298,7 +335,8 @@ class MatchSim(
 
     private fun foul(def: Side, atk: Side) {
         val fouler = pickW(def.onPitch) {
-            when (it.slot.pos) { Pos.GK -> 0.1; Pos.DF -> 3.0; Pos.MF -> 2.0; Pos.FW -> 1.0 } * (1.4 - it.p.defending / 100.0)
+            when (it.slot.pos) { Pos.GK -> 0.1; Pos.DF -> 3.0; Pos.MF -> 2.0; Pos.FW -> 1.0 } * (1.4 - it.p.defending / 100.0) *
+                com.supermenajer.game.game.Traits.foulFactor(it.p) * (if (calm && def === userSide) 0.7 else 1.0)
         } ?: return
         def.fouls++
         val r = rnd.nextDouble()
@@ -345,7 +383,7 @@ class MatchSim(
     }
 
     private fun injury(s: Side) {
-        val v = pick(s.onPitch) ?: return
+        val v = pickW(s.onPitch) { com.supermenajer.game.game.Traits.injuryFactor(it.p) } ?: return
         v.injured = true
         v.injWeeks = rnd.nextInt(2, 7)
         v.rating -= 0.2
@@ -447,6 +485,30 @@ class MatchSim(
     }
 
     /** 0 maç öncesi, 1 devre arası, 2 maç sonu konuşması yapıldı mı. */
+    /** Kenar çizgisi talimatı: son kullanılan dakika ve "sakin ol" (kart riskini azaltır). */
+    var lastShout = -100
+        private set
+    private var calm = false
+
+    val canShout: Boolean get() = !finished && minute - lastShout >= 10 && userSide != null
+
+    /** FM tarzı kenar çizgisi talimatı. 0 cesaretlendir, 1 daha fazlasını iste, 2 odaklan, 3 sakin ol. */
+    fun shout(kind: Int): String {
+        val us = userSide ?: return ""
+        if (!canShout) return "Oyuncular az önce seni duydu, biraz bekle."
+        lastShout = minute
+        val diff = us.goals - other(us).goals
+        val (delta, msg) = when (kind) {
+            0 -> if (diff < 0) 0.025 to "Oyuncular alkışını duydu, yeniden inandılar!" else 0.01 to "Takım cesaretlendi."
+            1 -> if (diff <= 0) (if (rnd.nextDouble() < 0.7) 0.03 to "Takım tempoyu artırdı!" else -0.01 to "Baskı ters tepti, bazı oyuncular gerildi.") else -0.01 to "Öndeyken bağırman oyuncuları şaşırttı."
+            2 -> 0.015 to "Oyuncular konsantre oldu."
+            else -> { calm = true; 0.0 to "Oyuncular sakinleşti, daha kontrollü oynayacaklar." }
+        }
+        us.onPitch.forEach { it.boost = (it.boost + delta).coerceIn(-0.06, 0.08) }
+        ev(Ev.INFO, us.index, "📣 Kenar çizgisinden: " + listOf("\"Hadi çocuklar, inanın!\"", "\"Daha fazlasını istiyorum!\"", "\"Odaklanın!\"", "\"Sakin olun!\"")[kind] + " · " + msg)
+        return msg
+    }
+
     val talksDone = BooleanArray(3)
     val talkDone: Boolean get() = talksDone[1]
     val random: Random get() = rnd
