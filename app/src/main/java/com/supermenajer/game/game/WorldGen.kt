@@ -132,6 +132,11 @@ object WorldGen {
             val tiers = listOfNotNull(Leagues.top(c.country) to c.topRep, Leagues.second(c.country)?.let { it to c.secondRep!! })
             var starIdx = 0
             for ((league, range) in tiers) {
+                if (RealWorld.has(league.id)) {
+                    RealWorld.addLeague(g, league.id, rnd, used)
+                    starIdx = c.stars.size
+                    continue
+                }
                 for ((i, rep) in reps(range, 18).withIndex()) {
                     val name = if (league.tier == 1 && starIdx < c.stars.size && i == starIdx) {
                         c.stars[starIdx++]

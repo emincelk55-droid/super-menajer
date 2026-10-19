@@ -62,15 +62,17 @@ object Generator {
     @Synchronized
     fun newWorld(rnd: Random = Random.Default): Game {
         recentNames.clear()
-        val teams = teamDefs.mapIndexed { i, d ->
+        val real = RealWorld.has(0)
+        val teams = if (real) mutableListOf() else teamDefs.mapIndexed { i, d ->
             Team(i, d.name, d.short, d.city, d.c1, d.c2, d.rep, budgetFor(d.rep))
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
             fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 15,
         )
-        for (t in teams) fillSquad(g, t, rnd, "TR")
-        addLowerDivision(g, rnd)
+        // Gerçek veri varsa gerçek kulüpler (benzer isimlerle), yoksa kurgusal dünya
+        if (real) RealWorld.addLeague(g, 0, rnd) else for (t in teams) fillSquad(g, t, rnd, "TR")
+        if (RealWorld.has(1)) RealWorld.addLeague(g, 1, rnd) else addLowerDivision(g, rnd)
         WorldGen.addForeignLeagues(g, rnd)
         topUpFreeAgents(g, rnd)
         g.reindex()

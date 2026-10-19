@@ -31,9 +31,14 @@ object Sponsors {
     )
     private val slotBase = listOf(2_500_000.0, 1_500_000.0, 1_000_000.0)
 
-    private val prefixes = listOf("Anadolu", "Boğaziçi", "Yıldız", "Kartal", "Mavi", "Atlas", "Zirve", "Ege", "Toros", "Nova", "Delta", "Vega", "Marmara", "Pusula", "Karadeniz", "Orion", "Lider", "Akdeniz")
-    private val sectors = listOf("Bank", "Holding", "Enerji", "Telekom", "Havayolları", "Sigorta", "Gıda", "Otomotiv", "Teknoloji", "Lojistik", "Yapı", "İletişim")
-    private val kitBrands = listOf("Stryde", "Kinetik", "Vortex", "Apex Sport", "Falco", "Nordik", "Kosu", "Atletika", "Pivot", "Sprinta")
+    /** Gerçek markalara benzer (birebir aynı olmayan) sponsor isimleri. */
+    private val brands = listOf(
+        "Fly Emirats", "Turkish Airlinez", "Etihat Airways", "Qatar Airwais", "Pegasüs Air", "Spotifai", "Rakutan", "Vodafon",
+        "Turkcel", "Türk Telekon", "Garanti BBVE", "Ziraat Bankasu", "Akbenk", "Yapı Kredy", "Allienz", "Siemenz", "Volkswegen",
+        "Audy", "Samsunk", "Bekko", "Trendyolu", "Getirr", "Papera", "Sokar Enerji", "Coinbaze", "Standart Chartered", "Unibet Bank",
+        "Hyundei", "Kia Motorz", "Toyuta", "Heinekan", "Mastercart", "Visaa", "Aramku", "Teleko Sigorta",
+    )
+    private val kitBrands = listOf("Adidaz", "Naik", "Pumma", "Under Armur", "Kappe", "Makron", "Humel", "New Balanse", "Jomma", "Loto", "Umbru", "Kastore")
 
     /** Kulübün ticari değeri (itibar, lig, başarı). */
     fun clubValue(g: Game, t: Team): Double {
@@ -70,10 +75,10 @@ object Sponsors {
 
     private fun name(slot: Int, rnd: Random, used: Set<String>): String {
         repeat(20) {
-            val n = if (slot == KIT) kitBrands.random(rnd) else "${prefixes.random(rnd)} ${sectors.random(rnd)}"
+            val n = if (slot == KIT) kitBrands.random(rnd) else brands.random(rnd)
             if (n !in used) return n
         }
-        return "${prefixes.random(rnd)} ${sectors.random(rnd)}"
+        return brands.random(rnd)
     }
 
     /** Boş alanlar için yeni teklifler oluşturur (eski teklifler silinir). */

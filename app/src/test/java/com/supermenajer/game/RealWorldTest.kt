@@ -1,0 +1,67 @@
+package com.supermenajer.game
+
+import com.supermenajer.game.game.Alias
+import com.supermenajer.game.game.GameRepo
+import com.supermenajer.game.game.Generator
+import com.supermenajer.game.game.RealWorld
+import com.supermenajer.game.game.Season
+import com.supermenajer.game.model.Leagues
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.nio.file.Files
+import kotlin.random.Random
+
+/** Gerçek dünya verisi: isimler benzer ama aynı değil, güçler veriden, ligler 18 takım. */
+class RealWorldTest {
+    @Test
+    fun aliases() {
+        val people = listOf("Arda Güler", "Kylian Mbappé", "Erling Haaland", "Lamine Yamal", "Victor Osimhen", "Harry Kane", "Jude Bellingham", "Pedri", "Okan Buruk", "Vinícius Júnior")
+        val clubs = listOf("Galatasaray", "Fenerbahçe", "Beşiktaş", "Real Madrid", "FC Barcelona", "Liverpool", "Manchester City", "Bayern Munich", "Santiago Bernabéu", "Rams Park")
+        for (n in people) { val a = Alias.person(n); println("ALIAS $n -> $a"); assertNotEquals(n, a) }
+        for (n in clubs) { val a = Alias.club(n); println("ALIAS $n -> $a"); assertNotEquals(n, a) }
+        assertEquals("Arda Gülar", Alias.person("Arda Güler"))
+        assertEquals("Kylian Mbapé", Alias.person("Kylian Mbappé"))
+    }
+
+    @Test
+    fun parsesAndBuilds() {
+        val d = RealWorld.parse(
+            99,
+            listOf(
+                "LEAGUE|99|2026-27|Test",
+                "TEAM|Galatasaray|GAL|Istanbul|Rams Park|53387|Okan Buruk|TR|#A90432|#FDB912|86",
+                "P|10|Leroy Sané|1996|DE|SGK|SLK|L|84|84|88,80,78,86,35,66",
+                "P|1|Uğurcan Çakır|1996|TR|KL|-|R|81|82|48,20,62,40,25,72",
+            ),
+        )
+        assertEquals(1, d.teams.size)
+        val w = d.teams[0].players[0]
+        val p = RealWorld.makePlayer(1, w, 0, Random(1))
+        assertEquals(84, p.overall)
+        assertEquals(com.supermenajer.game.game.Positions.Det.SGK.ordinal, p.detail)
+        assertEquals(com.supermenajer.game.game.Positions.Det.SLK.ordinal, p.secondDet)
+        assertEquals(10, p.number)
+        assertEquals(1, p.foot)
+        val k = RealWorld.makePlayer(2, d.teams[0].players[1], 0, Random(1))
+        assertEquals(81, k.overall)
+
+        // Gerçek veri yüklüyse dünya ondan kurulur
+        GameRepo.init(Files.createTempDirectory("smrw").toFile())
+        val world = Generator.newWorld(Random(5)).also { Season.computeExpectations(it) }
+        for (lg in Leagues.all) {
+            val n = world.divisionTeams(lg.id).size
+            println("LEAGUE ${lg.name}: $n takım, gerçek=${RealWorld.has(lg.id)}")
+            assertEquals(18, n)
+        }
+        if (RealWorld.has(0)) {
+            val tr = world.divisionTeams(0)
+            assertTrue(tr.all { it.real })
+            println("TR: " + tr.joinToString { it.name })
+            val best = world.players.filter { it.teamId in tr.map { t -> t.id } }.sortedByDescending { it.overall }.take(8)
+            println("TR en iyiler: " + best.joinToString { "${it.name} ${it.overall}" })
+            assertTrue(world.managers.size > 100)
+        }
+    }
+}

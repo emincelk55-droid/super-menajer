@@ -204,9 +204,9 @@ object Positions {
 
     /** fresh: dünya kurulurken / eski kayıt taşınırken tüm kadrolara kotalı atama; değilse sadece eksikleri tamamla. */
     fun ensureAll(g: Game, fresh: Boolean = false) {
-        if (fresh) for (t in g.teams) assignTeam(g, t)
+        if (fresh) for (t in g.teams) if (!t.real) assignTeam(g, t)
         for (p in g.players) if (p.detail < 0) assignDetail(p)
-        for (t in g.teams) balance(g, t)
+        for (t in g.teams) if (!t.real) balance(g, t)
         for (p in g.players) natRole(p)
     }
 }

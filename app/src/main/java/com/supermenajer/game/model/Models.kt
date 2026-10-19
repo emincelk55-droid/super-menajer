@@ -168,6 +168,8 @@ class Team(
     /** Stadyum kapasitesi (0 = henüz kurulmadı). */
     var stadium: Int = 0,
     var stadiumName: String = "",
+    /** Gerçek dünya verisinden kurulan kulüp (kadro mevkileri elle verilmiş, otomatik dengelenmez). */
+    var real: Boolean = false,
     /** 0 ucuz, 1 normal, 2 pahalı */
     var ticketPrice: Int = 1,
     /** Tesis seviyeleri 1-10. */
