@@ -12,8 +12,12 @@ object Lineups {
         when (slots[it].pos) { Pos.GK -> 0; Pos.FW -> 1; Pos.DF -> 2; Pos.MF -> 3 }
     }
 
+    /**
+     * Bir oyuncunun mevkiye uygunluğu. Kendi mevkisindeki oyuncu her zaman önce gelir;
+     * başka mevkiden oyuncu ancak o mevkide uygun kimse kalmadıysa seçilir.
+     */
     fun score(p: Player, pos: Pos): Double =
-        p.ovrAt(pos) * (0.6 + 0.4 * p.fitness / 100.0) + if (p.pos == pos) 3 else 0
+        p.ovrAt(pos) * (0.6 + 0.4 * p.fitness / 100.0) + if (p.pos == pos) 1000 else 0
 
     /** Mevcut formasyon için en iyi 11'i seçer. */
     fun autoPick(g: Game, t: Team) {
@@ -46,8 +50,9 @@ object Lineups {
         t.formation = formation
         val slots = Formations.slots(formation)
         val lineup = MutableList(11) { -1 }
+        // Mevcut 11'den sadece kendi mevkisine uyanlar yerleşir; kalan boşlukları kadrodan doğru mevkideki oyuncular doldurur
         for (i in fillOrder(slots)) {
-            val best = current.maxByOrNull { score(it, slots[i].pos) } ?: continue
+            val best = current.filter { it.pos == slots[i].pos && it.available }.maxByOrNull { score(it, slots[i].pos) } ?: continue
             lineup[i] = best.id
             current.remove(best)
         }

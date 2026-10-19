@@ -58,7 +58,10 @@ object Generator {
 
     fun teamLevel(rep: Int): Double = 40 + rep * 0.4
 
+    /** Dünya üretimi tek seferde bir iş parçacığında çalışır (isim tekrar listesi paylaşımlı). */
+    @Synchronized
     fun newWorld(rnd: Random = Random.Default): Game {
+        recentNames.clear()
         val teams = teamDefs.mapIndexed { i, d ->
             Team(i, d.name, d.short, d.city, d.c1, d.c2, d.rep, budgetFor(d.rep))
         }.toMutableList()
@@ -181,6 +184,7 @@ object Generator {
     private val recentNames = LinkedHashSet<String>()
 
     /** Baskın uyruktan isim (yerli oranı %70-78), kalanı ağırlıklı yabancı uyruklar. */
+    @Synchronized
     private fun randomName(rnd: Random, nation: String): Pair<String, String> {
         val r = rnd.nextDouble()
         val pool = when {
