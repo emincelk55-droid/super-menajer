@@ -42,6 +42,10 @@ class ScreensTest {
     fun screens() {
         GameRepo.init(Files.createTempDirectory("sm").toFile())
         GameRepo.preparedWorld = Generator.newWorld().also { Season.computeExpectations(it) }
+        GameRepo.screen = Screen.SPLASH
+        shot("00a_splash")
+        GameRepo.screen = Screen.TITLE
+        shot("00b_menu_empty")
         GameRepo.screen = Screen.NEW_GAME
         shot("01_newgame")
         // İngiltere'den bir takımla başla
@@ -54,6 +58,10 @@ class ScreensTest {
         shot("02_negotiate")
         GameRepo.selectedPlayer = null
         shot("03_transfer")
+        val cmp = g.players.first { it.teamId >= 0 && it.teamId != g.userTeamId && it.pos == com.supermenajer.game.model.Pos.FW && it.overall > 75 }
+        GameRepo.toggleWatch(cmp); GameRepo.compareWith(cmp)
+        shot("03h_compare")
+        GameRepo.compare = null; GameRepo.comparePin = null
         val tgt = g.players.first { it.teamId >= 0 && it.teamId != g.userTeamId && GameRepo.transferBlock(it) == null && g.squad(it.teamId).size > 20 }
         GameRepo.startTalks(tgt)
         GameRepo.negotiation!!.fee = GameRepo.askingPrice(tgt) / 2
@@ -97,8 +105,9 @@ class ScreensTest {
         GameRepo.leagueTab = 2; shot("08_euro")
         GameRepo.leagueTab = 3; shot("09_fixtures")
         GameRepo.tab = 2; GameRepo.tacticsMode = 0; shot("10_tactics")
-        GameRepo.tacticsPanel = 1; shot("10a_instructions")
-        GameRepo.tacticsPanel = 2; shot("10c_roles"); GameRepo.tacticsPanel = 0
+        GameRepo.tacticsPanel = 1; shot("10b_formations")
+        GameRepo.tacticsPanel = 2; shot("10a_instructions")
+        GameRepo.tacticsPanel = 3; shot("10c_roles"); GameRepo.tacticsPanel = 0
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
         GameRepo.clubMode = 3; shot("10e_finance")
         // v1.5: dinamikler, yetenek ağacı, hoca pazarı, olay kartı

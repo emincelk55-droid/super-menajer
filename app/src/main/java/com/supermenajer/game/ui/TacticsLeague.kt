@@ -97,14 +97,10 @@ fun DrawScope.drawPitch(vertical: Boolean) {
 
 @Composable
 fun TacticsTab(g: Game) {
-    val mode = GameRepo.tacticsMode
+    if (GameRepo.tacticsMode == 0) { TacticsBoard(g); return }
     Column(Modifier.fillMaxSize()) {
-        val cur = if (mode == 1) 3 else GameRepo.tacticsPanel.coerceIn(0, 2)
-        FmTabs(listOf("Diziliş", "Talimatlar", "Roller & Görevler", "Antrenman"), cur) { i ->
-            if (i == 3) GameRepo.tacticsMode = 1 else { GameRepo.tacticsMode = 0; GameRepo.tacticsPanel = i }
-        }
-        Spacer(Modifier.height(8.dp))
-        if (mode == 0) TacticsBoard(g) else TrainingContent(g)
+        SmTabBar(listOf("Taktik", "Antrenman"), 1, Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) { if (it == 0) GameRepo.tacticsMode = 0 }
+        TrainingContent(g)
     }
 }
 

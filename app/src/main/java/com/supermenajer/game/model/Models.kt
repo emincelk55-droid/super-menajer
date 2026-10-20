@@ -361,6 +361,8 @@ class Game(
     var difficulty: Int = 1,
     /** Serbest mod: yönetim seni asla kovmaz. */
     var noFiring: Boolean = false,
+    /** Son transferler (en yeni başta): "oyuncu|eski kulüp kısa|yeni kulüp kısa|bedel|güç". */
+    var transfers: MutableList<String> = mutableListOf(),
     /** Sezon sonunda futbolu bırakacağını açıklayan oyuncular. */
     var retiring: MutableList<Int> = mutableListOf(),
     var jobOffers: MutableList<Int> = mutableListOf(),
@@ -388,6 +390,8 @@ class Game(
     var scoutFocus: Int = 0,
     /** Gözlem listesi. */
     var shortlist: MutableList<Int> = mutableListOf(),
+    /** Kullanıcının ⭐ kısa listesi (transfer hedefleri). */
+    var watch: MutableList<Int> = mutableListOf(),
     /** jobOffers dolu ve fired=false ise: başarı sonrası gelen teklifler. */
     var careerOffer: Boolean = false,
     /** Kullanıcının teknik ekibi (rol başına bir kişi). */
@@ -478,6 +482,11 @@ class Game(
             it.byTeam.getOrPut(teamId) { mutableListOf() }.add(p)
         }
         p.teamId = teamId
+    }
+
+    fun logTransfer(p: Player, from: Team?, to: Team, price: Long) {
+        transfers.add(0, listOf(p.name, from?.short ?: "SRB", to.short, price.toString(), p.overall.toString()).joinToString("|") { it.replace("|", " ") })
+        while (transfers.size > 40) transfers.removeAt(transfers.lastIndex)
     }
 
     fun addPlayer(p: Player) {

@@ -15,7 +15,7 @@ import java.io.File
 import kotlin.math.roundToLong
 import kotlin.random.Random
 
-enum class Screen { TITLE, NEW_GAME, MAIN, MATCH, SUMMARY }
+enum class Screen { SPLASH, TITLE, NEW_GAME, MAIN, MATCH, SUMMARY }
 
 class Offer(val player: Player, val buyer: Team, val price: Long)
 
@@ -30,10 +30,36 @@ object GameRepo {
         private set
     var version by mutableIntStateOf(0)
         private set
-    var screen by mutableStateOf(Screen.TITLE)
+    var screen by mutableStateOf(Screen.SPLASH)
     var match: MatchSim? = null
         private set
     var selectedPlayer by mutableStateOf<Player?>(null)
+    /** Karşılaştırma: sabitlenen oyuncu ve açık karşılaştırma (iki oyuncu kimliği). */
+    var comparePin by mutableStateOf<Int?>(null)
+    var compare by mutableStateOf<Pair<Int, Int>?>(null)
+
+    fun toggleWatch(p: Player) {
+        val g = game ?: return
+        if (p.id in g.watch) g.watch.remove(p.id) else g.watch += p.id
+        changed()
+    }
+
+    /** ⚖: sabitli oyuncu varsa onunla, yoksa kadrodaki aynı mevkideki en iyi oyuncuyla karşılaştırır. */
+    fun compareWith(p: Player) {
+        val g = game ?: return
+        val pin = comparePin
+        if (pin != null && pin != p.id && g.player(pin) != null) {
+            compare = pin to p.id
+            return
+        }
+        comparePin = p.id
+        if (p.teamId != g.userTeamId) {
+            val d = Positions.det(p)
+            val mine = g.squad(g.userTeamId).filter { Positions.canPlay(it, d) }.maxByOrNull { it.overall }
+                ?: g.squad(g.userTeamId).filter { it.pos == p.pos }.maxByOrNull { it.overall }
+            if (mine != null) compare = mine.id to p.id
+        }
+    }
     var tab by mutableIntStateOf(0)
     var tacticsMode by mutableIntStateOf(0)
     var leagueTab by mutableIntStateOf(-1)
@@ -212,6 +238,9 @@ object GameRepo {
         if (m == null || m.size < 5) SlotInfo(n, true, "Kayıtlı kariyer", "", "", 0xFF2E7D32)
         else SlotInfo(n, true, m[0], m[1], m[2] + " · " + m[3], m[4].toLongOrNull() ?: 0xFF2E7D32)
     }
+
+    /** En son oynanan kayıt yuvası (dosya tarihine göre), yoksa null. */
+    fun lastSlot(): Int? = (1..3).filter { slotFile(it).exists() }.maxByOrNull { slotFile(it).lastModified() }
 
     fun deleteSlot(n: Int) {
         if (n == slot && screen == Screen.TITLE) game = null
@@ -778,6 +807,7 @@ object GameRepo {
             seller.name
         } else "serbest oyuncu"
         Economy.earn(us, Economy.BUYS, -price)
+        g.logTransfer(p, g.teamOrNull(p.teamId), us, price)
         g.movePlayer(p, us.id)
         Fans.bought(g, p)
         p.morale = 80.0
@@ -820,6 +850,7 @@ object GameRepo {
         TransferTalks.paySellOn(g, p, price, us.id)
         Career.sale(g, p.name, price)
         Dynamics.soldPlayer(g, p)
+        g.logTransfer(p, us, buyer, price)
         p.listed = false
         p.squadRole = -1
         g.movePlayer(p, buyer.id)

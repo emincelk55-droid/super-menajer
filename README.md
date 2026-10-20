@@ -101,3 +101,12 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   ayrılan oyuncuya ait olay kartları, bekletilen satış tekliflerinin denetimsiz kabulü, gün atlamada boş günlerin yaşanmaması,
   penaltı atışlarında sonsuz döngü, dünyanın iki kez üretilmesi.
 - Veri: Bundesliga kaleci değerleri, yıldız güçleri, takım itibarları ve çift kayıtlı oyuncular düzeltildi.
+
+### v2.2
+- Açılış ekranı (logo, yükleme çubuğu, ipuçları, "başlamak için dokun") ve yeni ana menü: Devam Et, Yeni Kariyer, Kariyer Yükle, Nasıl Oynanır, Çıkış.
+- SM tarzı ana sayfa: ☰ yan menü, bütçe/maaş/güven göstergeleri, tarihli büyük "Devam Et", görev kısayolları, kayan haber bandı;
+  büyük maç kartı (armalar, takım güçleri, turnuva, tarih, stadyum), gelen kutusu, menajer seviyesi, müsabakalar, spot lambası,
+  transferler, tesisler, takvim ve son maçlar.
+- SM tarzı taktik ekranı: perspektif saha, yüzlü oyuncu kartları (güç, mevki, moral, kondisyon); Kadro (yedekler + kadro kartları),
+  Diziliş (küçük saha resimleri), Talimatlar (Genel/Hücum/Savunma/Takım görevleri, açılır seçimler ve sahada görsel oklar), Roller.
+- Transfer: detaylı mevki, yaş, en az güç ve en fazla bonservis filtreleri; ⭐ kısa liste; ⚖ oyuncu karşılaştırma; daha hızlı liste.

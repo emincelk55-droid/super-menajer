@@ -640,6 +640,7 @@ object Season {
             val from = if (p.teamId >= 0) g.team(p.teamId) else null
             from?.let { Economy.earn(it, Economy.SALES, price); it.lineup.replaceAll { id -> if (id == p.id) -1 else id } }
             Economy.earn(buyer, Economy.BUYS, -price)
+            g.logTransfer(p, from, buyer, price)
             g.movePlayer(p, buyer.id)
             p.salary = p.demandWage
             p.contractYears = rnd.nextInt(2, 6)

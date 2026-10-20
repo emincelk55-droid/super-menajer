@@ -406,10 +406,24 @@ fun PlayerDialog(g: Game, p: Player) {
                 Spacer(Modifier.width(8.dp))
                 PositionMap(p, Modifier.size(132.dp, 84.dp).clip(RoundedCornerShape(6.dp)))
                 Spacer(Modifier.width(6.dp))
-                Text(
-                    "✕", fontSize = 20.sp, color = TextDim,
-                    modifier = Modifier.clip(CircleShape).clickable { GameRepo.selectedPlayer = null }.padding(8.dp),
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "✕", fontSize = 20.sp, color = TextDim,
+                        modifier = Modifier.clip(CircleShape).clickable { GameRepo.selectedPlayer = null }.padding(8.dp),
+                    )
+                    if (!own) Text(
+                        if (p.id in g.watch) "⭐" else "☆", fontSize = 20.sp, color = Gold,
+                        modifier = Modifier.clip(CircleShape).clickable { GameRepo.toggleWatch(p) }.padding(6.dp),
+                    )
+                    Text(
+                        "⚖", fontSize = 20.sp, color = Teal,
+                        modifier = Modifier.clip(CircleShape).clickable {
+                            GameRepo.compareWith(p)
+                            if (GameRepo.compare == null) message = "Karşılaştırma için sabitlendi. Başka bir oyuncunun profilinde ⚖'ye bas."
+                            else GameRepo.selectedPlayer = null
+                        }.padding(6.dp),
+                    )
+                }
             }
             // Sekmeler
             Row(Modifier.fillMaxWidth().background(Bg.copy(alpha = 0.5f)).padding(horizontal = 10.dp)) {
@@ -539,50 +553,61 @@ private fun Stat(label: String, v: String) {
 
 @Composable
 fun TransferTab(g: Game) {
-    var posFilter by remember { mutableStateOf<Pos?>(null) }
-    var mode by remember { mutableIntStateOf(0) } // 0 tümü, 1 serbest, 2 bütçeme uygun, 3 genç, 4 gözlem listesi
+    var detFilter by remember { mutableStateOf<com.supermenajer.game.game.Positions.Det?>(null) }
+    var mode by remember { mutableIntStateOf(0) } // 0 tümü, 1 serbest, 2 bütçeme uygun, 3 genç, 4 kısa liste, 5 gözlemci önerileri
     var country by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableIntStateOf(0) } // 0 güç, 1 potansiyel, 2 ucuz, 3 genç
+    var ages by remember { mutableStateOf(15f..40f) }
+    var minOvr by remember { mutableStateOf(40f) }
+    var maxPriceStep by remember { mutableIntStateOf(priceSteps.lastIndex) }
     val budget = g.userTeam.budget
-    val version = GameRepo.version
-    val list = remember(version, posFilter, mode, country, query, sort) {
+    // Gün gün ilerlerken liste her gün yeniden hesaplanmasın (6.500 oyuncu)
+    val tick = if (GameRepo.advancing) -1 else GameRepo.version
+    val maxPrice = priceSteps[maxPriceStep]
+    val list = remember(tick, detFilter, mode, country, query, sort, ages, minOvr, maxPriceStep) {
         val q = query.trim().lowercase()
+        val wagesNow = com.supermenajer.game.game.Economy.squadWages(g, g.userTeamId)
+        val est = HashMap<Int, Int>()
+        fun e(p: Player) = est.getOrPut(p.id) { com.supermenajer.game.game.Scouting.estimate(g, p) }
         g.players.asSequence()
             .filter { it.teamId != g.userTeamId && it.loanFrom != g.userTeamId }
-            .filter { posFilter == null || it.pos == posFilter }
+            .filter { detFilter == null || com.supermenajer.game.game.Positions.canPlay(it, detFilter!!) }
+            .filter { it.age.toFloat() in ages }
             .filter { country == null || (it.teamId >= 0 && g.teamOrNull(it.teamId)?.let { t -> g.countryOf(t) } == country) }
             .filter { q.isEmpty() || it.name.lowercase().contains(q) }
+            .filter { e(it) >= minOvr }
             .filter {
                 when (mode) {
                     1 -> it.teamId < 0
-                    2 -> GameRepo.askingPrice(it) <= budget && com.supermenajer.game.game.Economy.fitsWages(g, g.userTeam, it.demandWage)
+                    2 -> GameRepo.askingPrice(it) <= budget && wagesNow + it.demandWage <= g.userTeam.wageBudget
                     3 -> it.age <= 21
-                    4 -> it.id in g.shortlist || it.id in g.scouted
+                    4 -> it.id in g.watch
+                    5 -> it.id in g.shortlist || it.id in g.scouted
                     else -> true
                 }
             }
+            .map { it to GameRepo.askingPrice(it) }
+            .filter { (_, price) -> maxPriceStep == priceSteps.lastIndex || price <= maxPrice }
             .sortedWith(
                 when (sort) {
                     // Gizli bilgiyi sızdırmamak için tanımadığımız oyuncularda tahmini güç kullanılır.
-                    1 -> compareByDescending<Player> { if (com.supermenajer.game.game.Scouting.known(g, it)) it.potential else 0 }.thenByDescending { com.supermenajer.game.game.Scouting.estimate(g, it) }
-                    2 -> compareBy<Player> { GameRepo.askingPrice(it) }.thenByDescending { com.supermenajer.game.game.Scouting.estimate(g, it) }
-                    3 -> compareBy<Player> { it.age }.thenByDescending { com.supermenajer.game.game.Scouting.estimate(g, it) }
-                    else -> compareByDescending<Player> { com.supermenajer.game.game.Scouting.estimate(g, it) }
-                }
+                    1 -> compareByDescending<Pair<Player, Long>> { if (com.supermenajer.game.game.Scouting.known(g, it.first)) it.first.potential else 0 }.thenByDescending { e(it.first) }
+                    2 -> compareBy<Pair<Player, Long>> { it.second }.thenByDescending { e(it.first) }
+                    3 -> compareBy<Pair<Player, Long>> { it.first.age }.thenByDescending { e(it.first) }
+                    else -> compareByDescending<Pair<Player, Long>> { e(it.first) }
+                },
             )
             .take(150).toList()
     }
     Row(Modifier.fillMaxSize()) {
         // Sol panel: pencere durumu, gözlemci, arama ve filtreler
-        Column(Modifier.width(300.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(10.dp)) {
+        Column(Modifier.width(310.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(10.dp)) {
             val open = Season.transferWindowOpen(g)
             Text(
                 Season.windowText(g), color = if (open) Green else Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Surface1).padding(8.dp),
             )
-            Spacer(Modifier.height(8.dp))
-            ScoutCard(g)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = query, onValueChange = { query = it.take(30) }, singleLine = true,
@@ -594,22 +619,37 @@ fun TransferTab(g: Game) {
                 Chip("Bütçeme uygun", mode == 2) { mode = 2 }
                 Chip("Serbest", mode == 1) { mode = 1 }
                 Chip("Genç (≤21)", mode == 3) { mode = 3 }
-                Chip("📋 Gözlem (${g.shortlist.size})", mode == 4) { mode = 4 }
+                Chip("⭐ Kısa liste (${g.watch.size})", mode == 4) { mode = 4 }
+                Chip("🔭 Gözlemci", mode == 5) { mode = 5 }
             }
+            FilterTitle("Mevki")
+            FlowChips {
+                Chip("Hepsi", detFilter == null) { detFilter = null }
+                com.supermenajer.game.game.Positions.Det.entries.forEach { d -> Chip(d.code, detFilter == d) { detFilter = d } }
+            }
+            FilterTitle("Yaş: ${ages.start.toInt()}–${ages.endInclusive.toInt()}")
+            androidx.compose.material3.RangeSlider(
+                value = ages, onValueChange = { ages = it.start.roundToInt().toFloat()..it.endInclusive.roundToInt().toFloat() },
+                valueRange = 15f..40f, steps = 24,
+            )
+            FilterTitle("En az güç (tahmini): ${minOvr.toInt()}")
+            androidx.compose.material3.Slider(value = minOvr, onValueChange = { minOvr = it.roundToInt().toFloat() }, valueRange = 40f..90f, steps = 49)
+            FilterTitle("En fazla bonservis: " + if (maxPriceStep == priceSteps.lastIndex) "sınırsız" else money(maxPrice))
+            androidx.compose.material3.Slider(
+                value = maxPriceStep.toFloat(), onValueChange = { maxPriceStep = it.roundToInt() },
+                valueRange = 0f..priceSteps.lastIndex.toFloat(), steps = priceSteps.size - 2,
+            )
             FilterTitle("Ülke")
             FlowChips {
                 Chip("🌍 Tümü", country == null) { country = null }
                 Season.activeCountries(g).forEach { c -> Chip(Generator.flag(com.supermenajer.game.model.Leagues.flagOf(c)), country == c) { country = c } }
             }
-            FilterTitle("Mevki")
-            FlowChips {
-                Chip("Hepsi", posFilter == null) { posFilter = null }
-                Pos.entries.forEach { p -> Chip(p.label, posFilter == p) { posFilter = p } }
-            }
             FilterTitle("Sırala")
             FlowChips {
                 listOf("Güç", "Potansiyel", "En ucuz", "En genç").forEachIndexed { i, n -> Chip(n, sort == i) { sort = i } }
             }
+            Spacer(Modifier.height(10.dp))
+            ScoutCard(g)
         }
         // Sağ: oyuncular
         androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -617,17 +657,30 @@ fun TransferTab(g: Game) {
             Modifier.weight(1f).fillMaxHeight(),
             contentPadding = PaddingValues(vertical = 6.dp),
         ) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                Text(
+                    "${list.size}${if (list.size >= 150) "+" else ""} oyuncu · ⭐ kısa listeye ekle, ⚖ karşılaştır (oyuncu profilinden)",
+                    color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+            }
             if (list.isEmpty()) item { Text("Uygun oyuncu bulunamadı.", color = TextDim, modifier = Modifier.padding(16.dp)) }
-            items(list.size, key = { list[it].id }) { i ->
-                val p = list[i]
+            items(list.size, key = { list[it].first.id }) { i ->
+                val (p, price) = list[i]
                 val t = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
                 val team = t?.let { Generator.flag(g.flagOf(it)) + " " + it.short } ?: "Serbest"
-                val pot = if (com.supermenajer.game.game.Scouting.known(g, p) && (mode >= 3 || sort == 1)) " · P${p.potential}" else ""
-                PlayerRow(g, p, false, extra = "$team · ${money(GameRepo.askingPrice(p))}$pot")
+                val pot = if (com.supermenajer.game.game.Scouting.known(g, p) && (mode == 3 || sort == 1)) " · P${p.potential}" else ""
+                val star = if (p.id in g.watch) "⭐ " else ""
+                PlayerRow(g, p, false, extra = "$star$team · ${money(price)}$pot")
             }
         }
     }
 }
+
+/** Bonservis üst sınırı adımları (son adım: sınırsız). */
+private val priceSteps = listOf(
+    0L, 250_000L, 500_000L, 1_000_000L, 2_000_000L, 3_000_000L, 5_000_000L, 7_500_000L, 10_000_000L, 15_000_000L,
+    20_000_000L, 30_000_000L, 50_000_000L, 75_000_000L, 100_000_000L, Long.MAX_VALUE,
+)
 
 @Composable
 private fun FilterTitle(text: String) {

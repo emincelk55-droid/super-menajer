@@ -76,18 +76,6 @@ import com.supermenajer.game.model.Fixture
 import com.supermenajer.game.model.IncomingOffer
 import com.supermenajer.game.model.Game
 
-private class NavItem(val tab: Int, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-private val navItems = listOf(
-    NavItem(GameRepo.TAB_HOME, "Ana Sayfa", Icons.Filled.Home),
-    NavItem(GameRepo.TAB_INBOX, "Mesajlar", Icons.Filled.Email),
-    NavItem(GameRepo.TAB_SQUAD, "Kadro", Icons.Filled.Groups),
-    NavItem(GameRepo.TAB_TACTICS, "Taktik", Icons.Filled.SportsSoccer),
-    NavItem(GameRepo.TAB_CLUB, "Kulüp", Icons.Filled.AccountBalance),
-    NavItem(GameRepo.TAB_LEAGUE, "Lig", Icons.Filled.EmojiEvents),
-    NavItem(GameRepo.TAB_TRANSFER, "Transfer", Icons.Filled.SwapHoriz),
-)
-
 @Composable
 fun MainScreen() {
     GameRepo.version
@@ -95,13 +83,15 @@ fun MainScreen() {
     BackHandler {
         if (GameRepo.tab != GameRepo.TAB_HOME) GameRepo.tab = GameRepo.TAB_HOME else GameRepo.settingsOpen = true
     }
-    Row(Modifier.fillMaxSize()) {
-        NavRail(g)
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            TopBar(g)
+    var menu by remember { mutableStateOf(false) }
+    BackHandler(enabled = menu) { menu = false }
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            SmTopBar(g) { menu = true }
+            if (GameRepo.tab == GameRepo.TAB_HOME) QuickRow(g)
             Box(Modifier.weight(1f)) {
                 when (GameRepo.tab) {
-                    GameRepo.TAB_HOME -> HomeTab(g)
+                    GameRepo.TAB_HOME -> HomeDashboard(g)
                     GameRepo.TAB_SQUAD -> SquadTab(g)
                     GameRepo.TAB_TACTICS -> TacticsTab(g)
                     GameRepo.TAB_LEAGUE -> LeagueTab(g)
@@ -111,97 +101,16 @@ fun MainScreen() {
                 }
             }
         }
+        if (menu) MenuDrawer(g) { menu = false }
     }
     GameRepo.selectedPlayer?.let { PlayerDialog(g, it) }
+    GameRepo.compare?.let { (a, b) ->
+        val pa = g.player(a)
+        val pb = g.player(b)
+        if (pa != null && pb != null) CompareDialog(g, pa, pb) else GameRepo.compare = null
+    }
     GameRepo.negotiation?.let { NegotiationDialog(g, it) }
     if (GameRepo.settingsOpen) SettingsDialog()
-}
-
-/** Sol menü: sade, ikon + kısa etiket; mesajlarda okunmamış rozeti. */
-@Composable
-private fun NavRail(g: Game) {
-    Column(
-        Modifier.fillMaxHeight().width(68.dp).background(Surface1).padding(vertical = 2.dp),
-        verticalArrangement = Arrangement.SpaceEvenly,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        navItems.forEach { item ->
-            val sel = GameRepo.tab == item.tab
-            Column(
-                // En az 48dp dokunma alanı
-                Modifier.clip(RoundedCornerShape(12.dp)).clickable { GameRepo.tab = item.tab }
-                    .sizeIn(minWidth = 62.dp, minHeight = 46.dp).padding(horizontal = 2.dp, vertical = 1.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box {
-                    Box(
-                        Modifier.clip(RoundedCornerShape(14.dp)).background(if (sel) Green else Color.Transparent)
-                            .padding(horizontal = 12.dp, vertical = 2.dp),
-                    ) {
-                        Icon(item.icon, contentDescription = item.label, tint = if (sel) Color.Black else TextDim, modifier = Modifier.size(22.dp))
-                    }
-                    val badge = if (item.tab == GameRepo.TAB_INBOX) g.unread else 0
-                    if (badge > 0) {
-                        Box(
-                            Modifier.align(Alignment.TopEnd).size(17.dp).clip(CircleShape).background(Red),
-                            contentAlignment = Alignment.Center,
-                        ) { Text(if (badge > 9) "9+" else "$badge", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
-                    }
-                }
-                Text(item.label, fontSize = 10.sp, lineHeight = 12.sp, color = if (sel) Green else TextDim, maxLines = 1)
-            }
-        }
-    }
-}
-
-/** Üst çubuk: geri, kulüp, tarih, para, ayarlar ve CM tarzı büyük DEVAM düğmesi. */
-@Composable
-private fun TopBar(g: Game) {
-    val t = g.userTeam
-    Row(
-        Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 8.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (GameRepo.tab != GameRepo.TAB_HOME) {
-            IconButton(onClick = { GameRepo.tab = GameRepo.TAB_HOME }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = TextMain)
-            }
-            Spacer(Modifier.width(4.dp))
-        }
-        TeamBadge(t, 30.dp)
-        Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f)) {
-            Text(t.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val wk = when {
-                g.seasonOver -> "Sezon bitti"
-                !g.isMatchDay -> if (g.week == 1) "Hazırlık dönemi" else "Maç yok"
-                else -> g.dayLabel(g.week)
-            }
-            val date = if (g.date > 0) com.supermenajer.game.game.GameCalendar.format(g.date) else "${g.season}"
-            Text("📅 $date · $wk", color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(money(t.budget), color = if (t.budget >= 0) Gold else Red, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            val wages = Economy.squadWages(g, t.id)
-            Text(
-                "Maaş ${money(wages).removePrefix("€")}/${money(t.wageBudget).removePrefix("€")}",
-                color = if (wages > t.wageBudget) Red else TextDim, fontSize = 10.sp,
-            )
-        }
-        Spacer(Modifier.width(6.dp))
-        IconButton(onClick = { GameRepo.settingsOpen = true }, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.Settings, contentDescription = "Ayarlar", tint = TextDim)
-        }
-        Spacer(Modifier.width(4.dp))
-        Button(
-            onClick = { GameRepo.continueGame() },
-            enabled = !g.fired,
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (GameRepo.advancing) Gold else Green, contentColor = Color.Black),
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
-        ) { Text(GameRepo.continueLabel(g), fontWeight = FontWeight.Black, fontSize = 14.sp) }
-    }
 }
 
 /** Ayarlar: kaydet, ana menü, oyundan çık. */
@@ -248,35 +157,6 @@ private fun SettingsDialog() {
     }
 }
 
-/** Ana sayfa: solda bugünün işi ve yapılacaklar, sağda kulübün durumu. */
-@Composable
-private fun HomeTab(g: Game) {
-    Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        LazyColumn(Modifier.weight(1.1f).fillMaxHeight(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (!g.fired) item { EventCard(g) }
-            when {
-                g.fired -> item { FiredCard(g) }
-                g.seasonOver -> item { SeasonEndCard(g) }
-                else -> {
-                    val f = g.todayUserFixture()
-                    item { if (f != null) NextMatchCard(g, f) else RestDayCard(g) }
-                }
-            }
-            if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) item { CareerOfferCard(g) }
-            g.press?.let { q -> item { PressCard(g, q) } }
-            if (g.offers.isNotEmpty() && !g.fired) item { IncomingOffersCard(g) }
-            if (g.sponsorOffers.isNotEmpty() && !g.fired) item { SponsorOffersCard(g) }
-            if (Europe.groupOf(g, g.userTeamId) >= 0) item { EuroGroupCard(g, Europe.groupOf(g, g.userTeamId)) }
-        }
-        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { ClubStatusCard(g) }
-            item { LatestMessagesCard(g) }
-            item { MiniTable(g) }
-            item { RecentResults(g) }
-        }
-    }
-}
-
 /** Kulübün durumu tek bakışta: hedef, yönetim, taraftar, soyunma odası, form. */
 @Composable
 private fun ClubStatusCard(g: Game) {
@@ -317,7 +197,7 @@ private fun ClubStatusCard(g: Game) {
 }
 
 @Composable
-private fun StatusBar(label: String, value: Double, text: String, color: Color) {
+internal fun StatusBar(label: String, value: Double, text: String, color: Color) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = TextDim, fontSize = 12.sp, modifier = Modifier.width(96.dp), maxLines = 1)
         Bar(value.toFloat(), color, Modifier.weight(1f), 7.dp)
@@ -400,7 +280,7 @@ private fun NextMatchCard(g: Game, f: Fixture) {
 
 /** Maç hazırlığı: gizli antrenman ve galibiyet primi (OSM tarzı). */
 @Composable
-private fun MatchPrep(g: Game) {
+internal fun MatchPrep(g: Game) {
     var msg by remember { mutableStateOf<String?>(null) }
     val md = com.supermenajer.game.game.Matchday
     val nf = g.nextUserFixture()
@@ -475,7 +355,7 @@ private fun RestDayCard(g: Game) {
 }
 
 @Composable
-private fun FiredCard(g: Game) {
+internal fun FiredCard(g: Game) {
     SectionCard("Kovuldun!") {
         Text("😞 Yönetim seninle yolları ayırdı.", fontWeight = FontWeight.Bold, fontSize = 17.sp)
         Spacer(Modifier.height(6.dp))
@@ -499,7 +379,7 @@ private fun FiredCard(g: Game) {
 }
 
 @Composable
-private fun IncomingOffersCard(g: Game) {
+internal fun IncomingOffersCard(g: Game) {
     var msg by remember { mutableStateOf<String?>(null) }
     SectionCard("Gelen transfer teklifleri") {
         msg?.let { Text(it, color = Gold, fontSize = 13.sp); Spacer(Modifier.height(8.dp)) }
@@ -526,7 +406,7 @@ private fun IncomingOffersCard(g: Game) {
 }
 
 @Composable
-private fun SeasonEndCard(g: Game) {
+internal fun SeasonEndCard(g: Game) {
     val rec = g.history.lastOrNull()
     val t = g.userTeam
     val pos = rec?.userPos ?: g.position(t.id)
@@ -828,7 +708,7 @@ fun teamSubtitle(g: Game, t: Team): String =
     else "${g.leagueName(t)} · ${posText(g, t)} sıra"
 
 @Composable
-private fun PressCard(g: Game, q: PressQuestion) {
+internal fun PressCard(g: Game, q: PressQuestion) {
     var result by remember(q) { mutableStateOf<String?>(null) }
     SectionCard("🎤 Basın toplantısı") {
         Text(q.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -845,7 +725,7 @@ private fun PressCard(g: Game, q: PressQuestion) {
 }
 
 @Composable
-private fun CareerOfferCard(g: Game) {
+internal fun CareerOfferCard(g: Game) {
     SectionCard("💼 Kariyer teklifi") {
         Text("Başarın büyük kulüplerin dikkatini çekti! Kabul edersen hemen yeni takımının başına geçersin.", fontSize = 13.sp, color = TextDim)
         Spacer(Modifier.height(8.dp))
@@ -869,7 +749,7 @@ private fun CareerOfferCard(g: Game) {
 
 /** Yardımcı antrenörün rakip raporu ve önerileri. */
 @Composable
-private fun OpponentReport(g: Game, opp: Team) {
+internal fun OpponentReport(g: Game, opp: Team) {
     val open = GameRepo.reportOpen
     val us = g.userTeam
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp)) {
