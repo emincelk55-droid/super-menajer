@@ -56,6 +56,8 @@ class Player(
     var secondDet: Int = -1,
     /** Gerçek veride oyuncunun oynayabildiği diğer mevkiler (Positions.Det sıraları). */
     var extraDets: MutableList<Int> = mutableListOf(),
+    /** A2 (rezerv) takımında mı. */
+    var reserve: Boolean = false,
     /** Geçmiş sezonlar: "sezon|kulüp|maç|gol|asist|ort. puan". */
     var career: MutableList<String> = mutableListOf(),
     /** Forma numarası (0 = atanmadı). */
@@ -89,7 +91,8 @@ class Player(
     }
 
     val avgRating: Double get() = if (apps > 0) ratingSum / apps else 0.0
-    val available: Boolean get() = injuredWeeks == 0 && suspended == 0
+    /** A2 (rezerv) takımında oynayanlar maç kadrosuna alınmaz. */
+    val available: Boolean get() = injuredWeeks == 0 && suspended == 0 && !reserve
 
     /** Sözleşme durumu dikkate alınmadan piyasa değeri. */
     val marketValue: Long
@@ -144,6 +147,9 @@ class Team(
     /** İlk 11 mevkilerinin rolleri (bkz. Roles), kaptan ve duran top kullanıcıları (oyuncu id, -1 otomatik). */
     var roles: MutableList<Int> = mutableListOf(),
     var captain: Int = -1,
+    var viceCaptain: Int = -1,
+    /** Mevki başına markaj: 0 alan, 1 adam adama. */
+    var marking: MutableList<Int> = mutableListOf(),
     var penaltyTaker: Int = -1,
     var fkTaker: Int = -1,
     var cornerTaker: Int = -1,
@@ -357,6 +363,14 @@ class Game(
     /** Yönetimin güveni (0-100). 0'a inerse kovulursun. */
     var confidence: Double = 60.0,
     var fired: Boolean = false,
+    /** Milli takım görevi (ülke kodu, boş = yok), çağrılan kadro, sonuçlar ve puan. */
+    var nationalTeam: String = "",
+    var natSquad: MutableList<Int> = mutableListOf(),
+    var natResults: MutableList<String> = mutableListOf(),
+    var natPoints: Int = 0,
+    var natLastWeek: Int = -1,
+    /** A2 takımı maç sonuçları (en yeni başta). */
+    var a2Results: MutableList<String> = mutableListOf(),
     /** Menajerin uyruğu (bayrak kodu). */
     var managerNation: String = "TR",
     /** Kariyer açılış rehberi gösterildi mi. */

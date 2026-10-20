@@ -37,6 +37,8 @@ object GameRepo {
     /** Karşılaştırma: sabitlenen oyuncu ve açık karşılaştırma (iki oyuncu kimliği). */
     var comparePin by mutableStateOf<Int?>(null)
     var tacticWizard by mutableStateOf(false)
+    var instrSub by mutableIntStateOf(0)
+    var roleDialog by mutableIntStateOf(-1)
     var compare by mutableStateOf<Pair<Int, Int>?>(null)
 
     fun toggleWatch(p: Player) {
@@ -86,6 +88,7 @@ object GameRepo {
     const val TAB_TRANSFER = 4
     const val TAB_INBOX = 5
     const val TAB_CLUB = 6
+    const val TAB_NATIONAL = 7
 
     fun openNews(n: com.supermenajer.game.model.News) {
         inboxSel = n
@@ -302,10 +305,11 @@ object GameRepo {
 
     fun newCareer(
         g: Game, manager: String, teamId: Int, difficulty: Int = 1, noFiring: Boolean = false,
-        nation: String = "TR", rep: Int = 1, intro: Boolean = false,
+        nation: String = "TR", rep: Int = 1, intro: Boolean = false, national: String = "",
     ) {
         g.difficulty = difficulty
         g.noFiring = noFiring
+        g.nationalTeam = national
         g.managerNation = nation
         g.managerRep = listOf(25, 40, 60)[rep.coerceIn(0, 2)]
         g.introDone = !intro
@@ -623,6 +627,57 @@ object GameRepo {
             2 -> t.fkTaker = playerId
             else -> t.cornerTaker = playerId
         }
+        changed()
+    }
+
+    fun setViceCaptain(id: Int) { game?.userTeam?.viceCaptain = id; changed() }
+
+    fun setMarking(slot: Int, v: Int) {
+        val t = game?.userTeam ?: return
+        while (t.marking.size < 11) t.marking += 0
+        t.marking[slot] = v
+        changed()
+    }
+
+    /** A2 takımına gönder / A takıma al. */
+    fun setReserve(p: Player, on: Boolean): String? {
+        val g = game ?: return null
+        if (on) {
+            Reserves.canSend(g, p)?.let { return it }
+            removeFromLineup(p)
+            p.reserve = true
+            g.addNews("A2 takımı", "${p.name} A2 takımına gönderildi." + if (p.age >= 24) " Oyuncu bu karardan pek hoşnut değil." else "")
+        } else {
+            p.reserve = false
+        }
+        changed()
+        return null
+    }
+
+    fun takeNationalJob(code: String): String? {
+        val g = game ?: return null
+        val need = National.requiredRep(g, code)
+        if (g.managerRep < need) return "${National.name(code)} federasyonu en az $need itibarlı bir menajer istiyor (senin: ${g.managerRep})."
+        g.nationalTeam = code
+        g.natSquad.clear()
+        g.natPoints = 0
+        g.addNews("🌍 Milli takım görevi", "${National.name(code)} Futbol Federasyonu seni kulüp görevine ek olarak milli takımın başına getirdi.")
+        changed()
+        return null
+    }
+
+    fun resignNational() {
+        val g = game ?: return
+        g.addNews("🌍 Milli takımdan ayrıldın", "${National.name(g.nationalTeam)} milli takımındaki görevini bıraktın.")
+        g.nationalTeam = ""
+        g.natSquad.clear()
+        changed()
+    }
+
+    fun toggleCallUp(p: Player) {
+        val g = game ?: return
+        if (g.natSquad.isEmpty()) g.natSquad += National.squad(g).map { it.id }
+        if (p.id in g.natSquad) g.natSquad.remove(p.id) else if (g.natSquad.size < 26) g.natSquad += p.id
         changed()
     }
 

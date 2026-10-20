@@ -101,6 +101,7 @@ fun NewGameScreen() {
     var rep by remember { mutableIntStateOf(1) }
     var difficulty by remember { mutableIntStateOf(1) }
     var noFiring by remember { mutableStateOf(false) }
+    var national by remember { mutableStateOf("") }
     var starting by remember { mutableStateOf(false) }
     val hasSave = remember { GameRepo.slots().getOrNull(GameRepo.slot - 1)?.exists == true }
     BackHandler { if (step > 1) step-- else GameRepo.screen = Screen.TITLE }
@@ -113,7 +114,7 @@ fun NewGameScreen() {
         val msgs = listOf("Menajer ekleniyor", "Turnuvalar kuruluyor", "Fikstür çekiliyor", "Basın toplantısı hazırlanıyor")
         LaunchedEffect(Unit) {
             for (i in msgs.indices) { msg = i; kotlinx.coroutines.delay(450) }
-            GameRepo.newCareer(w, name, selected, difficulty, noFiring, nation, rep, intro = true)
+            GameRepo.newCareer(w, name, selected, difficulty, noFiring, nation, rep, intro = true, national = national)
         }
         MenuBackground {
             Row(
@@ -163,8 +164,8 @@ fun NewGameScreen() {
                 when (step) {
                     1 -> TeamStep(w, country, div, selected, onCountry = { country = it; div = Leagues.top(it).id; selected = -1 }, onDiv = { div = it; selected = -1 }) { selected = it }
                     2 -> ProfileStep(first, last, nation, rep, { first = it.take(16) }, { last = it.take(16) }, { nation = it }) { rep = it }
-                    3 -> OptionsStep(difficulty, noFiring, { difficulty = it }) { noFiring = it }
-                    else -> if (w != null) SummaryStep(w, w.team(selected), name, nation, rep, difficulty, noFiring)
+                    3 -> OptionsStep(w, difficulty, noFiring, national, { difficulty = it }, { national = it }) { noFiring = it }
+                    else -> if (w != null) SummaryStep(w, w.team(selected), name, nation, rep, difficulty, noFiring, national)
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -350,8 +351,12 @@ private fun ProfileStep(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OptionsStep(difficulty: Int, noFiring: Boolean, onDifficulty: (Int) -> Unit, onNoFiring: (Boolean) -> Unit) {
+private fun OptionsStep(
+    w: Game?, difficulty: Int, noFiring: Boolean, national: String,
+    onDifficulty: (Int) -> Unit, onNational: (String) -> Unit, onNoFiring: (Boolean) -> Unit,
+) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(
             Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(Color(0xE60E1431))
@@ -375,6 +380,15 @@ private fun OptionsStep(difficulty: Int, noFiring: Boolean, onDifficulty: (Int) 
         ) {
             Text("AYRICALIKLAR", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             ToggleRow("🛡 Kovulamaz ol", "Yönetim seni asla kovmaz (serbest mod).", noFiring) { onNoFiring(!noFiring) }
+            ToggleRow("🌍 Kulüp ve milli takım", "Kulübünle birlikte bir milli takımı da çalıştır.", national.isNotEmpty()) {
+                onNational(if (national.isNotEmpty()) "" else (w?.let { com.supermenajer.game.game.National.nations(it).firstOrNull { c -> c == "TR" } } ?: "TR"))
+            }
+            if (national.isNotEmpty() && w != null) {
+                val list = remember(w) { com.supermenajer.game.game.National.nations(w) }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    list.take(16).forEach { c -> Chip("${Generator.flag(c)} ${com.supermenajer.game.game.National.name(c)}", national == c) { onNational(c) } }
+                }
+            }
             ToggleRow("🔍 Özellik maskeleme", "Gözlemci raporu olmayan oyuncuların değerleri tahmini görünür.", true, enabled = false) {}
             ToggleRow("🌍 13 lig aktif", "Türkiye, İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz ve Hollanda.", true, enabled = false) {}
         }
@@ -400,7 +414,7 @@ private fun ToggleRow(title: String, desc: String, on: Boolean, enabled: Boolean
 }
 
 @Composable
-private fun SummaryStep(w: Game, t: Team, name: String, nation: String, rep: Int, difficulty: Int, noFiring: Boolean) {
+private fun SummaryStep(w: Game, t: Team, name: String, nation: String, rep: Int, difficulty: Int, noFiring: Boolean, national: String) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(
             Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(Color(0xE60E1431))
@@ -442,6 +456,7 @@ private fun SummaryStep(w: Game, t: Team, name: String, nation: String, rep: Int
             Spacer(Modifier.height(10.dp))
             InfoLineW("Zorluk", Difficulty.names[difficulty])
             InfoLineW("Kovulma", if (noFiring) "Kapalı (serbest mod)" else "Açık")
+            if (national.isNotEmpty()) InfoLineW("Milli takım", "${Generator.flag(national)} ${com.supermenajer.game.game.National.name(national)}")
             InfoLineW("Menajerlik unvanları", "Unvansız başlıyor")
         }
     }

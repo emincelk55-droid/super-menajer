@@ -66,8 +66,13 @@ import kotlin.math.roundToLong
 @Composable
 fun SquadTab(g: Game) {
     Column(Modifier.fillMaxSize()) {
-        FmTabs(listOf("Oyuncular", "Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}"), GameRepo.squadMode) { GameRepo.squadMode = it }
-        if (GameRepo.squadMode == 1) DynamicsView(g) else PlayersList(g)
+        val a2 = g.squad(g.userTeamId).count { it.reserve }
+        FmTabs(listOf("Oyuncular", "Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", "A2 Takımı ($a2)"), GameRepo.squadMode) { GameRepo.squadMode = it }
+        when (GameRepo.squadMode) {
+            1 -> DynamicsView(g)
+            2 -> ReservesView(g)
+            else -> PlayersList(g)
+        }
     }
 }
 
@@ -294,6 +299,12 @@ fun PlayerDialog(g: Game, p: Player) {
                     OutlinedButton(onClick = { GameRepo.removeFromLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("Yedeğe Al") }
                 } else if (p.available) {
                     Button(onClick = { GameRepo.addToLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("İlk 11'e Al") }
+                }
+                if (p.loanFrom < 0) {
+                    OutlinedButton(
+                        onClick = { message = GameRepo.setReserve(p, !p.reserve) ?: if (!p.reserve) "A takıma alındı." else "A2 takımına gönderildi." },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(if (p.reserve) "⬆ A takıma al" else "⬇ A2 takımına gönder") }
                 }
                 Spacer(Modifier.height(6.dp))
                 if (p.loanFrom < 0) ContractBox(g, p) { message = it }
@@ -780,6 +791,59 @@ private fun ScoutCard(g: Game) {
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 com.supermenajer.game.game.Scouting.focusNames.forEachIndexed { i, n -> Chip(n, g.scoutFocus == i, Modifier.weight(1f)) { GameRepo.setScout(country, i) } }
+            }
+        }
+    }
+}
+
+
+/** A2 (rezerv) takımı: haftalık maçlar, gençlerin gelişimi, oyuncu gönder/al. */
+@Composable
+private fun ReservesView(g: Game) {
+    var msg by remember { mutableStateOf<String?>(null) }
+    val res = g.squad(g.userTeamId).filter { it.reserve }.sortedByDescending { it.overall }
+    val cand = g.squad(g.userTeamId).filter { !it.reserve && it.id !in g.userTeam.lineup && it.loanFrom < 0 }
+        .sortedWith(compareBy<Player> { it.age > 21 }.thenBy { it.overall })
+    Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                DashCard("A2 Kadrosu (${res.size})", Modifier.fillMaxWidth()) {
+                    Text("A2'deki oyuncular A takım maçlarına alınmaz. Her lig haftası A2 maçı oynarlar; 22 yaş altı oyuncular bu maçlarla gelişir, 24 yaş üstü oyuncuların morali düşer.", color = TextDim, fontSize = 12.sp)
+                    msg?.let { Text(it, color = Gold, fontSize = 12.sp) }
+                    Spacer(Modifier.height(6.dp))
+                    if (res.isEmpty()) Text("A2 takımında oyuncu yok.", color = TextDim, fontSize = 13.sp)
+                    res.forEach { p ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f)) { PlayerRow(g, p, false, extra = "${p.age} yaş · P${com.supermenajer.game.game.Scouting.potText(g, p)} · moral ${p.morale.toInt()}") }
+                            OutlinedButton(onClick = { msg = GameRepo.setReserve(p, false) }) { Text("⬆ A takım") }
+                        }
+                    }
+                }
+            }
+            item {
+                DashCard("A2 Sonuçları", Modifier.fillMaxWidth()) {
+                    if (g.a2Results.isEmpty()) Text("Henüz A2 maçı oynanmadı.", color = TextDim, fontSize = 13.sp)
+                    g.a2Results.take(8).forEach { r ->
+                        val c = r.split("|")
+                        Row(Modifier.padding(vertical = 3.dp)) {
+                            Text(c[0], color = TextDim, fontSize = 12.sp, modifier = Modifier.width(76.dp))
+                            Text(c.getOrElse(1) { "" }, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+        LazyColumn(Modifier.weight(1f).fillMaxHeight()) {
+            item {
+                DashCard("A2'ye gönderilebilecekler", Modifier.fillMaxWidth()) {
+                    Text("İlk 11 dışındaki oyuncular (önce gençler).", color = TextDim, fontSize = 12.sp)
+                    cand.take(20).forEach { p ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f)) { PlayerRow(g, p, false, extra = "${p.age} yaş · güç ${p.overall}") }
+                            OutlinedButton(onClick = { msg = GameRepo.setReserve(p, true) }) { Text("⬇ A2") }
+                        }
+                    }
+                }
             }
         }
     }

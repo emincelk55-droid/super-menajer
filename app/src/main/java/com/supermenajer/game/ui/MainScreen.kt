@@ -98,6 +98,7 @@ fun MainScreen() {
                     GameRepo.TAB_TRANSFER -> TransferTab(g)
                     GameRepo.TAB_INBOX -> InboxTab(g)
                     GameRepo.TAB_CLUB -> ClubTab(g)
+                    GameRepo.TAB_NATIONAL -> NationalTab(g)
                 }
             }
         }

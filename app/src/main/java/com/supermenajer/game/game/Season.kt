@@ -427,6 +427,8 @@ object Season {
                 Fans.weekly(g, rnd)
                 Assistant.weekly(g, d.number, rnd)
                 Development.weekly(g, rnd)
+                Reserves.weekly(g, d.number, rnd)
+                National.weekly(g, d.number, rnd)
                 Dynamics.weekly(g)
                 Events.weekly(g, rnd)
                 ManagerMarket.weekly(g, d.number, rnd)
@@ -817,6 +819,7 @@ object Season {
     }
 
     fun newSeason(g: Game, rnd: Random = Random.Default) {
+        National.summerTournament(g, rnd)
         val us = g.userTeam
         Sponsors.newSeason(g)
         // Küme düşme / yükselme (2 ligli ülkelerde)

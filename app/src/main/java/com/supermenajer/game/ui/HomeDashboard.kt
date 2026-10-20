@@ -252,6 +252,7 @@ private val menuEntries = listOf(
     MenuEntry("🔁", "Transfer", GameRepo.TAB_TRANSFER) { it.offers.size },
     MenuEntry("🏆", "Lig ve Kupalar", GameRepo.TAB_LEAGUE),
     MenuEntry("🏛", "Kulüp", GameRepo.TAB_CLUB),
+    MenuEntry("🌍", "Milli Takım", GameRepo.TAB_NATIONAL),
 )
 
 /** ☰ ile açılan yan menü. */

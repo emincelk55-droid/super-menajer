@@ -350,7 +350,6 @@ fun TacticsBoard(g: Game) {
     val panel = GameRepo.tacticsPanel.coerceIn(0, 3)
     var sel by remember { mutableIntStateOf(-1) }
     var benchSel by remember { mutableIntStateOf(-1) }
-    var instrSub by remember { mutableIntStateOf(0) }
     var drag by remember { mutableStateOf<DragState?>(null) }
     var rootPos by remember { mutableStateOf(Offset.Zero) }
     var benchRect by remember { mutableStateOf(Rect.Zero) }
@@ -390,7 +389,7 @@ fun TacticsBoard(g: Game) {
                 val range = depthRange(slots)
                 Canvas(Modifier.fillMaxSize()) {
                     drawPerspectivePitch()
-                    if (panel == 2) drawInstructionOverlay(g, instrSub)
+                    if (panel == 2) drawInstructionOverlay(g, GameRepo.instrSub)
                 }
                 val cardW = (bh.value * 0.175f).coerceIn(50f, 64f).dp
                 slots.forEachIndexed { i, s ->
@@ -475,13 +474,14 @@ fun TacticsBoard(g: Game) {
                             onDragEnd = { drag?.let { drop(it) }; drag = null },
                         )
                         1 -> FormationPanel(g) { sel = -1; benchSel = -1; GameRepo.setFormation(it) }
-                        2 -> InstructionsPanel(g, instrSub) { instrSub = it }
+                        2 -> InstructionsPanel(g, GameRepo.instrSub) { GameRepo.instrSub = it }
                         else -> RolesPanel(g)
                     }
                 }
             }
         }
         if (GameRepo.tacticWizard) TacticWizard(g) { GameRepo.tacticWizard = false }
+        if (GameRepo.roleDialog in slots.indices) RoleDialog(g, GameRepo.roleDialog) { GameRepo.roleDialog = -1 }
         // Sürüklenen oyuncu parmağı takip eder
         drag?.let { d ->
             val half = with(density) { 32.dp.toPx() }
@@ -672,24 +672,7 @@ private fun InstructionsPanel(g: Game, sub: Int, onSub: (Int) -> Unit) {
                         InstrRow("Zaman geçirme", "70'den sonra öndeyken oyunu yavaşlatır.", yesNo[if (t.timeWasting) 1 else 0], yesNo) { GameRepo.setInstruction("timewaste", it) }
                     }
                 }
-                else -> {
-                    val xi = t.lineup.mapNotNull { g.player(it) }
-                    val names = xi.map { "${it.overall} · ${it.name.substringAfterLast(' ')}" }
-                    val duties = listOf(
-                        "Kaptan" to Roles.captain(g, t),
-                        "Penaltıcı" to Roles.penaltyTaker(g, t, xi),
-                        "Frikikçi" to Roles.freeKickTaker(g, t, xi),
-                        "Kornerci" to Roles.cornerTaker(g, t, xi),
-                    )
-                    duties.forEachIndexed { k, (label, cur) ->
-                        item {
-                            InstrRow(
-                                label, if (k == 0) "Liderlik moral ve uyuma etki eder." else "Duran topları kullanacak oyuncu.",
-                                cur?.let { "${it.overall} · ${it.name.substringAfterLast(' ')}" } ?: "Otomatik", names,
-                            ) { GameRepo.setDuty(k, xi[it].id) }
-                        }
-                    }
-                }
+                else -> dutiesItems(g)
             }
         }
     }
@@ -702,7 +685,7 @@ private fun RolesPanel(g: Game) {
     val slots = Formations.slots(t.formation)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
         item {
-            Text("⭐ oyuncunun doğal rolü: o rolde %3 daha verimli oynar.", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+            Text("⭐ oyuncunun doğal rolü: o rolde %3 daha verimli oynar. Ayrıntı ve markaj için oyuncuya dokun.", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
         }
         items(slots.size) { i ->
             val p = g.player(t.lineup.getOrNull(i) ?: -1)
@@ -710,12 +693,13 @@ private fun RolesPanel(g: Game) {
             val cur = Roles.roleIndex(t, i).coerceIn(0, roles.size - 1)
             val nat = p?.let { if (it.pos == slots[i].pos) Positions.natRole(it) else -1 } ?: -1
             val d = Positions.slotDet(slots[i])
-            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().clickable { GameRepo.roleDialog = i }.padding(vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.width(4.dp).height(20.dp).background(posColor(slots[i].pos)))
                     Spacer(Modifier.width(8.dp))
                     Text(d.code, color = posColor(slots[i].pos), fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.width(48.dp))
                     Text(p?.name ?: "Boş", fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (t.marking.getOrNull(i) == 1) Text("🎯 Adam adama", color = Gold, fontSize = 11.sp)
                 }
                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(roles[cur].info, color = TextMain.copy(alpha = 0.85f), fontSize = 12.sp, modifier = Modifier.weight(1f).padding(end = 8.dp), maxLines = 3)
@@ -830,6 +814,179 @@ fun TacticWizard(g: Game, onClose: () -> Unit) {
                         .clickable { S.apply(g, sel, formation); onClose() },
                     contentAlignment = Alignment.Center,
                 ) { Text("Taktiği Onayla", fontWeight = FontWeight.Black) }
+            }
+        }
+    }
+}
+
+
+private fun setStars(v: Double) = ((v - 45) / 9).roundToInt().coerceIn(1, 5)
+
+/** Liderlik (1-20): yaş/tecrübe ve lider kişilik. */
+fun leadership(p: Player): Int {
+    val exp = ((p.age - 22) * 2.2).coerceIn(-8.0, 14.0)
+    return ((30 + exp * 2 + if (com.supermenajer.game.game.Traits.isLeader(p)) 35 else 0) / 5).roundToInt().coerceIn(1, 20)
+}
+
+/** Takım görevleri: FM tarzı duran top kullanıcıları ve kaptan tabloları. */
+private fun androidx.compose.foundation.lazy.LazyListScope.dutiesItems(g: Game) {
+    val t = g.userTeam
+    val xi = t.lineup.mapNotNull { g.player(it) }.filter { it.pos != com.supermenajer.game.model.Pos.GK }
+    val pen = Roles.penaltyTaker(g, t, xi)
+    val fk = Roles.freeKickTaker(g, t, xi)
+    val cor = Roles.cornerTaker(g, t, xi)
+    item {
+        Text("DURAN TOP KULLANICILARI", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Oyuncu", color = TextDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            listOf("Penaltı", "Frikik", "Korner").forEach { Text(it, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center) }
+        }
+    }
+    items(xi.size) { i ->
+        val p = xi[i]
+        val vals = listOf(
+            p.shooting * 0.75 + p.dribbling * 0.25 to (pen?.id == p.id),
+            p.shooting * 0.5 + p.passing * 0.5 to (fk?.id == p.id),
+            p.passing * 0.8 + p.dribbling * 0.2 to (cor?.id == p.id),
+        )
+        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(Positions.det(p).code, color = posColor(p.pos), fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.width(36.dp))
+            Text(p.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            vals.forEachIndexed { k, (v, on) ->
+                val st = setStars(v)
+                Box(
+                    Modifier.width(72.dp).height(28.dp).padding(horizontal = 3.dp).clip(RoundedCornerShape(6.dp))
+                        .background(if (on) Gold.copy(alpha = 0.25f) else Color.Transparent)
+                        .border(1.dp, if (on) Gold else Color.Transparent, RoundedCornerShape(6.dp))
+                        .clickable { GameRepo.setDuty(k + 1, p.id) },
+                    contentAlignment = Alignment.Center,
+                ) { Text("★".repeat(st) + "☆".repeat(5 - st), color = if (on) Gold else TextDim, fontSize = 10.sp) }
+            }
+        }
+    }
+    item {
+        Text("Bir yıldız kutusuna dokunarak o görevi ver. Sarı kutu: şu anki kullanıcı.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+        Spacer(Modifier.height(12.dp))
+        Text("KAPTANLAR", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Oyuncu", color = TextDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            listOf("Durum" to 64, "Grup" to 64, "Yaş" to 34, "Lid" to 34, "" to 76).forEach { (h, w) ->
+                Text(h, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(w.dp), textAlign = TextAlign.Center)
+            }
+        }
+    }
+    val cap = Roles.captain(g, t)
+    val vice = g.player(t.viceCaptain)
+    val tiers = Dynamics.tiers(g, t)
+    val squad = g.squad(t.id).filter { !it.reserve }.sortedByDescending { leadership(it) * 10 + it.overall / 10 }
+    items(squad.size) { i ->
+        val p = squad[i]
+        val tier = when { tiers[0]?.contains(p) == true -> "Lider"; tiers[1]?.contains(p) == true -> "Etkili"; else -> "Normal" }
+        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(p.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), fontWeight = if (p.id == cap?.id || p.id == vice?.id) FontWeight.Black else FontWeight.Normal)
+            Text(tier, fontSize = 11.sp, color = if (tier == "Lider") Gold else TextMain, modifier = Modifier.width(64.dp), textAlign = TextAlign.Center)
+            Text(Dynamics.groupOf(g, t, p).substringBefore(" "), fontSize = 11.sp, modifier = Modifier.width(64.dp), textAlign = TextAlign.Center, maxLines = 1)
+            Text("${p.age}", fontSize = 12.sp, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
+            Text("${leadership(p)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (leadership(p) >= 15) Green else TextMain, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
+            Row(Modifier.width(76.dp), horizontalArrangement = Arrangement.Center) {
+                listOf("C" to (cap?.id == p.id), "V" to (vice?.id == p.id)).forEachIndexed { k, (l, on) ->
+                    Box(
+                        Modifier.padding(horizontal = 3.dp).size(28.dp).clip(CircleShape).background(if (on) Gold else Color(0xFF1B2452))
+                            .clickable { if (k == 0) GameRepo.setDuty(0, p.id) else GameRepo.setViceCaptain(p.id) },
+                        contentAlignment = Alignment.Center,
+                    ) { Text(l, fontWeight = FontWeight.Black, fontSize = 12.sp, color = if (on) Color.Black else TextDim) }
+                }
+            }
+        }
+    }
+}
+
+
+/** Rolün önemli özellikleri (rol katsayılarından). */
+private fun keyAttrs(r: Roles.Role, pos: com.supermenajer.game.model.Pos): String {
+    if (pos == com.supermenajer.game.model.Pos.GK) return if (r.mid > 0) "Refleks / Ayakla oyun / Bire bir / Pas" else "Refleks / Bire bir / Hava hakimiyeti / İletişim"
+    val list = listOf(
+        r.atk to "Hareketlenme / Hız", r.mid to "Pas / Karar alma", r.def to "Top kapma / Markaj / Pozisyon alma",
+        r.shot - 1.0 to "Bitiricilik / Soğukkanlılık", r.assist - 1.0 to "Yaratıcılık / Orta yapma", r.header - 1.0 to "Kafa / Güç",
+    )
+    return list.sortedByDescending { it.first }.take(3).joinToString(" / ") { it.second }
+}
+
+/** FM tarzı rol penceresi: roller (★ önerilen), açıklama, önemli özellikler ve markaj tipi. */
+@Composable
+private fun RoleDialog(g: Game, slot: Int, onClose: () -> Unit) {
+    val t = g.userTeam
+    val slots = Formations.slots(t.formation)
+    val s = slots[slot]
+    val p = g.player(t.lineup.getOrNull(slot) ?: -1)
+    val roles = Roles.byPos.getValue(s.pos)
+    var sel by remember { mutableIntStateOf(Roles.roleIndex(t, slot).coerceIn(0, roles.size - 1)) }
+    var marking by remember { mutableIntStateOf(t.marking.getOrNull(slot) ?: 0) }
+    val nat = p?.let { if (it.pos == s.pos) Positions.natRole(it) else -1 } ?: -1
+    WideDialog(onDismissRequest = onClose, maxWidth = 720.dp) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Brush.verticalGradient(listOf(CardTop, CardBottom)))
+                .border(1.dp, CardLine, RoundedCornerShape(14.dp)).verticalScroll(rememberScrollState()),
+        ) {
+            Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(p?.name ?: Positions.slotDet(s).label, color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                Text("✕", color = Color.Black, fontSize = 18.sp, modifier = Modifier.clickable(onClick = onClose).padding(4.dp))
+            }
+            Column(Modifier.padding(14.dp)) {
+                Row {
+                    Text("Bu oyuncuyu görevlendirmek istediğin taktiksel role dokun", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text("★ Önerilen rol", color = Teal, fontSize = 12.sp)
+                }
+                Spacer(Modifier.height(8.dp))
+                roles.indices.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth()) {
+                        pair.forEach { r ->
+                            Row(
+                                Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable { sel = r }.padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    Modifier.size(20.dp).clip(CircleShape).background(if (r == sel) Purple else Color.Transparent)
+                                        .border(2.dp, if (r == sel) Purple else TextDim, CircleShape),
+                                    contentAlignment = Alignment.Center,
+                                ) { if (r == sel) Text("✓", fontSize = 11.sp, fontWeight = FontWeight.Black) }
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    roles[r].name + if (r == nat) " ★" else "", fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                                    color = if (r == sel) Teal else TextMain,
+                                )
+                            }
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                if (s.pos == com.supermenajer.game.model.Pos.DF || s.pos == com.supermenajer.game.model.Pos.MF) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Markaj:", fontSize = 13.sp, modifier = Modifier.width(70.dp))
+                        listOf("Alan", "Oyuncu").forEachIndexed { k, l ->
+                            Box(
+                                Modifier.weight(1f).height(32.dp).background(if (marking == k) Purple else Color.Transparent).clickable { marking = k },
+                                contentAlignment = Alignment.Center,
+                            ) { Text(l, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                        }
+                    }
+                    Text(
+                        if (marking == 0) "Alan savunması: oyuncu kendi bölgesini korur, dengeli oyun." else "Adam adama: en tehlikeli rakibi yakından takip eder; savunma güçlenir, oyun kurulumu biraz zayıflar.",
+                        color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028)).padding(10.dp)) {
+                    Text(roles[sel].info, fontSize = 14.sp)
+                    Text("Önemli Özellikler: ${keyAttrs(roles[sel], s.pos)}", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(8.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple)))
+                        .clickable { GameRepo.setRole(slot, sel); GameRepo.setMarking(slot, marking); onClose() },
+                    contentAlignment = Alignment.Center,
+                ) { Text("Onayla", fontWeight = FontWeight.Black) }
             }
         }
     }

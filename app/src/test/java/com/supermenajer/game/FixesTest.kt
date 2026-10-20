@@ -35,6 +35,28 @@ class FixesTest {
         assertEquals(0, g.userTeam.mentality)
         assertTrue(GameRepo.teamReport(g).contains("en zayıf"))
 
+        // A2: gönderilen oyuncu maç kadrosuna giremez, haftalık A2 maçı oynanır
+        val young = g.squad(teamId).filter { it.id !in g.userTeam.lineup }.minBy { it.age }
+        assertNull(GameRepo.setReserve(young, true))
+        assertTrue(young.reserve && !young.available)
+        val second = g.squad(teamId).filter { it.id !in g.userTeam.lineup && !it.reserve }.minBy { it.age }
+        GameRepo.setReserve(second, true)
+        com.supermenajer.game.game.Reserves.weekly(g, 1, Random(2))
+        assertTrue(g.a2Results.isNotEmpty())
+        GameRepo.setReserve(young, false)
+        assertTrue(young.available)
+
+        // Milli takım: itibar yetmezse görev verilmez; pencerede maç, yaz turnuvası
+        g.managerRep = 10
+        assertNotNull(GameRepo.takeNationalJob("ES"))
+        g.managerRep = 95
+        assertNull(GameRepo.takeNationalJob("ES"))
+        com.supermenajer.game.game.National.weekly(g, 6, Random(4))
+        com.supermenajer.game.game.National.weekly(g, 6, Random(4))
+        assertEquals(1, g.natResults.size)
+        com.supermenajer.game.game.National.summerTournament(g, Random(5))
+        assertTrue(g.natResults.size >= 2)
+
         // Kiralık gelen oyuncu tekrar kiralık gönderilemez
         val other = g.teams.first { it.id != teamId }
         val loanee = g.squad(other.id).first { it.age <= 23 }

@@ -113,6 +113,16 @@ class ScreensTest {
         GameRepo.tacticsPanel = 2; shot("10a_instructions")
         GameRepo.tacticsPanel = 3; shot("10c_roles"); GameRepo.tacticsPanel = 0
         GameRepo.tacticWizard = true; shot("10d_tactic_wizard"); GameRepo.tacticWizard = false
+        GameRepo.tacticsPanel = 2; GameRepo.instrSub = 3; shot("10e_duties"); GameRepo.instrSub = 0
+        GameRepo.tacticsPanel = 3; GameRepo.roleDialog = 4; shot("10f_role_dialog"); GameRepo.roleDialog = -1; GameRepo.tacticsPanel = 0
+        // A2 takımı ve milli takım
+        g.squad(g.userTeamId).filter { it.id !in g.userTeam.lineup }.sortedBy { it.age }.take(3).forEach { GameRepo.setReserve(it, true) }
+        com.supermenajer.game.game.Reserves.weekly(g, 3, kotlin.random.Random(3))
+        GameRepo.tab = 1; GameRepo.squadMode = 2; shot("10g_a2"); GameRepo.squadMode = 0
+        GameRepo.tab = GameRepo.TAB_NATIONAL; shot("10h_national_offers")
+        g.managerRep = 90; GameRepo.takeNationalJob("GB")
+        com.supermenajer.game.game.National.weekly(g, 6, kotlin.random.Random(6))
+        shot("10i_national")
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
         GameRepo.clubMode = 3; shot("10e_finance")
         // v1.5: dinamikler, yetenek ağacı, hoca pazarı, olay kartı

@@ -149,6 +149,8 @@ class MatchSim(
                 com.supermenajer.game.game.Roles.roleIndex(s.team, idx) == com.supermenajer.game.game.Positions.natRole(x.p)
             val nb = if (natural) e * 0.03 else 0.0
             a += e * r.atk + nb * 0.3; m += e * r.mid + nb * 0.4; d += e * r.def + nb * 0.3
+            // Adam adama markaj: savunmaya katkı, oyun kurulumuna küçük kayıp
+            if (idx >= 0 && s.team.marking.getOrNull(idx) == 1 && (x.slot.pos == Pos.DF || x.slot.pos == Pos.MF)) { d += e * 0.025; m -= e * 0.012 }
         }
         a /= 4.3; m /= 5.4; d /= 5.9
         when (s.team.mentality) { 0 -> { a *= 0.9; d *= 1.07 }; 2 -> { a *= 1.08; d *= 0.94 } }
@@ -183,7 +185,8 @@ class MatchSim(
         a *= lf; m *= lf; d *= lf
         // Kaptan sahadaysa küçük bir moral desteği
         val cap = com.supermenajer.game.game.Roles.captain(game, s.team)
-        if (cap != null && s.onPitch.any { it.p.id == cap.id }) { a *= 1.01; m *= 1.01; d *= 1.01 }
+        val vice = game.player(s.team.viceCaptain)
+        if ((cap != null && s.onPitch.any { it.p.id == cap.id }) || (vice != null && s.onPitch.any { it.p.id == vice.id })) { a *= 1.01; m *= 1.01; d *= 1.01 }
         if (s === userSide) {
             val f = com.supermenajer.game.game.Dynamics.matchFactor(game) * com.supermenajer.game.game.Perks.tactics(game) *
                 com.supermenajer.game.game.Difficulty.matchFactor(game)

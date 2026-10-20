@@ -120,3 +120,12 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Kariyer açılışı: "Son dakika" TV haberi, 6 sayfalık hoş geldin rehberi, yardımcı antrenörün takım raporu ve ilk mesajlar.
 - Taktik Oluştur: 7 oyun tarzı (Tiki-Taka, Gegenpress, Topa Sahip Ol, Kanat Oyunu, Uzun Top, Kontra Atak, Catenaccio),
   kadroya uygunluk çubukları, artı/eksi yönler ve önerilen dizilişler; tek dokunuşla uygulanır.
+
+### v2.4
+- Takım görevleri: FM tarzı duran top tablosu (penaltı/frikik/korner yıldızları, dokunarak ata) ve kaptan tablosu
+  (durum, sosyal grup, yaş, liderlik; kaptan ve yardımcı kaptan seçimi — kaptan yoksa yardımcısı moral verir).
+- Rol penceresi: oyuncuya dokununca roller (★ önerilen), açıklama, önemli özellikler ve markaj seçimi (alan / adam adama).
+  Adam adama markaj maç motorunda savunmayı güçlendirir, oyun kurulumunu biraz zayıflatır.
+- A2 takımı: oyuncuları A2'ye gönder/geri al; A2 her lig haftası maç oynar, 22 yaş altı oyuncular gelişir, 24 yaş üstü mutsuz olur.
+- Milli takım kariyeri: kulüple birlikte milli takım çalıştır (yeni kariyerde ya da Milli Takım ekranından, itibara göre),
+  kadro çağır/çıkar, 6/13/22/29. haftalarda milli maçlar, sezon sonunda Avrupa Şampiyonası / Dünya Kupası.
