@@ -45,7 +45,7 @@ import com.supermenajer.game.model.News
 @Composable
 fun ClubTab(g: Game) {
     // Telefonda tüm bölümler tek satırda görünsün diye kısa adlı sekmeler
-    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar", "Efsaneler")
+    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar", "Efsaneler", "Vizyon")
     Column(Modifier.fillMaxSize()) {
         val dots = buildSet {
             if (g.sponsorOffers.isNotEmpty()) add(2)
@@ -62,6 +62,7 @@ fun ClubTab(g: Game) {
             5 -> CareerView(g)
             6 -> PerksView(g)
             8 -> LegendsView(g)
+            9 -> VisionView(g)
             else -> ManagerMarketView(g)
         }
     }
@@ -329,4 +330,54 @@ private fun LegendRow(i: Int, name: String, value: String, active: Boolean) {
         Text(name + if (active) "" else " (ayrıldı)", fontSize = 14.sp, modifier = Modifier.weight(1f))
         Text(value, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
+}
+
+
+/** Kulüp vizyonu (5 yıllık plan) ve rakip menajer karnesi. */
+@Composable
+private fun VisionView(g: Game) {
+    com.supermenajer.game.game.Vision.ensure(g)
+    val goals = com.supermenajer.game.game.Vision.list(g)
+    TwoCards({
+        SectionCard("🏛 Yönetimin 5 Yıllık Vizyonu") {
+            Text("Her sezon sonunda değerlendirilir. Başarılan hedef: +10 güven, itibar ve XP. Kaçan hedef: -10 güven.", color = TextDim, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            goals.forEach { v ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(when (v.status) { 1 -> "✅"; 2 -> "❌"; else -> "⏳" }, fontSize = 16.sp, modifier = Modifier.width(30.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(v.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = when (v.status) { 1 -> Green; 2 -> Red; else -> TextMain })
+                        val left = v.deadline - g.season
+                        Text(
+                            when (v.status) {
+                                1 -> "Başarıldı"
+                                2 -> "Kaçırıldı"
+                                else -> if (left <= 0) "Bu sezon sonu son tarih!" else "Son tarih: ${v.deadline}-${(v.deadline + 1) % 100} sezonu ($left sezon kaldı)"
+                            },
+                            color = TextDim, fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }, {
+        SectionCard("🎙️ Rakip Menajerlerle Karnen") {
+            if (g.h2h.isEmpty()) Text("Henüz rakip hocalarla karşılaşmadın.", color = TextDim, fontSize = 13.sp)
+            g.h2h.entries.sortedByDescending { e -> e.value.split(",").sumOf { it.toIntOrNull() ?: 0 } }.take(15).forEach { (m, v) ->
+                val c = v.split(",").map { it.toIntOrNull() ?: 0 }
+                val team = g.managers.entries.firstOrNull { it.value == m }?.key?.let { g.teamOrNull(it)?.name } ?: ""
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(m, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        if (team.isNotEmpty()) Text(team, color = TextDim, fontSize = 11.sp)
+                    }
+                    Text("${c.getOrElse(0) { 0 }}G", color = Green, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.width(34.dp))
+                    Text("${c.getOrElse(1) { 0 }}B", color = Gold, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.width(34.dp))
+                    Text("${c.getOrElse(2) { 0 }}M", color = Red, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.width(34.dp))
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text("Büyük maçlardan önce rakip hocalar basına laf atabilir; cevabın takımının moralini ve rakibin hırsını etkiler.", color = TextDim, fontSize = 11.sp)
+        }
+    })
 }

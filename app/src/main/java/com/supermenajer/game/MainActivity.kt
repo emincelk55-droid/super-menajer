@@ -42,12 +42,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppRoot() {
-    when (GameRepo.screen) {
-        Screen.SPLASH -> com.supermenajer.game.ui.SplashScreen()
-        Screen.TITLE -> TitleScreen()
-        Screen.NEW_GAME -> NewGameScreen()
-        Screen.MAIN -> MainScreen()
-        Screen.MATCH -> MatchScreen()
-        Screen.SUMMARY -> SummaryScreen()
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+        when (GameRepo.screen) {
+            Screen.SPLASH -> com.supermenajer.game.ui.SplashScreen()
+            Screen.TITLE -> TitleScreen()
+            Screen.NEW_GAME -> NewGameScreen()
+            Screen.MAIN -> MainScreen()
+            Screen.MATCH -> MatchScreen()
+            Screen.SUMMARY -> SummaryScreen()
+        }
+        GameRepo.busy?.let { com.supermenajer.game.ui.BusyOverlay(it) }
     }
 }

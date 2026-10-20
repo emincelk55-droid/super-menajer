@@ -147,6 +147,34 @@ class FixesTest {
         assertTrue(g.retiring.isEmpty())
         assertTrue(scorer.career.single().contains("|10|4|"))
 
+        // Rakip menajer: laf sokma → basın sorusu; cevap rakibe hırs, karne tutulur
+        val opp = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }
+        val mgr = g.managers[opp.id]!!
+        com.supermenajer.game.game.Rivals.record(g, opp, 2, 1)
+        com.supermenajer.game.game.Rivals.record(g, opp, 0, 0)
+        assertEquals(Triple(1, 1, 0), com.supermenajer.game.game.Rivals.h2h(g, mgr))
+        g.press = com.supermenajer.game.model.PressQuestion("x", com.supermenajer.game.game.Rivals.answers, com.supermenajer.game.game.Rivals.PRESS_KIND)
+        GameRepo.answerPress(g.press!!, 1)
+        assertTrue(g.rivalBoost > 0 && g.press == null)
+
+        // Vizyon: 5 hedef, sezon sonunda değerlendirilir
+        com.supermenajer.game.game.Vision.ensure(g)
+        assertEquals(5, g.vision.size)
+        g.userTeam.budget = -1
+        com.supermenajer.game.game.Vision.evaluate(g)
+        assertTrue(com.supermenajer.game.game.Vision.list(g).first { it.id == "finance" }.status == 2)
+        g.userTeam.budget = 10_000_000
+
+        // Veri editörü
+        val ed = g.squad(g.userTeamId).first { it.pos != com.supermenajer.game.model.Pos.GK }
+        GameRepo.editPlayer(ed, "Yeni İsim", 22, 95, listOf(90, 90, 90, 90, 90, 90, 10))
+        assertEquals("Yeni İsim", ed.name)
+        assertTrue(ed.overall >= 85 && ed.potential >= ed.overall)
+
+        // Arka plan işlemi: testte (ana iş parçacığı yok) senkron çalışır, meşgul durumu temizlenir
+        GameRepo.skipToNextMatchAsync()
+        assertNull(GameRepo.busy)
+
         // Ana menüye dönünce kariyer kapanır, kayıt başka yuvaya yazılmaz
         GameRepo.closeCareer()
         assertNull(GameRepo.game)

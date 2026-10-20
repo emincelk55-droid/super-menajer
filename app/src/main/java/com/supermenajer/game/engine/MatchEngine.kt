@@ -65,12 +65,14 @@ class MatchSim(
     private val autoUserSubs: Boolean,
     private val rnd: Random = Random.Default,
     val nat: NatMatch? = null,
+    /** İki kişilik maç: deplasman takımını da bir oyuncu yönetir (yapay zekâ değişiklik yapmaz). */
+    val twoPlayer: Boolean = false,
 ) {
     private val big = com.supermenajer.game.game.Talks.bigMatch(game, fixture)
     val home = Side(nat?.home ?: game.team(fixture.home), 0)
     val away = Side(nat?.away ?: game.team(fixture.away), 1)
     /** Skor tabelasındaki başlık (milli maçta turnuva adı). */
-    val title: String? get() = nat?.title
+    val title: String? get() = nat?.title ?: if (twoPlayer) "👥 İki kişilik maç" else null
     val sides: List<Side> get() = listOf(home, away)
     var minute = 0
         private set
@@ -111,6 +113,7 @@ class MatchSim(
             if (wb > 0) us.onPitch.forEach { it.boost += 0.01 * wb }
             // Rakibe özel talimat
             val them = other(us)
+            if (game.rivalBoost != 0.0) them.onPitch.forEach { it.boost += game.rivalBoost }
             when (game.oppInstr) {
                 0 -> them.onPitch.maxByOrNull { it.p.overall }?.let {
                     it.boost -= 0.08
@@ -294,7 +297,7 @@ class MatchSim(
         fatigue(home); fatigue(away)
         for (s in sides) if (rnd.nextDouble() < 0.0012) injury(s)
         if (minute == 58 || minute == 67 || minute == 76 || minute == 84) {
-            for (s in sides) if (s.team.id != userTeamId || autoUserSubs) aiSub(s)
+            for (s in sides) if ((s.team.id != userTeamId || autoUserSubs) && !(twoPlayer && s === away)) aiSub(s)
         }
         if (minute == 45) ev(Ev.HALF, -1, Comms.half(home, away))
         if (minute == 90) finish()

@@ -84,6 +84,7 @@ object Season {
         ManagerMarket.ensure(g, rnd)
         Contracts.assignClauses(g, rnd)
         Missions.ensure(g, rnd)
+        Vision.ensure(g)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
         Sponsors.refreshOffers(g, rnd)
@@ -352,6 +353,7 @@ object Season {
     fun matchNews(g: Game, sim: MatchSim, rnd: Random = Random.Default) {
         val us = sim.userSide ?: return
         Medical.afterMatch(g, us.used.filter { it.injured }.map { it.p })
+        Rivals.record(g, sim.other(us).team, us.goals, sim.other(us).goals)
         g.oppInstr = -1
         run {
             val them0 = sim.other(us)
@@ -492,6 +494,7 @@ object Season {
             if (p.injuredWeeks > 0) p.injuredWeeks--
             if (p.fragileWeeks > 0) p.fragileWeeks--
             if (p.injuredWeeks == 0 && p.injuryType.isNotEmpty()) p.injuryType = ""
+            if (p.injuredWeeks == 0 && p.id in g.medical) g.medical.remove(p.id)
             // İyi fizyoterapist iyileşmeyi hızlandırır
             if (mine && p.injuredWeeks > 0 && rnd.nextDouble() < physioHeal) p.injuredWeeks--
             if (p.suspended > 0) p.suspended--
@@ -689,6 +692,7 @@ object Season {
         }
         for (p in g.players) if (p.teamId >= 0) p.fitness = (p.fitness + 4).coerceAtMost(100.0)
         Scouting.processDay(g, false, rnd)
+        Rivals.maybeJab(g, rnd)
         if (transferWindowOpen(g)) Roles.ensureNumbers(g, g.userTeam)
     }
 
@@ -841,6 +845,7 @@ object Season {
 
     fun newSeason(g: Game, rnd: Random = Random.Default) {
         National.summerTournament(g, rnd)
+        Vision.evaluate(g)
         val us = g.userTeam
         Sponsors.newSeason(g)
         // Küme düşme / yükselme (2 ligli ülkelerde)

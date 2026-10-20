@@ -58,7 +58,7 @@ import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Screen
 import kotlin.math.sin
 
-const val APP_VERSION = "v2.7"
+const val APP_VERSION = "v2.8"
 
 private val tips = listOf(
     "İpucu: DEVAM düğmesi günleri tek tek geçirir, önemli bir olayda durur.",
@@ -260,6 +260,8 @@ fun TitleScreen() {
                 Spacer(Modifier.height(6.dp))
                 MenuButton("📂", "KARİYER YÜKLE", "${slots.count { it.exists }}/3 kayıt", selected = panel == 1) { panel = 1 }
                 Spacer(Modifier.height(6.dp))
+                MenuButton("👥", "İKİ KİŞİLİK MAÇ", "Aynı telefonda arkadaşınla oyna", selected = panel == 4) { panel = 4 }
+                Spacer(Modifier.height(6.dp))
                 MenuButton("❓", "NASIL OYNANIR", "Kısa rehber", selected = panel == 3) { panel = 3 }
                 Spacer(Modifier.height(6.dp))
                 MenuButton("✕", "ÇIKIŞ", null) { (ctx as? android.app.Activity)?.finishAndRemoveTask() }
@@ -303,6 +305,7 @@ fun TitleScreen() {
                         Text("Dolu bir yuvayı seçersen eski kariyer silinir.", color = TextDim, fontSize = 12.sp)
                         slots.forEach { s -> SlotRow(s, if (s.exists) "ÜZERİNE YAZ" else "BAŞLA", false, onDelete = null) { startNew(s.n) } }
                     }
+                    4 -> VersusPanel()
                     else -> {
                         Text("NASIL OYNANIR", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         listOf(
@@ -389,4 +392,77 @@ private fun SlotRow(s: GameRepo.SlotInfo, action: String, confirmDelete: Boolean
                 .border(1.dp, Green, RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp),
         ) { Text(action, color = if (s.exists && action == "YÜKLE") Color.Black else Green, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
     }
+}
+
+
+/** Arka planda uzun işlem sürerken: dokunuşları engelleyen yarı saydam katman. */
+@Composable
+fun BusyOverlay(msg: String) {
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f))
+            .clickable(remember { MutableInteractionSource() }, null) {},
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            Modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xEE10163A)).border(1.dp, Teal.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                .padding(horizontal = 22.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.CircularProgressIndicator(color = Teal, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(14.dp))
+            Text(msg, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+    }
+}
+
+
+/** İki kişilik maç: iki oyuncu birer takım seçer; maçta ikisi de kendi takımını yönetir. */
+@Composable
+private fun VersusPanel() {
+    var world by remember { mutableStateOf<com.supermenajer.game.model.Game?>(GameRepo.preparedWorld) }
+    LaunchedEffect(Unit) {
+        if (world == null) world = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { GameRepo.awaitWorld() }
+    }
+    Text("İKİ KİŞİLİK MAÇ", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+    Text("Telefonu aranızda paylaşın: 1. oyuncu ev sahibi takımı, 2. oyuncu deplasman takımını yönetir (mentalite ve oyuncu değişikliği). Kariyere etkisi yoktur.", color = TextDim, fontSize = 12.sp)
+    val w = world
+    if (w == null) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.CircularProgressIndicator(color = Teal, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("Takımlar yükleniyor...", color = TextDim)
+        }
+        return
+    }
+    val leagues = com.supermenajer.game.model.Leagues.topLeagues
+    var l1 by remember { mutableIntStateOf(0) }
+    var l2 by remember { mutableIntStateOf(0) }
+    val teams1 = remember(l1) { w.divisionTeams(leagues[l1].id).sortedByDescending { com.supermenajer.game.game.Lineups.strength(w, it) } }
+    val teams2 = remember(l2) { w.divisionTeams(leagues[l2].id).sortedByDescending { com.supermenajer.game.game.Lineups.strength(w, it) } }
+    var t1 by remember(l1) { mutableIntStateOf(0) }
+    var t2 by remember(l2) { mutableIntStateOf(if (l1 == l2) 1 else 0) }
+    for ((k, pair) in listOf((l1 to t1) to teams1, (l2 to t2) to teams2).withIndex()) {
+        val (sel, list) = pair
+        val team = list.getOrNull(sel.second)
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF151D3D)).padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("${k + 1}. OYUNCU", fontWeight = FontWeight.Black, fontSize = 13.sp, color = if (k == 0) Teal else Gold, modifier = Modifier.width(86.dp))
+            if (team != null) TeamBadge(team, 34.dp)
+            Spacer(Modifier.width(8.dp))
+            SmDropdown(leagues[sel.first].name, leagues.map { it.name }, Modifier.weight(1f)) { if (k == 0) l1 = it else l2 = it }
+            Spacer(Modifier.width(6.dp))
+            SmDropdown(team?.name ?: "-", list.map { "${it.name} (${com.supermenajer.game.game.Lineups.strength(w, it).toInt()})" }, Modifier.weight(1.3f)) { if (k == 0) t1 = it else t2 = it }
+        }
+    }
+    val a = teams1.getOrNull(t1)
+    val b = teams2.getOrNull(t2)
+    val ok = a != null && b != null && a.id != b.id
+    Box(
+        Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(12.dp))
+            .background(if (ok) Brush.horizontalGradient(listOf(Color(0xFF0FB98A), Green)) else Brush.horizontalGradient(listOf(Surface2, Surface2)))
+            .clickable(enabled = ok) { GameRepo.takePreparedWorld(); GameRepo.startVersus(w, a!!.id, b!!.id) },
+        contentAlignment = Alignment.Center,
+    ) { Text(if (ok) "MAÇA BAŞLA  ▶" else "İki farklı takım seçin", color = if (ok) Color.Black else TextDim, fontWeight = FontWeight.Black, fontSize = 15.sp) }
 }

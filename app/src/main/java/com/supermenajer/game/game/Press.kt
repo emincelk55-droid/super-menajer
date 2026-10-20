@@ -65,6 +65,7 @@ object Press {
 
     /** Cevabı uygular ve geri bildirim döner. */
     fun answer(g: Game, q: PressQuestion, index: Int): String {
+        if (q.kind == Rivals.PRESS_KIND) return Rivals.answer(g, index)
         val e = templates.getOrNull(q.kind)?.answers?.getOrNull(index)?.second ?: return ""
         val f = StaffLogic.talkFactor(g)
         for (p in g.squad(g.userTeamId)) p.morale = (p.morale + e.morale * f).coerceIn(5.0, 100.0)

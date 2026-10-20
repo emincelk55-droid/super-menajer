@@ -77,7 +77,12 @@ object Matchday {
             .randomOrNull(rnd) ?: return "Rakip bulunamadı."
         val f = Fixture(0, us.id, opp.id, comp = Comp.FRIENDLY)
         val savedFit = g.squad(us.id).associate { it.id to it.fitness }
+        // Hazırlık maçı resmi maça ait talimatları ve atışma etkisini kullanmaz
+        val instr = g.oppInstr
+        val rb = g.rivalBoost
+        g.oppInstr = -1; g.rivalBoost = 0.0
         val sim = MatchSim(g, f, us.id, autoUserSubs = true, rnd = rnd)
+        g.oppInstr = instr; g.rivalBoost = rb
         sim.runToEnd()
         // Hazırlık maçı resmi istatistiklere yazılmaz
         for (p in g.squad(us.id)) p.fitness = (savedFit[p.id] ?: 100.0).coerceAtMost(100.0)

@@ -375,6 +375,12 @@ class Game(
     var fired: Boolean = false,
     /** Milli takım görevi (ülke kodu, boş = yok), çağrılan kadro, sonuçlar ve puan. */
     var nationalTeam: String = "",
+    /** Rakip menajerlerle karne: hoca → "G,B,M"; basın atışmasının rakibe etkisi; son atışma günü. */
+    var h2h: MutableMap<String, String> = mutableMapOf(),
+    var rivalBoost: Double = 0.0,
+    var lastJabWeek: Int = -1,
+    /** Kulüp vizyonu (5 yıllık plan): "id|başlık|son sezon|durum(0 aktif,1 başarıldı,2 kaçtı)|başlangıç". */
+    var vision: MutableList<String> = mutableListOf(),
     /** Kulüp efsaneleri (futbolu bırakanlar): "isim|maç|gol|sezon". */
     var hallOfFame: MutableList<String> = mutableListOf(),
     /** Sağlık ekibinin karar beklediği sakat oyuncular. */

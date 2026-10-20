@@ -216,7 +216,30 @@ class ScreensTest {
         GameRepo.tab = 0; shot("15_seasonend")
         GameRepo.startNewSeason()
         GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("16_history")
+        GameRepo.leagueTab = 6; shot("16b_calendar")
+        GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 9; shot("16c_vision"); GameRepo.clubMode = 0
+        // Rakip hocanın laf sokması (basın kartı)
+        run {
+            val opp = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }
+            g.press = com.supermenajer.game.model.PressQuestion("${opp.name} hocası ${g.managers[opp.id]}: \"Onların hocası çok konuşuyor; biz konuşmayı sahaya bırakıyoruz.\" Ne cevap vereceksin?", com.supermenajer.game.game.Rivals.answers, com.supermenajer.game.game.Rivals.PRESS_KIND)
+            g.pendingEvent = null
+            GameRepo.tab = 0; shot("16d_rival_press"); g.press = null
+        }
+        GameRepo.editorOpen = true; shot("16e_editor"); GameRepo.editorOpen = false
         GameRepo.flush()
         GameRepo.screen = Screen.TITLE; shot("00_title")
+        // İki kişilik maç
+        val vw = Generator.newWorld().also { Season.computeExpectations(it) }
+        val top = vw.divisionTeams(0).sortedBy { it.expected }
+        GameRepo.startVersus(vw, top[0].id, top[1].id)
+        run {
+            val sim = GameRepo.match!!
+            repeat(25) { sim.step() }
+            repeat(40) { GameRepo.pitchFor(sim).update(1f / 30f) }
+        }
+        shot("17_versus")
+        GameRepo.finishMatch()
+        shot("17b_versus_summary")
+        GameRepo.closeSummary()
     }
 }

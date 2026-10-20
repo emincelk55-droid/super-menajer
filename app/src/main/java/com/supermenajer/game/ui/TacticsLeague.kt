@@ -183,7 +183,7 @@ fun LeagueTab(g: Game) {
     val sel = GameRepo.leagueSel
     var day by remember { mutableIntStateOf(g.week.coerceIn(1, g.totalDays)) }
     Column(Modifier.fillMaxSize()) {
-        FmTabs(listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "İstatistik", "Geçmiş"), view) { GameRepo.leagueTab = it }
+        FmTabs(listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "İstatistik", "Geçmiş", "Takvim"), view) { GameRepo.leagueTab = it }
         if (view == 0 || view == 4) {
             // Lig seçici: önce ülke, sonra lig
             val country = Leagues.of(sel)?.country ?: g.userCountry
@@ -230,6 +230,7 @@ fun LeagueTab(g: Game) {
                 }
             }
             4 -> Scorers(g, sel)
+            6 -> CalendarView(g)
             else -> HistoryView(g)
         }
     }
@@ -474,6 +475,81 @@ private fun RankCard(g: Game, title: String, list: List<com.supermenajer.game.mo
                     color = if (t.id == g.userTeamId) Green else TextMain)
                 Text(value(p), fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
+        }
+    }
+}
+
+
+/** Aylık takvim: kullanıcının maç günleri (rakip ve turnuva), bugün ve milli maç pencereleri. */
+@Composable
+private fun CalendarView(g: Game) {
+    val cal = com.supermenajer.game.game.GameCalendar
+    val today = java.time.LocalDate.ofEpochDay(if (g.date > 0) g.date else cal.dateOf(g, 1))
+    var month by remember { mutableStateOf(java.time.YearMonth.from(today)) }
+    // Gün → kullanıcının maçı
+    val mine = remember(GameRepo.version) {
+        g.fixtures.filter { it.involves(g.userTeamId) }.associateBy { cal.dateOf(g, it.week) }
+    }
+    val months = listOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
+    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { month = month.minusMonths(1) }) { Text("◀", fontSize = 18.sp) }
+            Text("${months[month.monthValue - 1]} ${month.year}", fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            TextButton(onClick = { month = month.plusMonths(1) }) { Text("▶", fontSize = 18.sp) }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz").forEach {
+                Text(it, color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            }
+        }
+        val first = month.atDay(1)
+        val offset = first.dayOfWeek.value - 1
+        val days = month.lengthOfMonth()
+        val cells = offset + days
+        val rows = (cells + 6) / 7
+        Column(Modifier.weight(1f).fillMaxWidth()) {
+            for (r in 0 until rows) {
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    for (c in 0..6) {
+                        val idx = r * 7 + c - offset + 1
+                        Box(Modifier.weight(1f).fillMaxHeight().padding(2.dp)) {
+                            if (idx in 1..days) {
+                                val d = month.atDay(idx)
+                                val f = mine[d.toEpochDay()]
+                                val isToday = d == today
+                                val past = d.isBefore(today)
+                                Column(
+                                    Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp))
+                                        .background(if (f != null) (if (com.supermenajer.game.model.Comp.isLeague(f.comp)) Color(0xFF1B2B5A) else Color(0xFF3A2160)) else Color(0xFF0E1431))
+                                        .border(if (isToday) 2.dp else 0.dp, if (isToday) Teal else Color.Transparent, RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("$idx", fontSize = 10.sp, color = if (past) TextDim.copy(alpha = 0.5f) else TextDim, modifier = Modifier.width(18.dp))
+                                        if (f != null) {
+                                            val opp = g.team(if (f.home == g.userTeamId) f.away else f.home)
+                                            TeamBadge(opp, 14.dp)
+                                            Spacer(Modifier.width(3.dp))
+                                            Text(opp.short, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                            Spacer(Modifier.weight(1f))
+                                            Text(
+                                                if (f.played) "${f.hg}-${f.ag}" else if (f.home == g.userTeamId) "İÇ" else "DIŞ",
+                                                fontSize = 10.sp, color = if (f.played) TextMain else if (f.home == g.userTeamId) Green else Gold, fontWeight = FontWeight.Bold, maxLines = 1,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp)) {
+            Legend(Color(0xFF1B2B5A), "Lig maçı")
+            Legend(Color(0xFF3A2160), "Kupa / Avrupa")
+            Legend(Teal, "Bugün")
         }
     }
 }

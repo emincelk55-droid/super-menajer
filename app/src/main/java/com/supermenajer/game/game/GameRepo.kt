@@ -38,6 +38,7 @@ object GameRepo {
     var comparePin by mutableStateOf<Int?>(null)
     var tacticWizard by mutableStateOf(false)
     var openTeam by mutableIntStateOf(-1)
+    var editorOpen by mutableStateOf(false)
     var instrSub by mutableIntStateOf(0)
     var roleDialog by mutableIntStateOf(-1)
     var compare by mutableStateOf<Pair<Int, Int>?>(null)
@@ -167,7 +168,8 @@ object GameRepo {
                 advanceJob?.cancel()
                 advanceJob = scope.launch {
                     while (advancing && game === g) {
-                        val stop = advanceDay()
+                        // Günün simülasyonu arka planda: arayüz donmaz
+                        val stop = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { advanceDay() }
                         bump()
                         if (stop) break
                         kotlinx.coroutines.delay(170)
@@ -270,6 +272,7 @@ object GameRepo {
 
     /** Kaydı yazar. force=false iken sık değişikliklerde en fazla 4 saniyede bir yazar. */
     fun save(force: Boolean = false) {
+        if (versus) return
         val g = game ?: return
         val now = System.currentTimeMillis()
         if (!force && now - lastSave < 4_000) {
@@ -405,6 +408,12 @@ object GameRepo {
     fun finishMatch() {
         val g = game ?: return
         val sim = match ?: return
+        if (sim.twoPlayer) {
+            sim.runToEnd()
+            screen = Screen.SUMMARY
+            bump()
+            return
+        }
         if (sim.nat != null) {
             if (g.natPending.isEmpty()) return
             sim.runToEnd()
@@ -440,7 +449,58 @@ object GameRepo {
     }
 
     /** Kullanıcının maçı olan güne kadar ilerler (yeni teklif gelirse durur). */
+    /** Uzun işlem sürerken gösterilen mesaj (null = yok). Arayüz bu sırada dokunuşları engeller. */
+    var busy by mutableStateOf<String?>(null)
+
+    /** Ağır simülasyonu arka planda çalıştırır, bitince ana iş parçacığında devam eder. */
+    private fun runBusy(msg: String, work: () -> Unit, then: () -> Unit = {}) {
+        if (busy != null) return
+        busy = msg
+        val launched = runCatching {
+            scope.launch {
+                runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { work() } }
+                busy = null
+                then()
+                save(force = true)
+                bump()
+            }
+        }
+        if (launched.isFailure) { busy = null; work(); then(); save(force = true); bump() }
+    }
+
+    fun skipToNextMatchAsync() = runBusy("Maç gününe ilerleniyor...", { skipCore() })
+
+    fun quickMatchAsync() {
+        val g = game ?: return
+        val f = g.todayUserFixture() ?: return
+        match = MatchSim(g, f, g.userTeamId, autoUserSubs = true)
+        finishMatchAsync()
+    }
+
+    fun finishMatchAsync() {
+        val sim = match ?: return
+        if (sim.nat != null || sim.twoPlayer) { finishMatch(); return }
+        val g = game ?: return
+        if (sim.fixture.played) return
+        runBusy("Diğer maçlar oynanıyor...", {
+            sim.runToEnd()
+            sim.applyToGame()
+            Season.matchNews(g, sim)
+            Season.simulateRest(g, sim.fixture.week)
+            Season.endDay(g)
+        }) {
+            Lineups.validate(g, g.userTeam)
+            screen = Screen.SUMMARY
+        }
+    }
+
     fun skipToNextMatch() {
+        skipCore()
+        save(force = true)
+        bump()
+    }
+
+    private fun skipCore() {
         val g = game ?: return
         var guard = 0
         while (!g.fired && !g.seasonOver && g.todayUserFixture() == null && g.natPending.isEmpty() && guard++ < 30) {
@@ -455,8 +515,6 @@ object GameRepo {
             if (g.offers.size > offersBefore) break
         }
         Lineups.validate(g, g.userTeam)
-        save(force = true)
-        bump()
     }
 
     fun answerPress(q: com.supermenajer.game.model.PressQuestion, index: Int): String {
@@ -613,7 +671,32 @@ object GameRepo {
 
     fun closeSummary() {
         match = null
-        screen = Screen.MAIN
+        if (versus) {
+            // İki kişilik maç bitti: dünya kariyere karışmadan ana menüye dönülür
+            versus = false
+            game = null
+            pitch = null
+            screen = Screen.TITLE
+        } else screen = Screen.MAIN
+        bump()
+    }
+
+    /** İki kişilik (aynı cihazda) dostluk maçı. */
+    var versus = false
+        private set
+
+    fun startVersus(world: Game, homeId: Int, awayId: Int) {
+        advancing = false
+        versus = true
+        world.userTeamId = homeId
+        world.reindex()
+        Lineups.autoPick(world, world.team(homeId))
+        Lineups.autoPick(world, world.team(awayId))
+        val f = com.supermenajer.game.model.Fixture(1, homeId, awayId, comp = com.supermenajer.game.model.Comp.FRIENDLY)
+        game = world
+        match = MatchSim(world, f, homeId, autoUserSubs = false, twoPlayer = true)
+        pitch = null
+        screen = Screen.MATCH
         bump()
     }
 
@@ -685,6 +768,17 @@ object GameRepo {
     }
 
     fun signPreContract(p: Player): String { val g = game ?: return ""; val m = Contracts.signPre(g, p); changed(); return m }
+
+    /** Veri editörü: oyuncu bilgilerini günceller. a: hız, şut, pas, teknik, savunma, fizik, kalecilik. */
+    fun editPlayer(p: Player, name: String, age: Int, potential: Int, a: List<Int>) {
+        p.name = name
+        p.age = age.coerceIn(15, 45)
+        p.pace = a[0].coerceIn(1, 99); p.shooting = a[1].coerceIn(1, 99); p.passing = a[2].coerceIn(1, 99)
+        p.dribbling = a[3].coerceIn(1, 99); p.defending = a[4].coerceIn(1, 99); p.physical = a[5].coerceIn(1, 99)
+        p.goalkeeping = a[6].coerceIn(1, 99)
+        p.potential = potential.coerceIn(p.overall, 99)
+        changed()
+    }
 
     fun setViceCaptain(id: Int) { game?.userTeam?.viceCaptain = id; changed() }
 

@@ -154,3 +154,15 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Sezon görevleri (meydan okumalar) XP ve bütçe ödülüyle; taraftar sosyal medya akışı; Kulüp → Efsaneler (en çok forma giyenler,
   golcüler, şöhretler galerisi).
 - Ana sayfada bekleyen kararlar (sağlık, milli maç, teklifler) üste taşındı; sık kayıtlarda atlanan kayıt artık kısa süre sonra yazılıyor.
+
+### v2.8
+- Donma iyileştirmesi: gün gün ilerleme, maça atlama, hızlı sonuç ve maç sonu diğer maçların oynatılması arka planda;
+  uzun işlemlerde "ilerleniyor" katmanı.
+- Rakip menajerler: büyük maçlardan bir gün önce rakip hoca basına laf atar, cevabın (sakin / sert / centilmen)
+  takımının moralini, rakibin hırsını ve taraftarı etkiler. Rakip hocalarla kafa kafaya karne.
+- Kulüp vizyonu: yönetimin 5 yıllık planı (lig hedefi, Avrupa, gençler, mali disiplin, tesis); her sezon sonu değerlendirilir.
+- Takvim ekranı (Lig → Takvim, ana sayfadaki 📅): aylık görünüm, maç günleri, rakip, iç/dış saha ve skorlar.
+- Veri editörü (Ayarlar): oyuncu adı, yaşı, potansiyeli ve niteliklerini düzenle.
+- Çok oyunculu: ana menüden "İki Kişilik Maç" — aynı telefonda iki oyuncu birer takım seçer; ikisi de mentalite ve
+  oyuncu değişikliğini yönetir.
+- Düzeltmeler: rakibe özel talimat hazırlık maçında harcanmıyor; iyileşen oyuncunun sağlık kartı kalmıyor.

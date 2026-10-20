@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -104,6 +105,7 @@ fun MatchScreen() {
     var ticker by remember { mutableStateOf(sim.events.lastOrNull()?.let { Ticker(it.minute, it.text, it.side, 0) }) }
     var tab by remember { mutableIntStateOf(0) }
     var showSubs by remember { mutableStateOf(false) }
+    var subSide by remember { mutableIntStateOf(0) }
     var goalFlash by remember { mutableStateOf<MatchEvent?>(null) }
     var halfResult by remember { mutableStateOf<Talks.Result?>(null) }
     val haptic = LocalHapticFeedback.current
@@ -186,7 +188,7 @@ fun MatchScreen() {
                     if (sim.minute == 45 && !running && !sim.finished) {
                         OverlayCard("DEVRE ARASI", "$scoreH - $scoreA", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
                             halfResult?.let { r -> Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center) }
-                            if (!sim.talkDone && sim.userSide != null) {
+                            if (!sim.talkDone && sim.userSide != null && !sim.twoPlayer) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Talks.halfOptions.forEachIndexed { i, n ->
                                         SmallChip(n, false, Modifier.weight(1f)) { halfResult = Talks.talk(sim, Talks.HALF, i); tick++ }
@@ -198,7 +200,7 @@ fun MatchScreen() {
                         }
                     } else if (sim.finished && shown >= sim.events.size) {
                         OverlayCard("MAÇ BİTTİ", "$scoreH - $scoreA" + if (sim.penHome >= 0) "  (P ${sim.penHome}-${sim.penAway})" else "", null) {
-                            SmActionButton("MAÇ SONUCU  ▶", Modifier.fillMaxWidth()) { GameRepo.finishMatch() }
+                            SmActionButton("MAÇ SONUCU  ▶", Modifier.fillMaxWidth()) { GameRepo.finishMatchAsync() }
                         }
                     }
                 }
@@ -225,16 +227,32 @@ fun MatchScreen() {
                 onSpeed = { speed = it },
                 onMentality = { sim.userSide?.team?.mentality = it; GameRepo.bump(); tick++ },
                 onShout = { if (sim.canShout) { sim.shout(it); revealed = sim.events.size; tick++ } },
-                onSubs = { running = false; showSubs = true },
+                onSubs = { running = false; subSide = 0; showSubs = true },
                 onSkip = { running = false; sim.runToEnd(); revealed = sim.events.size; tick++ },
             )
+            // İki kişilik maç: 2. oyuncunun kontrolleri
+            if (sim.twoPlayer) {
+                Row(
+                    Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text("2. OYUNCU · ${sim.away.team.short}", fontWeight = FontWeight.Black, fontSize = 13.sp, color = awayC.let { if (it.luminance() < 0.15f) TextMain else it }, modifier = Modifier.width(150.dp))
+                    Segmented(listOf("Defans", "Denge", "Hücum"), sim.away.team.mentality, Modifier.weight(1f)) { sim.away.team.mentality = it; tick++ }
+                    Box(
+                        Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
+                            .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                            .clickable { running = false; subSide = 1; showSubs = true }.padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("🔁 Değişiklik (${sim.away.subsLeft})", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                }
+            }
         }
     }
     if (showSubs) {
-        val us = sim.userSide
-        if (us != null) SubDialog(sim, us, onClose = { showSubs = false; anim.sync(); tick++ })
+        val side = if (subSide == 1 && sim.twoPlayer) sim.away else sim.userSide
+        if (side != null) SubDialog(sim, side, onClose = { showSubs = false; anim.sync(); tick++ })
     }
-    if (sim.minute == 0 && !running && sim.userSide != null && !showSubs) {
+    if (sim.minute == 0 && !running && sim.userSide != null && !showSubs && !sim.twoPlayer) {
         PreMatchDialog(sim, preResult, onTalk = { preResult = Talks.talk(sim, Talks.PRE, it); tick++ }, onStart = { running = true })
     }
 }
@@ -556,7 +574,7 @@ fun SummaryScreen() {
                         }
                     }
                 }
-                if (sim.userSide != null) item { PostTalkCard(sim) }
+                if (sim.userSide != null && !sim.twoPlayer) item { PostTalkCard(sim) }
                 com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
                     item {
                         val us = sim.home.team.id == g.userTeamId
@@ -576,7 +594,7 @@ fun SummaryScreen() {
                 item {
                     DashCard("Maç İstatistikleri", Modifier.fillMaxWidth()) { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
                 }
-                if (sim.nat == null) item {
+                if (sim.nat == null && !sim.twoPlayer) item {
                     DashCard("Diğer Sonuçlar · ${Comp.name(sim.fixture.comp)}", Modifier.fillMaxWidth()) {
                         g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->
                             if (i > 0) HorizontalDivider(color = CardLine)

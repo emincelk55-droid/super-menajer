@@ -239,7 +239,7 @@ fun QuickRow(g: Game) {
                 modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
             )
         }
-        RoundIconButton("📅", 38.dp) { GameRepo.tab = GameRepo.TAB_LEAGUE; GameRepo.leagueTab = 3 }
+        RoundIconButton("📅", 38.dp) { GameRepo.tab = GameRepo.TAB_LEAGUE; GameRepo.leagueTab = 6 }
         RoundIconButton("⚙", 38.dp) { GameRepo.settingsOpen = true }
     }
 }
@@ -318,13 +318,13 @@ fun MenuDrawer(g: Game, onClose: () -> Unit) {
 fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
+        g.press?.let { q -> add { PressCard(g, q) } }
         if (!g.fired && g.natPending.isNotEmpty()) add { NationalMatchCard(g) }
-        g.medical.mapNotNull { g.player(it) }.filter { it.teamId == g.userTeamId }.forEach { p -> add { MedicalCard(g, p) } }
+        g.medical.mapNotNull { g.player(it) }.filter { it.teamId == g.userTeamId && it.injuredWeeks > 0 }.forEach { p -> add { MedicalCard(g, p) } }
         if (g.seasonOver && g.tourSeason == g.season && g.tourTeams.size == 16) add { TournamentCard(g) }
         if (g.fired) add { FiredCard(g) }
         if (g.seasonOver && !g.fired) add { SeasonEndCard(g) }
         if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) add { CareerOfferCard(g) }
-        g.press?.let { q -> add { PressCard(g, q) } }
         if (g.offers.isNotEmpty() && !g.fired) add { IncomingOffersCard(g) }
         if (g.sponsorOffers.isNotEmpty() && !g.fired) add { SponsorOffersCard(g) }
         if (!g.fired && !g.seasonOver && g.nextUserFixture() != null) add { MatchPrepCard(g) }
@@ -463,9 +463,9 @@ private fun HeroMatchCard(g: Game, modifier: Modifier) {
             SideButton("📋  Taktikler", modifier = Modifier.weight(1f)) { GameRepo.tab = GameRepo.TAB_TACTICS; GameRepo.tacticsMode = 0 }
             if (today) {
                 SideButton("▶  MAÇA ÇIK", accent = true, modifier = Modifier.weight(1f)) { GameRepo.playMatch(live = true) }
-                SideButton("⚡  Hızlı sonuç", modifier = Modifier.weight(1f)) { GameRepo.playMatch(live = false) }
+                SideButton("⚡  Hızlı sonuç", modifier = Modifier.weight(1f)) { GameRepo.quickMatchAsync() }
             } else {
-                SideButton("⏩  Maça atla", modifier = Modifier.weight(1f)) { GameRepo.skipToNextMatch() }
+                SideButton("⏩  Maça atla", modifier = Modifier.weight(1f)) { GameRepo.skipToNextMatchAsync() }
             }
         }
     }

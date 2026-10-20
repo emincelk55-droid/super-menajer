@@ -114,6 +114,7 @@ fun MainScreen() {
     }
     GameRepo.negotiation?.let { NegotiationDialog(g, it) }
     if (GameRepo.settingsOpen) SettingsDialog()
+    if (GameRepo.editorOpen) EditorDialog(g)
 }
 
 /** Ayarlar: kaydet, ana menü, oyundan çık. */
@@ -131,6 +132,7 @@ private fun SettingsDialog() {
                     OutlinedButton(onClick = { GameRepo.save(force = true); saved = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (saved) "✓ Kaydedildi" else "💾 Oyunu kaydet")
                     }
+                    OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.editorOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🛠 Veri editörü") }
                     OutlinedButton(onClick = { confirm = 1 }, modifier = Modifier.fillMaxWidth()) { Text("🏠 Ana menüye dön") }
                     OutlinedButton(onClick = { confirm = 2 }, modifier = Modifier.fillMaxWidth()) { Text("🚪 Oyundan çık", color = Red) }
                     Spacer(Modifier.height(6.dp))
@@ -274,7 +276,7 @@ private fun NextMatchCard(g: Game, f: Fixture) {
                 modifier = Modifier.weight(1.4f).height(46.dp), shape = RoundedCornerShape(12.dp),
             ) { Text("▶  MAÇA ÇIK", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
             OutlinedButton(
-                onClick = { GameRepo.playMatch(live = false) },
+                onClick = { GameRepo.quickMatchAsync() },
                 modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp),
             ) { Text("Hızlı sonuç", maxLines = 1) }
         }
@@ -344,7 +346,7 @@ private fun RestDayCard(g: Game) {
             Button(onClick = { GameRepo.continueGame() }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp)) {
                 Text(if (GameRepo.advancing) "⏸ DURDUR" else "▶ GÜN GÜN", fontWeight = FontWeight.Bold, maxLines = 1)
             }
-            OutlinedButton(onClick = { GameRepo.skipToNextMatch() }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(onClick = { GameRepo.skipToNextMatchAsync() }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp)) {
                 Text("⏩ Maça atla", maxLines = 1)
             }
         }
