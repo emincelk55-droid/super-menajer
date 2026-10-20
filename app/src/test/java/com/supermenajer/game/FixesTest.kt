@@ -63,8 +63,28 @@ class FixesTest {
         assertEquals(appsBefore, g.players.sumOf { it.apps })
         assertTrue(g.natPending.isEmpty())
         assertEquals(1, g.natResults.size)
-        com.supermenajer.game.game.National.summerTournament(g, Random(5))
-        assertTrue(g.natResults.size >= 2)
+        // Canlı turnuva: 4 grup + eleme; kullanıcının maçları bekleyen maç olarak oynanır
+        val T = com.supermenajer.game.game.Tournament
+        assertTrue(T.needed(g))
+        T.start(g, Random(7))
+        assertEquals(16, g.tourTeams.toSet().size)
+        assertTrue(g.natPending.isNotEmpty())
+        var guard = 0
+        while (g.natPending.isNotEmpty() && guard++ < 10) {
+            if (T.active(g) && g.tourStage >= 3) {
+                val ko = com.supermenajer.game.game.National.buildMatch(g, live = false)!!
+                assertTrue(ko.isCup)
+            }
+            com.supermenajer.game.game.National.simulatePending(g)
+        }
+        assertEquals(6, g.tourStage)
+        assertEquals(1, g.tourAlive.size)
+        assertTrue(!T.needed(g))
+        // Grup aşaması: 24 maç, toplam puan 2-3 arası/maç
+        val pts = g.tourPts.values.sum()
+        assertTrue(pts in 48..72)
+        com.supermenajer.game.game.National.summerTournament(g, Random(5)) // bu sezon oynandı: tekrar oynanmaz
+        assertTrue(g.natResults.size >= 4)
 
         // Kiralık gelen oyuncu tekrar kiralık gönderilemez
         val other = g.teams.first { it.id != teamId }

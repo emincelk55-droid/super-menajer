@@ -228,7 +228,7 @@ object Comp {
     fun roundName(comp: Int, round: Int) = if (comp == EURO) euroRounds[round] else cupRounds[round]
 
     /** Bir maçın eleme (tek maç, gerekirse penaltı) olup olmadığı. */
-    fun isKnockout(comp: Int, round: Int) = isCup(comp) || (comp == EURO && round >= EURO_KO)
+    fun isKnockout(comp: Int, round: Int) = isCup(comp) || (comp == EURO && round >= EURO_KO) || (comp == NATIONAL && round >= 1)
 }
 
 @Serializable
@@ -371,6 +371,16 @@ class Game(
     /** Oynanmayı bekleyen milli maç: "rakip|tür|evde(1/0)" (boş = yok). */
     var natPending: String = "",
     var natFormation: String = "4-3-3",
+    /** Yaz turnuvası: sezon, aşama (0-2 grup maçları, 3 çeyrek, 4 yarı, 5 final, 6 bitti), 16 ulus (4'lü gruplar),
+     *  grup puan/averaj tabloları, eleme ağacı ve sonuç kayıtları. */
+    var tourSeason: Int = -1,
+    var tourStage: Int = 0,
+    var tourTeams: MutableList<String> = mutableListOf(),
+    var tourPts: MutableMap<String, Int> = mutableMapOf(),
+    var tourGf: MutableMap<String, Int> = mutableMapOf(),
+    var tourGa: MutableMap<String, Int> = mutableMapOf(),
+    var tourAlive: MutableList<String> = mutableListOf(),
+    var tourLog: MutableList<String> = mutableListOf(),
     var natSquad: MutableList<Int> = mutableListOf(),
     var natResults: MutableList<String> = mutableListOf(),
     var natPoints: Int = 0,

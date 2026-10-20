@@ -157,9 +157,10 @@ object GameRepo {
             advancing -> advancing = false
             g.fired -> tab = TAB_HOME
             g.pendingEvent != null -> tab = TAB_HOME
+            g.natPending.isNotEmpty() -> playNational(live = true)
+            g.seasonOver && Tournament.needed(g) -> { Tournament.start(g); save(force = true); bump() }
             g.seasonOver -> startNewSeason()
             g.todayUserFixture() != null -> playMatch(live = true)
-            g.natPending.isNotEmpty() -> playNational(live = true)
             else -> {
                 advancing = true
                 advanceJob?.cancel()
@@ -184,9 +185,10 @@ object GameRepo {
         advancing -> "⏸ DURDUR"
         g.fired -> "TEKLİFLER"
         g.pendingEvent != null -> "⚡ KARAR VER"
+        g.natPending.isNotEmpty() -> "MİLLİ MAÇ ▶"
+        g.seasonOver && Tournament.needed(g) -> "TURNUVA ▶"
         g.seasonOver -> "YENİ SEZON ▶"
         g.todayUserFixture() != null -> "MAÇA ÇIK ▶"
-        g.natPending.isNotEmpty() -> "MİLLİ MAÇ ▶"
         else -> "DEVAM ▶"
     }
 

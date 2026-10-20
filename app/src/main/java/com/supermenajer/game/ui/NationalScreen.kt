@@ -61,6 +61,9 @@ fun NationalTab(g: Game) {
     val l = season.size - w - d
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (com.supermenajer.game.game.Tournament.active(g) || (g.tourSeason == g.season && g.tourTeams.size == 16 && g.seasonOver)) {
+                item { TournamentCard(g) }
+            }
             item {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
@@ -81,7 +84,10 @@ fun NationalTab(g: Game) {
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                         NatStat("Bu sezon", "$w G · $d B · $l M")
                         NatStat("Puan", "${g.natPoints}")
-                        NatStat("Sıradaki pencere", next?.let { "$it. hafta" } ?: "Yaz turnuvası")
+                        NatStat(
+                            if (com.supermenajer.game.game.Tournament.active(g)) "Turnuva" else "Sıradaki pencere",
+                            if (com.supermenajer.game.game.Tournament.active(g)) com.supermenajer.game.game.Tournament.stageText(g).substringBefore(" ·") else next?.let { "$it. hafta" } ?: "Yaz turnuvası",
+                        )
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -213,6 +219,56 @@ private fun NationalOffers(g: Game) {
                         .clickable(enabled = ok) { msg = GameRepo.takeNationalJob(code) },
                     contentAlignment = Alignment.Center,
                 ) { Text("Görevi al", color = if (ok) Color(0xFF06231A) else TextDim, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            }
+        }
+    }
+}
+
+
+/** Yaz turnuvası: 4 grup tablosu ve eleme turu sonuçları. */
+@Composable
+fun TournamentCard(g: Game) {
+    val T = com.supermenajer.game.game.Tournament
+    val me = g.nationalTeam
+    DashCard("🏆 ${T.title(g)} · ${T.stageText(g)}", Modifier.fillMaxWidth()) {
+        for (row in 0..1) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (col in 0..1) {
+                    val gi = row * 2 + col
+                    Column(Modifier.weight(1f).padding(vertical = 4.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028)).padding(6.dp)) {
+                        Row {
+                            Text("${T.groupNames[gi]} Grubu", fontWeight = FontWeight.Black, fontSize = 12.sp, color = Teal, modifier = Modifier.weight(1f))
+                            Text("AV", color = TextDim, fontSize = 10.sp, modifier = Modifier.width(26.dp), textAlign = TextAlign.End)
+                            Text("P", color = TextDim, fontSize = 10.sp, modifier = Modifier.width(22.dp), textAlign = TextAlign.End)
+                        }
+                        T.standings(g, gi).forEachIndexed { i, c ->
+                            val mine = c == me
+                            Row(
+                                Modifier.fillMaxWidth().background(if (mine) Teal.copy(alpha = 0.15f) else Color.Transparent).padding(vertical = 1.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(Modifier.size(4.dp, 14.dp).background(if (i < 2 && g.tourStage >= 3) Green else Color.Transparent))
+                                Spacer(Modifier.width(4.dp))
+                                Text("${Generator.flag(c)} ${National.name(c)}", fontSize = 12.sp, fontWeight = if (mine) FontWeight.Black else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                val gd = (g.tourGf[c] ?: 0) - (g.tourGa[c] ?: 0)
+                                Text(if (gd > 0) "+$gd" else "$gd", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(26.dp), textAlign = TextAlign.End)
+                                Text("${g.tourPts[c] ?: 0}", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp), textAlign = TextAlign.End)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val ko = g.tourLog.map { it.split("|") }.filter { it.size >= 2 && (it[0].toIntOrNull() ?: 0) >= 3 }
+        if (ko.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text("ELEME TURLARI", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            val names = listOf("Çeyrek Final", "Yarı Final", "Final")
+            ko.forEach { (st, line) ->
+                Row(Modifier.padding(vertical = 2.dp)) {
+                    Text(names.getOrElse(st.toInt() - 3) { "" }, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(84.dp))
+                    Text(line, fontSize = 12.sp, fontWeight = if (National.name(me) in line) FontWeight.Bold else FontWeight.Normal)
+                }
             }
         }
     }

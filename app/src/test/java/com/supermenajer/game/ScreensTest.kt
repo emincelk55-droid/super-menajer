@@ -135,6 +135,19 @@ class ScreensTest {
         GameRepo.finishMatch()
         shot("10l_national_summary")
         GameRepo.closeSummary()
+        com.supermenajer.game.game.Tournament.start(g, kotlin.random.Random(11))
+        com.supermenajer.game.game.National.simulatePending(g)
+        com.supermenajer.game.game.National.simulatePending(g)
+        GameRepo.tab = GameRepo.TAB_NATIONAL; shot("10m_tournament")
+        GameRepo.playNational(live = true)
+        run {
+            val sim = GameRepo.match!!
+            repeat(20) { sim.step() }
+            repeat(40) { GameRepo.pitchFor(sim).update(1f / 30f) }
+        }
+        shot("10n_tournament_match")
+        GameRepo.finishMatch(); GameRepo.closeSummary()
+        g.tourSeason = -1; g.tourTeams.clear()
         GameRepo.resignNational()
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
         GameRepo.clubMode = 3; shot("10e_finance")

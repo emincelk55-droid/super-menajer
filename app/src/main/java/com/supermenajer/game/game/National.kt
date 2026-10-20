@@ -100,12 +100,13 @@ object National {
         g.addNews("🌍 Milli maç günü: $line", "$kind. DEVAM ET ile maça çık; kadronu Milli Takım ekranından düzenleyebilirsin.")
     }
 
-    class Pending(val opp: String, val kind: String, val home: Boolean)
+    /** ko: tek maç eleme (beraberlikte penaltı); tour: yaz turnuvası maçı. */
+    class Pending(val opp: String, val kind: String, val home: Boolean, val ko: Boolean, val tour: Boolean)
 
     fun pending(g: Game): Pending? {
         val c = g.natPending.split("|")
         if (g.nationalTeam.isEmpty() || c.size < 3) return null
-        return Pending(c[0], c[1], c[2] == "1")
+        return Pending(c[0], c[1], c[2] == "1", c.getOrNull(3) == "1", c.getOrNull(4) == "1")
     }
 
     private val shorts = mapOf(
@@ -145,16 +146,18 @@ object National {
         val them = teamFor(p.opp, OPP_ID)
         val h = if (p.home) me else them
         val a = if (p.home) them else me
-        val fx = Fixture(g.week, h.id, a.id, comp = Comp.NATIONAL)
+        val fx = Fixture(g.week, h.id, a.id, comp = Comp.NATIONAL, round = if (p.ko) 1 else 0)
         val pools = mapOf(USER_ID to squad(g), OPP_ID to autoSquad(g, p.opp))
-        return MatchSim(g, fx, USER_ID, autoUserSubs = !live, nat = NatMatch(h, a, pools, "Milli Maç · ${p.kind}"))
+        return MatchSim(g, fx, USER_ID, autoUserSubs = !live, nat = NatMatch(h, a, pools, if (p.tour) p.kind else "Milli Maç · ${p.kind}"))
     }
 
     /** Maç sonucunu işler (kendi gollerimiz x, rakip y). */
-    fun record(g: Game, x: Int, y: Int, scorers: List<String> = emptyList()) {
+    fun record(g: Game, x: Int, y: Int, scorers: List<String> = emptyList(), won: Boolean? = null, pens: String = "") {
         val p = pending(g) ?: return
         val code = g.nationalTeam
         g.natPending = ""
+        if (p.tour) Tournament.userResult(g, p, x, y, won ?: (x > y), pens, scorers)
+        if (p.tour) return
         val pts = when { x > y -> 3; x == y -> 1; else -> 0 }
         g.natPoints += pts
         val line = if (p.home) "${name(code)} $x-$y ${name(p.opp)}" else "${name(p.opp)} $y-$x ${name(code)}"
@@ -182,13 +185,15 @@ object National {
         val them = sim.other(us)
         val scorers = sim.events.filter { it.type == com.supermenajer.game.engine.Ev.GOAL && it.side == us.index }
             .mapNotNull { e -> us.used.firstOrNull { it.p.id == e.playerId }?.p?.name?.substringAfterLast(' ') }
-        record(g, us.goals, them.goals, scorers)
+        val won = sim.cupWinner()?.let { it === us.team }
+        val pens = if (sim.penHome >= 0) (if (us === sim.home) "${sim.penHome}-${sim.penAway}" else "${sim.penAway}-${sim.penHome}") else ""
+        record(g, us.goals, them.goals, scorers, if (sim.isCup) won else null, pens)
     }
 
     /** Sezon sonu turnuvası: en güçlü 8 ulus (kendi takımın dahil) eleme usulü. */
     fun summerTournament(g: Game, rnd: Random) {
         val code = g.nationalTeam
-        if (code.isEmpty()) return
+        if (code.isEmpty() || g.tourSeason == g.season) return
         val title = if (g.season % 2 == 0) "Avrupa Şampiyonası" else "Dünya Kupası"
         val field = (listOf(code) + nations(g).filter { it != code }.take(7)).shuffled(rnd).toMutableList()
         val str = field.associateWith { if (it == code) strengthOf(g, it, squad(g)) * Perks.tactics(g) else strengthOf(g, it) }

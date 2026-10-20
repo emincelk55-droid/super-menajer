@@ -136,3 +136,10 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - İki ulusun gerçek oyuncu havuzundan otomatik ilk 11 ve yedekler; milli takım dizilişi Milli Takım ekranından seçilir.
 - Milli maç kulüp istatistiklerine yazılmaz; yorgunluk, sakatlık ve moral kulübe yansır. "Hızlı sonuç" ile simüle de edilebilir.
 - Milli takımlar skor tabelasında bayraklarıyla görünür.
+
+### v2.6
+- Yaz turnuvası (Avrupa Şampiyonası / Dünya Kupası) artık canlı: sezon bitince "Turnuva" ile kura çekilir.
+  16 ulus, 4 grup (ilk iki çıkar), çeyrek final, yarı final, final. Senin maçların canlı (ya da hızlı sonuç),
+  diğer maçlar aynı turda sonuçlanır; eleme maçlarında beraberlikte penaltılar.
+- Milli Takım ekranında grup tabloları (puan, averaj) ve eleme turu sonuçları; ana sayfada turnuva kartı.
+- Elenirsen turnuva arka planda tamamlanır ve şampiyon açıklanır; kazanırsan kupa dolabına girer, itibar ve XP kazanırsın.

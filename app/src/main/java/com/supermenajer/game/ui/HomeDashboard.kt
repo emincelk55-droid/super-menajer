@@ -131,9 +131,10 @@ fun devamTitle(g: Game): String = when {
     GameRepo.advancing -> "Durdur"
     g.fired -> "Teklifler"
     g.pendingEvent != null -> "Karar Ver"
+    g.natPending.isNotEmpty() -> "Milli Maç"
+    g.seasonOver && com.supermenajer.game.game.Tournament.needed(g) -> "Turnuva"
     g.seasonOver -> "Yeni Sezon"
     g.todayUserFixture() != null -> "Maça Çık"
-    g.natPending.isNotEmpty() -> "Milli Maç"
     else -> "Devam Et"
 }
 
@@ -318,6 +319,7 @@ fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
         if (!g.fired && g.natPending.isNotEmpty()) add { NationalMatchCard(g) }
+        if (g.seasonOver && g.tourSeason == g.season && g.tourTeams.size == 16) add { TournamentCard(g) }
         if (g.fired) add { FiredCard(g) }
         if (g.seasonOver && !g.fired) add { SeasonEndCard(g) }
         if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) add { CareerOfferCard(g) }

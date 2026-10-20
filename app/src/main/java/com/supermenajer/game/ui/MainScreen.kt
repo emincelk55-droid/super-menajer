@@ -447,10 +447,19 @@ internal fun SeasonEndCard(g: Game) {
         Spacer(Modifier.height(8.dp))
         Text("Sezon arası transfer dönemi açık: yeni sezondan önce kadronu güçlendirebilirsin.", color = TextDim, fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { GameRepo.startNewSeason() },
-            modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
-        ) { Text("YENİ SEZONA BAŞLA (${g.season + 1})", fontWeight = FontWeight.Bold) }
+        val T = com.supermenajer.game.game.Tournament
+        if (g.natPending.isNotEmpty() || T.needed(g)) {
+            Button(
+                onClick = { GameRepo.continueGame() },
+                modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Gold),
+            ) { Text(if (T.needed(g)) "🏆 ${T.title(g).uppercase()}'NA BAŞLA" else "🏆 TURNUVA MAÇINA ÇIK", fontWeight = FontWeight.Bold, color = Color.Black) }
+        } else {
+            Button(
+                onClick = { GameRepo.startNewSeason() },
+                modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp),
+            ) { Text("YENİ SEZONA BAŞLA (${g.season + 1})", fontWeight = FontWeight.Bold) }
+        }
     }
 }
 
