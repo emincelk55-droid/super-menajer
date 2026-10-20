@@ -54,16 +54,22 @@ class Side(val team: Team, val index: Int) {
     fun gk(): PIM? = onPitch.firstOrNull { it.slot.pos == Pos.GK }
 }
 
+/** Milli maç kurulumu: iki ulusun geçici takım nesneleri ve çağrılan oyuncuları. */
+class NatMatch(val home: Team, val away: Team, val pools: Map<Int, List<Player>>, val title: String)
+
 class MatchSim(
     val game: Game,
     val fixture: Fixture,
     private val userTeamId: Int,
     private val autoUserSubs: Boolean,
     private val rnd: Random = Random.Default,
+    val nat: NatMatch? = null,
 ) {
     private val big = com.supermenajer.game.game.Talks.bigMatch(game, fixture)
-    val home = Side(game.team(fixture.home), 0)
-    val away = Side(game.team(fixture.away), 1)
+    val home = Side(nat?.home ?: game.team(fixture.home), 0)
+    val away = Side(nat?.away ?: game.team(fixture.away), 1)
+    /** Skor tabelasındaki başlık (milli maçta turnuva adı). */
+    val title: String? get() = nat?.title
     val sides: List<Side> get() = listOf(home, away)
     var minute = 0
         private set
@@ -86,9 +92,14 @@ class MatchSim(
         setup(home)
         setup(away)
         ev(Ev.KICKOFF, -1, Comms.kickoff(home.team, away.team, rnd))
-        if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
-        Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
-        userSide?.let { us ->
+        if (nat != null) {
+            fixture.attendance = (home.team.stadium * rnd.nextDouble(0.85, 1.0)).toInt()
+            ev(Ev.INFO, -1, "🏟️ ${Facilities.crowdText(this)} · Milli marşlar okundu, tribünler bayraklarla dolu!")
+        } else {
+            if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
+            Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
+        }
+        if (nat == null) userSide?.let { us ->
             // Gizli antrenman: rakibe özel hazırlık
             if (game.secretWeek == fixture.week) {
                 us.onPitch.forEach { it.boost += 0.025 }
@@ -98,7 +109,7 @@ class MatchSim(
             val wb = us.team.winBonus
             if (wb > 0) us.onPitch.forEach { it.boost += 0.01 * wb }
         }
-        val fanBoost = com.supermenajer.game.game.Fans.homeBoost(game, fixture)
+        val fanBoost = if (nat != null) 0.01 else com.supermenajer.game.game.Fans.homeBoost(game, fixture)
         if (fanBoost > 0) {
             home.onPitch.forEach { it.boost += fanBoost }
             ev(Ev.INFO, 0, "📣 Tribünler coşkulu! Taraftar takımını 12. adam gibi destekliyor.")
@@ -106,11 +117,26 @@ class MatchSim(
     }
 
     private fun setup(s: Side) {
-        if (s.team.id == userTeamId) Lineups.validate(game, s.team) else Lineups.autoPick(game, s.team)
+        val pool = nat?.pools?.get(s.team.id)
+        if (pool != null) Lineups.autoPick(game, s.team, pool)
+        else if (s.team.id == userTeamId) Lineups.validate(game, s.team) else Lineups.autoPick(game, s.team)
         val slots = Formations.slots(s.team.formation)
         s.team.lineup.forEachIndexed { i, id -> game.player(id)?.let { s.onPitch += PIM(it, slots[i]) } }
         s.used += s.onPitch
-        s.bench += Lineups.bench(game, s.team)
+        s.bench += if (pool != null) Lineups.bench(game, s.team, 9, pool) else Lineups.bench(game, s.team)
+    }
+
+    /** Milli maç sonrası: kulüp istatistiklerine yazılmaz; yorgunluk, sakatlık ve moral işlenir. */
+    fun applyNational() {
+        check(finished)
+        for (s in sides) {
+            val res = s.goals.compareTo(other(s).goals)
+            for (m in s.used) {
+                m.p.fitness = m.fit
+                m.p.morale = (m.p.morale + res * 3).coerceIn(5.0, 100.0)
+                if (m.injured) m.p.injuredWeeks = m.injWeeks
+            }
+        }
     }
 
     private fun ev(type: Ev, side: Int, text: String, pid: Int = -1, buildUp: String = "", assistId: Int = -1, style: Int = 0) {

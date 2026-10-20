@@ -146,6 +146,17 @@ fun PosChip(pos: Pos, small: Boolean = false) {
 
 @Composable
 fun TeamBadge(team: Team, size: Dp = 36.dp) {
+    // Milli takımlar (geçici takım nesneleri): arma yerine bayrak
+    if (team.id <= com.supermenajer.game.game.National.USER_ID) {
+        val code = com.supermenajer.game.game.National.names.entries.firstOrNull { it.value == team.city }?.key
+        if (code != null) {
+            Box(
+                Modifier.size(size).clip(CircleShape).background(Color(0xFF0B1028)).border(2.dp, Color.White.copy(alpha = 0.8f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { Text(com.supermenajer.game.game.Generator.flag(code), fontSize = (size.value * 0.5f).sp) }
+            return
+        }
+    }
     val c1 = Color(team.color1)
     val c2 = Color(team.color2)
     // Arma: kalkan şekli, takım kimliğine göre çizgili / yarım / bantlı desen

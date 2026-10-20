@@ -26,15 +26,16 @@ object Lineups {
     }
 
     /** Mevcut formasyon için en iyi 11'i seçer. */
-    fun autoPick(g: Game, t: Team) {
+    fun autoPick(g: Game, t: Team, pool: List<Player> = g.squad(t.id)) {
         t.lineup = MutableList(11) { -1 }
-        validate(g, t)
+        validate(g, t, pool)
     }
 
     /** Geçersiz (sakat, cezalı, kadroda olmayan) oyuncuları en iyi alternatifle değiştirir. */
-    fun validate(g: Game, t: Team) {
+    fun validate(g: Game, t: Team, pool: List<Player> = g.squad(t.id)) {
         val slots = Formations.slots(t.formation)
-        val avail = g.squad(t.id).filter { it.available }.associateBy { it.id }
+        // Milli takımda A2 durumu önemsizdir: yalnız sakat/cezalı olmayanlar
+        val avail = pool.filter { it.injuredWeeks == 0 && (it.available || it.teamId != t.id) }.associateBy { it.id }
         val lineup = MutableList(11) { t.lineup.getOrNull(it) ?: -1 }
         val used = mutableSetOf<Int>()
         for (i in 0 until 11) {
@@ -66,8 +67,8 @@ object Lineups {
         validate(g, t)
     }
 
-    fun bench(g: Game, t: Team, n: Int = 7): List<Player> {
-        val rest = g.squad(t.id).filter { it.available && it.id !in t.lineup }.sortedByDescending { it.overall }
+    fun bench(g: Game, t: Team, n: Int = 7, pool: List<Player> = g.squad(t.id)): List<Player> {
+        val rest = pool.filter { it.injuredWeeks == 0 && (it.available || it.teamId != t.id) && it.id !in t.lineup }.sortedByDescending { it.overall }
         val gk = rest.firstOrNull { it.pos == Pos.GK }
         val others = rest.filter { it !== gk }.take(if (gk != null) n - 1 else n)
         return listOfNotNull(gk) + others

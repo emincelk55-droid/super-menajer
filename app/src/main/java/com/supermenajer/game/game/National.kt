@@ -1,6 +1,11 @@
 package com.supermenajer.game.game
 
+import com.supermenajer.game.engine.MatchSim
+import com.supermenajer.game.engine.NatMatch
+import com.supermenajer.game.model.Comp
+import com.supermenajer.game.model.Fixture
 import com.supermenajer.game.model.Game
+import com.supermenajer.game.model.Team
 import com.supermenajer.game.model.Player
 import com.supermenajer.game.model.Pos
 import kotlin.math.exp
@@ -78,33 +83,106 @@ object National {
         return goals(rnd, 1.3 * exp(d / 9.0)).coerceAtMost(7) to goals(rnd, 1.3 * exp(-d / 9.0)).coerceAtMost(7)
     }
 
-    /** Lig haftası sonunda: pencere haftasıysa bir milli maç oynanır. */
+    /** Lig haftası sonunda: pencere haftasıysa milli maç günü gelir (DEVAM ile canlı oynanır). */
     fun weekly(g: Game, leagueWeek: Int, rnd: Random) {
         val code = g.nationalTeam
         if (code.isEmpty() || g.fired || leagueWeek !in windows || g.natLastWeek == leagueWeek) return
         g.natLastWeek = leagueWeek
+        // Önceki maç oynanmadan yeni pencere geldiyse o maç hızlıca sonuçlanır
+        if (g.natPending.isNotEmpty()) simulatePending(g, rnd)
         val others = nations(g).filter { it != code }
         if (others.isEmpty()) return
         val opp = others[rnd.nextInt(others.size.coerceAtMost(16))]
-        val sq = squad(g)
-        val me = strengthOf(g, code, sq) * Difficulty.matchFactor(g) * Perks.tactics(g)
         val home = rnd.nextBoolean()
-        val (x, y) = play(me, strengthOf(g, opp), rnd, if (home) 1.5 else -1.5)
         val kind = if (leagueWeek == 6 || leagueWeek == 22) "Hazırlık maçı" else "Eleme maçı"
+        g.natPending = "$opp|$kind|${if (home) 1 else 0}"
+        val line = if (home) "${name(code)} - ${name(opp)}" else "${name(opp)} - ${name(code)}"
+        g.addNews("🌍 Milli maç günü: $line", "$kind. DEVAM ET ile maça çık; kadronu Milli Takım ekranından düzenleyebilirsin.")
+    }
+
+    class Pending(val opp: String, val kind: String, val home: Boolean)
+
+    fun pending(g: Game): Pending? {
+        val c = g.natPending.split("|")
+        if (g.nationalTeam.isEmpty() || c.size < 3) return null
+        return Pending(c[0], c[1], c[2] == "1")
+    }
+
+    private val shorts = mapOf(
+        "TR" to "TUR", "GB" to "ENG", "ES" to "ESP", "DE" to "GER", "IT" to "ITA", "FR" to "FRA", "PT" to "POR", "NL" to "NED",
+        "BR" to "BRA", "AR" to "ARG", "BE" to "BEL", "HR" to "CRO", "DK" to "DEN", "SE" to "SWE", "CH" to "SUI", "AT" to "AUT",
+        "PL" to "POL", "MA" to "MAR", "SN" to "SEN", "NG" to "NGA", "JP" to "JPN", "US" to "USA", "NO" to "NOR", "RS" to "SRB",
+    )
+    private val colors = mapOf(
+        "TR" to (0xFFE30A17 to 0xFFFFFFFF), "GB" to (0xFFFFFFFF to 0xFF1A2A5A), "ES" to (0xFFC60B1E to 0xFFFFC400),
+        "DE" to (0xFFFFFFFF to 0xFF111111), "IT" to (0xFF1F5FBF to 0xFFFFFFFF), "FR" to (0xFF1A2A6C to 0xFFFFFFFF),
+        "PT" to (0xFF9B1B30 to 0xFF006847), "NL" to (0xFFFF6F00 to 0xFFFFFFFF), "BR" to (0xFFFFDC02 to 0xFF009C3B),
+        "AR" to (0xFF74ACDF to 0xFFFFFFFF), "BE" to (0xFFD71921 to 0xFF111111), "HR" to (0xFFE8112D to 0xFFFFFFFF),
+        "DK" to (0xFFC60C30 to 0xFFFFFFFF), "MA" to (0xFFC1272D to 0xFF006233), "SN" to (0xFFFFFFFF to 0xFF00853F),
+        "JP" to (0xFF1B2A7A to 0xFFFFFFFF), "US" to (0xFFFFFFFF to 0xFF0A3161), "SE" to (0xFFFECC00 to 0xFF006AA7),
+    )
+
+    /** Ulus için geçici takım nesnesi (maç motoru için). */
+    fun teamFor(code: String, id: Int, formation: String = "4-2-3-1"): Team {
+        val (c1, c2) = colors[code] ?: run {
+            val h = code.hashCode()
+            (0xFF000000 or (h.toLong() and 0xFFFFFF)) to 0xFFFFFFFF
+        }
+        return Team(id, name(code), shorts[code] ?: name(code).take(3).uppercase(), name(code), c1, c2, 80, 0, formation).also {
+            it.stadium = 52_000
+            it.stadiumName = "${name(code)} Ulusal Stadı"
+        }
+    }
+
+    const val USER_ID = -1000
+    const val OPP_ID = -1001
+
+    /** Bekleyen milli maç için maç motoru. */
+    fun buildMatch(g: Game, live: Boolean): MatchSim? {
+        val p = pending(g) ?: return null
+        val code = g.nationalTeam
+        val me = teamFor(code, USER_ID, g.natFormation)
+        val them = teamFor(p.opp, OPP_ID)
+        val h = if (p.home) me else them
+        val a = if (p.home) them else me
+        val fx = Fixture(g.week, h.id, a.id, comp = Comp.NATIONAL)
+        val pools = mapOf(USER_ID to squad(g), OPP_ID to autoSquad(g, p.opp))
+        return MatchSim(g, fx, USER_ID, autoUserSubs = !live, nat = NatMatch(h, a, pools, "Milli Maç · ${p.kind}"))
+    }
+
+    /** Maç sonucunu işler (kendi gollerimiz x, rakip y). */
+    fun record(g: Game, x: Int, y: Int, scorers: List<String> = emptyList()) {
+        val p = pending(g) ?: return
+        val code = g.nationalTeam
+        g.natPending = ""
         val pts = when { x > y -> 3; x == y -> 1; else -> 0 }
         g.natPoints += pts
-        val line = if (home) "${name(code)} $x-$y ${name(opp)}" else "${name(opp)} $y-$x ${name(code)}"
-        g.natResults.add(0, "${g.season}|$kind|$line|$pts")
+        val line = if (p.home) "${name(code)} $x-$y ${name(p.opp)}" else "${name(p.opp)} $y-$x ${name(code)}"
+        g.natResults.add(0, "${g.season}|${p.kind}|$line|$pts")
         while (g.natResults.size > 30) g.natResults.removeAt(g.natResults.lastIndex)
-        val scorers = sq.filter { it.pos == Pos.FW || it.pos == Pos.MF }.sortedByDescending { it.shooting }.take(4)
-        val who = if (x > 0 && scorers.isNotEmpty()) " Golcüler: " + (1..x).map { scorers[rnd.nextInt(scorers.size)].name.substringAfterLast(' ') }.distinct().joinToString() + "." else ""
+        val who = if (scorers.isNotEmpty()) " Golcüler: ${scorers.joinToString()}." else ""
         g.addNews(
             "🌍 Milli maç: $line",
-            "$kind · ${when (pts) { 3 -> "Galibiyet! Taraftar milli takımın oyunundan memnun."; 1 -> "Beraberlik."; else -> "Mağlubiyet. Basın kadro tercihlerini sorguluyor." }}$who",
+            "${p.kind} · ${when (pts) { 3 -> "Galibiyet! Taraftar milli takımın oyunundan memnun."; 1 -> "Beraberlik."; else -> "Mağlubiyet. Basın kadro tercihlerini sorguluyor." }}$who",
         )
         if (pts == 3) Perks.addXp(g, 15)
-        // Milli takımda oynayan kulüp oyuncularımız biraz yorulur
-        sq.filter { it.teamId == g.userTeamId }.forEach { it.fitness = (it.fitness - 8).coerceAtLeast(40.0) }
+    }
+
+    /** Bekleyen maçı hızlıca sonuçlandırır. */
+    fun simulatePending(g: Game, rnd: Random = Random.Default) {
+        val sim = buildMatch(g, live = false) ?: return
+        sim.runToEnd()
+        sim.applyNational()
+        finish(g, sim)
+    }
+
+    /** Maç motorundan gelen sonucu kaydeder. */
+    fun finish(g: Game, sim: MatchSim) {
+        val us = sim.userSide ?: return
+        val them = sim.other(us)
+        val scorers = sim.events.filter { it.type == com.supermenajer.game.engine.Ev.GOAL && it.side == us.index }
+            .mapNotNull { e -> us.used.firstOrNull { it.p.id == e.playerId }?.p?.name?.substringAfterLast(' ') }
+        record(g, us.goals, them.goals, scorers)
     }
 
     /** Sezon sonu turnuvası: en güçlü 8 ulus (kendi takımın dahil) eleme usulü. */

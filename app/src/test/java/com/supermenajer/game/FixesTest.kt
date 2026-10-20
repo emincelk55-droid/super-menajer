@@ -53,6 +53,15 @@ class FixesTest {
         assertNull(GameRepo.takeNationalJob("ES"))
         com.supermenajer.game.game.National.weekly(g, 6, Random(4))
         com.supermenajer.game.game.National.weekly(g, 6, Random(4))
+        assertTrue(g.natPending.isNotEmpty() && g.natResults.isEmpty())
+        // Canlı milli maç: maç motoru iki ulusun kadrosuyla oynar, kulüp istatistiklerine yazılmaz
+        val appsBefore = g.players.sumOf { it.apps }
+        val sim = com.supermenajer.game.game.National.buildMatch(g, live = false)!!
+        assertTrue(sim.home.onPitch.size == 11 && sim.away.onPitch.size == 11)
+        assertTrue(sim.userSide!!.onPitch.all { it.p.nation == "ES" })
+        sim.runToEnd(); sim.applyNational(); com.supermenajer.game.game.National.finish(g, sim)
+        assertEquals(appsBefore, g.players.sumOf { it.apps })
+        assertTrue(g.natPending.isEmpty())
         assertEquals(1, g.natResults.size)
         com.supermenajer.game.game.National.summerTournament(g, Random(5))
         assertTrue(g.natResults.size >= 2)

@@ -27,12 +27,12 @@ object Talks {
     class Result(val message: String, val reactions: List<String>)
 
     fun isDerby(g: Game, f: Fixture): Boolean {
-        val h = g.team(f.home)
-        val a = g.team(f.away)
+        val h = g.teamOrNull(f.home) ?: return false
+        val a = g.teamOrNull(f.away) ?: return false
         return h.city == a.city && Leagues.of(h.division)?.country == "Türkiye" && Leagues.of(a.division)?.country == "Türkiye"
     }
 
-    fun bigMatch(g: Game, f: Fixture) = isDerby(g, f) || Comp.isCup(f.comp) || f.comp == Comp.EURO
+    fun bigMatch(g: Game, f: Fixture) = f.comp == Comp.NATIONAL || isDerby(g, f) || Comp.isCup(f.comp) || f.comp == Comp.EURO
 
     /** Güç farkı (+ ise biz favoriyiz). Ev sahibi avantajı dahil. */
     fun strengthDiff(sim: MatchSim): Double {

@@ -210,11 +210,14 @@ object Comp {
     const val CUP = 2
     const val EURO = 3
     const val FRIENDLY = 9
+    /** Milli maç (lig/kupa dışı, takvime işlenmez). */
+    const val NATIONAL = 8
     fun isLeague(c: Int) = c == SUPER || c == FIRST || c in 10..29
     fun isCup(c: Int) = c == CUP || c >= 30
     fun name(c: Int) = when {
         c == EURO -> "Avrupa Kupası"
         c == FRIENDLY -> "Hazırlık maçı"
+        c == NATIONAL -> "Milli Maç"
         isCup(c) -> Leagues.cupName(c)
         else -> Leagues.of(c)?.name ?: "Lig"
     }
@@ -365,6 +368,9 @@ class Game(
     var fired: Boolean = false,
     /** Milli takım görevi (ülke kodu, boş = yok), çağrılan kadro, sonuçlar ve puan. */
     var nationalTeam: String = "",
+    /** Oynanmayı bekleyen milli maç: "rakip|tür|evde(1/0)" (boş = yok). */
+    var natPending: String = "",
+    var natFormation: String = "4-3-3",
     var natSquad: MutableList<Int> = mutableListOf(),
     var natResults: MutableList<String> = mutableListOf(),
     var natPoints: Int = 0,

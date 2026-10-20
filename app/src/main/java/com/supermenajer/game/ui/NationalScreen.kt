@@ -90,6 +90,17 @@ fun NationalTab(g: Game) {
                     )
                 }
             }
+            if (g.natPending.isNotEmpty()) item { NationalMatchCard(g) }
+            item {
+                DashCard("Diziliş", Modifier.fillMaxWidth()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        com.supermenajer.game.model.Formations.names.forEach { f ->
+                            SmallChip(f, g.natFormation == f, Modifier.weight(1f)) { g.natFormation = f; GameRepo.changed() }
+                        }
+                    }
+                    Text("Milli maçlarda en iyi 11 bu dizilişe göre otomatik seçilir; maç sırasında değişiklik ve mentaliteyi sen yönetirsin.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
             item {
                 DashCard("Sonuçlar", Modifier.fillMaxWidth()) {
                     if (g.natResults.isEmpty()) Text("Henüz milli maç oynanmadı.", color = TextDim, fontSize = 13.sp)

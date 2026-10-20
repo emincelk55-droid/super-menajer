@@ -123,6 +123,19 @@ class ScreensTest {
         g.managerRep = 90; GameRepo.takeNationalJob("GB")
         com.supermenajer.game.game.National.weekly(g, 6, kotlin.random.Random(6))
         shot("10i_national")
+        GameRepo.tab = 0; shot("10j_national_pending")
+        GameRepo.playNational(live = true)
+        run {
+            val sim = GameRepo.match!!
+            val an = GameRepo.pitchFor(sim)
+            repeat(38) { sim.step() }
+            repeat(60) { an.update(1f / 30f) }
+        }
+        shot("10k_national_match")
+        GameRepo.finishMatch()
+        shot("10l_national_summary")
+        GameRepo.closeSummary()
+        GameRepo.resignNational()
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
         GameRepo.clubMode = 3; shot("10e_finance")
         // v1.5: dinamikler, yetenek ağacı, hoca pazarı, olay kartı

@@ -133,6 +133,7 @@ fun devamTitle(g: Game): String = when {
     g.pendingEvent != null -> "Karar Ver"
     g.seasonOver -> "Yeni Sezon"
     g.todayUserFixture() != null -> "Maça Çık"
+    g.natPending.isNotEmpty() -> "Milli Maç"
     else -> "Devam Et"
 }
 
@@ -316,6 +317,7 @@ fun MenuDrawer(g: Game, onClose: () -> Unit) {
 fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
+        if (!g.fired && g.natPending.isNotEmpty()) add { NationalMatchCard(g) }
         if (g.fired) add { FiredCard(g) }
         if (g.seasonOver && !g.fired) add { SeasonEndCard(g) }
         if (!g.fired && g.careerOffer && g.jobOffers.isNotEmpty()) add { CareerOfferCard(g) }
@@ -793,6 +795,34 @@ private fun MatchPrepCard(g: Game) {
             var fr by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
             SideButton("🤝  Hazırlık maçı oyna (${g.friendlies}/3)", modifier = Modifier.padding(top = 6.dp).height(38.dp)) { fr = GameRepo.friendly() }
             fr?.let { Text("Sonuç: $it", color = Gold, fontSize = 12.sp) }
+        }
+    }
+}
+
+
+/** Bekleyen milli maç: rakip, tür ve maça çık / hızlı sonuç / kadro düğmeleri. */
+@Composable
+fun NationalMatchCard(g: Game) {
+    val p = com.supermenajer.game.game.National.pending(g) ?: return
+    val N = com.supermenajer.game.game.National
+    val me = g.nationalTeam
+    val (h, a) = if (p.home) me to p.opp else p.opp to me
+    DashCard("🌍 Milli Maç Günü · ${p.kind}", Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            for ((i, c) in listOf(h, a).withIndex()) {
+                if (i == 1) Text("VS", fontWeight = FontWeight.Black, color = TextDim, modifier = Modifier.padding(horizontal = 10.dp))
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(Generator.flag(c), fontSize = 34.sp)
+                    Text(N.name(c), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Güç ${N.strengthOf(g, c, if (c == me) N.squad(g) else null).toInt()}", color = TextDim, fontSize = 11.sp)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SideButton("▶  MAÇA ÇIK", accent = true, modifier = Modifier.weight(1.3f).height(42.dp)) { GameRepo.playNational(live = true) }
+            SideButton("⚡ Hızlı sonuç", modifier = Modifier.weight(1f).height(42.dp)) { GameRepo.playNational(live = false) }
+            SideButton("👥 Kadro", modifier = Modifier.weight(0.9f).height(42.dp)) { GameRepo.tab = GameRepo.TAB_NATIONAL }
         }
     }
 }

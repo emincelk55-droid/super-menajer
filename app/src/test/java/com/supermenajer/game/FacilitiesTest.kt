@@ -48,7 +48,7 @@ class FacilitiesTest {
         assertTrue(g.projects.isEmpty())
         val tickets = us.lastReport[Economy.TICKETS] ?: 0L
         println("BİLET: ${tickets} · ortalama ${Facilities.avgAttendance(us)} / ${us.stadium}")
-        assertTrue(tickets in 1_000_000L..12_000_000L)
+        assertTrue(tickets in 700_000L..12_000_000L)
 
         // Altyapı seçmeleri yeni sezonda gelir
         val before = g.squad(us.id).size

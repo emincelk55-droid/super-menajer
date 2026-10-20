@@ -129,3 +129,10 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - A2 takımı: oyuncuları A2'ye gönder/geri al; A2 her lig haftası maç oynar, 22 yaş altı oyuncular gelişir, 24 yaş üstü mutsuz olur.
 - Milli takım kariyeri: kulüple birlikte milli takım çalıştır (yeni kariyerde ya da Milli Takım ekranından, itibara göre),
   kadro çağır/çıkar, 6/13/22/29. haftalarda milli maçlar, sezon sonunda Avrupa Şampiyonası / Dünya Kupası.
+
+### v2.5
+- Milli maçlar artık canlı: pencere haftasında "Milli maç günü" gelir, DEVAM ET seni maça götürür.
+  Kulüp maçlarıyla aynı SM tarzı maç ekranı: 2D saha, soyunma odası konuşması, değişiklik, mentalite, bağırma, devre arası.
+- İki ulusun gerçek oyuncu havuzundan otomatik ilk 11 ve yedekler; milli takım dizilişi Milli Takım ekranından seçilir.
+- Milli maç kulüp istatistiklerine yazılmaz; yorgunluk, sakatlık ve moral kulübe yansır. "Hızlı sonuç" ile simüle de edilebilir.
+- Milli takımlar skor tabelasında bayraklarıyla görünür.

@@ -133,7 +133,7 @@ object GameRepo {
     fun advanceDay(): Boolean {
         val g = game ?: return true
         if (g.fired || g.seasonOver) return true
-        if (g.todayUserFixture() != null) return true
+        if (g.todayUserFixture() != null || g.natPending.isNotEmpty()) return true
         val offers = g.offers.size
         val newsBefore = g.news.firstOrNull()
         if (!g.isMatchDay) {
@@ -146,7 +146,7 @@ object GameRepo {
         }
         val fresh = g.news.takeWhile { it !== newsBefore }
         val important = fresh.any { n -> importantWords.any { it in n.title.lowercase() } }
-        return g.offers.size > offers || g.press != null || g.careerOffer || g.fired || g.seasonOver || g.pendingEvent != null ||
+        return g.offers.size > offers || g.press != null || g.careerOffer || g.fired || g.seasonOver || g.pendingEvent != null || g.natPending.isNotEmpty() ||
             important || g.todayUserFixture() != null
     }
 
@@ -159,6 +159,7 @@ object GameRepo {
             g.pendingEvent != null -> tab = TAB_HOME
             g.seasonOver -> startNewSeason()
             g.todayUserFixture() != null -> playMatch(live = true)
+            g.natPending.isNotEmpty() -> playNational(live = true)
             else -> {
                 advancing = true
                 advanceJob?.cancel()
@@ -185,6 +186,7 @@ object GameRepo {
         g.pendingEvent != null -> "⚡ KARAR VER"
         g.seasonOver -> "YENİ SEZON ▶"
         g.todayUserFixture() != null -> "MAÇA ÇIK ▶"
+        g.natPending.isNotEmpty() -> "MİLLİ MAÇ ▶"
         else -> "DEVAM ▶"
     }
 
@@ -371,9 +373,35 @@ object GameRepo {
         }
     }
 
+    /** Bekleyen milli maçı canlı ya da hızlı oynatır. */
+    fun playNational(live: Boolean) {
+        val g = game ?: return
+        if (!live) {
+            National.simulatePending(g)
+            changed()
+            bump()
+            return
+        }
+        val sim = National.buildMatch(g, live = true) ?: return
+        match = sim
+        pitch = null
+        screen = Screen.MATCH
+        bump()
+    }
+
     fun finishMatch() {
         val g = game ?: return
         val sim = match ?: return
+        if (sim.nat != null) {
+            if (g.natPending.isEmpty()) return
+            sim.runToEnd()
+            sim.applyNational()
+            National.finish(g, sim)
+            save(force = true)
+            screen = Screen.SUMMARY
+            bump()
+            return
+        }
         if (sim.fixture.played) return
         sim.runToEnd()
         sim.applyToGame()
@@ -402,7 +430,7 @@ object GameRepo {
     fun skipToNextMatch() {
         val g = game ?: return
         var guard = 0
-        while (!g.fired && !g.seasonOver && g.todayUserFixture() == null && guard++ < 30) {
+        while (!g.fired && !g.seasonOver && g.todayUserFixture() == null && g.natPending.isEmpty() && guard++ < 30) {
             if (!g.isMatchDay) {
                 // Aradaki boş günler de yaşanır (gözlemci raporları, transferler)
                 while (!g.isMatchDay) { g.date++; Season.freeDay(g) }
@@ -670,6 +698,7 @@ object GameRepo {
         val g = game ?: return
         g.addNews("🌍 Milli takımdan ayrıldın", "${National.name(g.nationalTeam)} milli takımındaki görevini bıraktın.")
         g.nationalTeam = ""
+        g.natPending = ""
         g.natSquad.clear()
         changed()
     }

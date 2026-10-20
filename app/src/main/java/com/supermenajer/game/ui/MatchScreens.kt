@@ -223,7 +223,7 @@ fun MatchScreen() {
                 sim, running, speed,
                 onPlay = { running = !running },
                 onSpeed = { speed = it },
-                onMentality = { GameRepo.setMentality(it); tick++ },
+                onMentality = { sim.userSide?.team?.mentality = it; GameRepo.bump(); tick++ },
                 onShout = { if (sim.canShout) { sim.shout(it); revealed = sim.events.size; tick++ } },
                 onSubs = { running = false; showSubs = true },
                 onSkip = { running = false; sim.runToEnd(); revealed = sim.events.size; tick++ },
@@ -576,7 +576,7 @@ fun SummaryScreen() {
                 item {
                     DashCard("Maç İstatistikleri", Modifier.fillMaxWidth()) { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
                 }
-                item {
+                if (sim.nat == null) item {
                     DashCard("Diğer Sonuçlar · ${Comp.name(sim.fixture.comp)}", Modifier.fillMaxWidth()) {
                         g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->
                             if (i > 0) HorizontalDivider(color = CardLine)
@@ -705,7 +705,7 @@ private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEven
                 // Orta: skor kutuları ve dakika
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 10.dp)) {
                     Text(
-                        (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") +
+                        sim.title ?: (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") +
                             if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}" else "${Comp.name(f.comp)} · ${sim.game.leagueWeekAt(f.week)}. hafta",
                         color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     )
