@@ -15,7 +15,8 @@ object Difficulty {
     fun patience(g: Game): Double = when (g.difficulty) { 0 -> 0.6; 2 -> 1.35; else -> 1.0 }
 
     /** Başlangıç transfer bütçesi çarpanı. */
-    fun budgetFactor(g: Game): Double = when (g.difficulty) { 0 -> 1.5; 2 -> 0.7; else -> 1.0 }
+    fun budgetFactor(g: Game): Double = budgetFactor(g.difficulty)
+    fun budgetFactor(d: Int): Double = when (d) { 0 -> 1.5; 2 -> 0.7; else -> 1.0 }
 
     /** Kullanıcı takımının maç gücü çarpanı. */
     fun matchFactor(g: Game): Double = when (g.difficulty) { 0 -> 1.04; 2 -> 0.97; else -> 1.0 }

@@ -22,6 +22,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -92,7 +97,7 @@ fun MatchScreen() {
     val sim = GameRepo.match ?: return
     var tick by remember { mutableIntStateOf(0) }
     // Kullanıcı maçında önce maç öncesi konuşma yapılır
-    var running by remember { mutableStateOf(sim.userSide == null || sim.minute > 0) }
+    var running by remember { mutableStateOf(sim.userSide == null || (sim.minute > 0 && sim.minute != 45)) }
     var preResult by remember { mutableStateOf<Talks.Result?>(null) }
     var speed by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableIntStateOf(sim.events.size) }
@@ -153,92 +158,76 @@ fun MatchScreen() {
     val homeC = Color(sim.home.team.color1)
     val awayC = Color(sim.away.team.color1).let { if (colorDistance(it, homeC) < 0.5f) Color(sim.away.team.color2) else it }
 
-    Row(Modifier.fillMaxSize()) {
-        // Sol: FM tarzı 2D saha, skor ve son olay
-        Column(Modifier.weight(1.75f).fillMaxHeight()) {
-            Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF256F3B)), contentAlignment = Alignment.Center) {
-                val gkH = keeperColor(homeC, awayC, Color(0xFF26C6DA))
-                val gkA = keeperColor(homeC, awayC, Color(0xFFFF7043))
-                MatchPitch(
-                    anim, homeC, awayC, gkH, gkA, running, paces[speed].scale,
-                    Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true),
-                )
-                ScoreBug(sim, scoreH, scoreA, homeC, awayC, shown >= sim.events.size, Modifier.align(Alignment.TopStart).padding(8.dp))
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp),
+    val shownEvents = sim.events.take(shown)
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0C1131), Color(0xFF120E36), Color(0xFF080B20))))) {
+        SmScoreboard(sim, scoreH, scoreA, shownEvents, shown >= sim.events.size, homeC, awayC)
+        Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Sol: 2D saha ve son olay
+            Column(Modifier.weight(2.1f).fillMaxHeight()) {
+                Box(
+                    Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF256F3B))
+                        .border(1.dp, CardLine, RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    goalFlash?.let { GoalCard(sim, it, if (it.side == 0) homeC else awayC) }
-                }
-            }
-            TickerBox(ticker, homeC, awayC)
-        }
-        // Sağ: kontroller, devre arası ve anlatım
-        Column(Modifier.weight(1f).fillMaxHeight().background(Bg)) {
-            LiveStrip(sim, homeC, awayC)
-            if (!sim.finished) {
-                // Telefonda taşmasın: tüm kontroller eşit genişlikte satırlarda
-                Row(
-                    Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 6.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
-                ) {
-                    SmallChip(if (running) "⏸" else "▶", false, Modifier.weight(0.8f)) { running = !running }
-                    paces.forEachIndexed { i, pc -> SmallChip(pc.label, speed == i, Modifier.weight(1f)) { speed = i } }
-                    val us = sim.userSide
-                    SmallChip("🔁 ${us?.subsLeft ?: 0}", false, Modifier.weight(0.9f)) { running = false; showSubs = true }
-                }
-                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    val t = sim.userSide?.team
-                    listOf("Defansif", "Dengeli", "Hücum").forEachIndexed { i, s ->
-                        SmallChip(s, t?.mentality == i, Modifier.weight(1f)) { GameRepo.setMentality(i); tick++ }
-                    }
-                }
-                if (sim.userSide != null) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 6.dp).alpha(if (sim.canShout) 1f else 0.45f),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically,
+                    val gkH = keeperColor(homeC, awayC, Color(0xFF26C6DA))
+                    val gkA = keeperColor(homeC, awayC, Color(0xFFFF7043))
+                    MatchPitch(
+                        anim, homeC, awayC, gkH, gkA, running, paces[speed].scale,
+                        Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true),
+                    )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
                     ) {
-                        Text(if (sim.canShout) "Bağır" else "${10 - (sim.minute - sim.lastShout)}'", color = TextDim, fontSize = 11.sp, modifier = Modifier.width(34.dp))
-                        listOf("📣 Coş", "😠 Bas!", "🎯 Odak", "🧘 Sakin").forEachIndexed { i, s ->
-                            SmallChip(s, false, Modifier.weight(1f)) { if (sim.canShout) { sim.shout(i); revealed = sim.events.size; tick++ } }
+                        goalFlash?.let { GoalCard(sim, it, if (it.side == 0) homeC else awayC) }
+                    }
+                    TickerBox(ticker, homeC, awayC, Modifier.align(Alignment.BottomCenter))
+                    // Devre arası ve maç sonu: sahanın ortasında SM tarzı kart
+                    if (sim.minute == 45 && !running && !sim.finished) {
+                        OverlayCard("DEVRE ARASI", "$scoreH - $scoreA", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
+                            halfResult?.let { r -> Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center) }
+                            if (!sim.talkDone && sim.userSide != null) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Talks.halfOptions.forEachIndexed { i, n ->
+                                        SmallChip(n, false, Modifier.weight(1f)) { halfResult = Talks.talk(sim, Talks.HALF, i); tick++ }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            SmActionButton("2. YARI  ▶", Modifier.fillMaxWidth()) { running = true }
+                        }
+                    } else if (sim.finished && shown >= sim.events.size) {
+                        OverlayCard("MAÇ BİTTİ", "$scoreH - $scoreA" + if (sim.penHome >= 0) "  (P ${sim.penHome}-${sim.penAway})" else "", null) {
+                            SmActionButton("MAÇ SONUCU  ▶", Modifier.fillMaxWidth()) { GameRepo.finishMatch() }
                         }
                     }
                 }
             }
-            if (sim.minute == 45 && !running) {
-                Banner("DEVRE ARASI", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
-                    Button(onClick = { running = true }) { Text("2. YARI") }
-                }
-                halfResult?.let { r ->
-                    Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp))
-                }
-                if (!sim.talkDone && sim.userSide != null) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Talks.halfOptions.forEachIndexed { i, n ->
-                            Chip(n, false, Modifier.weight(1f)) { halfResult = Talks.talk(sim, Talks.HALF, i); tick++ }
-                        }
+            // Sağ: anlatım, istatistik, oyuncular
+            Column(
+                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp))
+                    .background(Brush.verticalGradient(listOf(CardTop, CardBottom))).border(1.dp, CardLine, RoundedCornerShape(14.dp)),
+            ) {
+                SmTabBar(listOf("Olaylar", "İstatistik", "Oyuncular"), tab, Modifier.padding(horizontal = 4.dp), small = true) { tab = it }
+                Box(Modifier.weight(1f)) {
+                    when (tab) {
+                        0 -> Commentary(sim, homeC, awayC, shown)
+                        1 -> Stats(sim)
+                        else -> Ratings(sim)
                     }
                 }
-            } else if (sim.finished) {
-                Banner("MAÇ BİTTİ", null) {
-                    Button(onClick = { GameRepo.finishMatch() }, colors = ButtonDefaults.buttonColors(containerColor = Gold)) {
-                        Text("MAÇ SONUCU ▶", fontWeight = FontWeight.Bold)
-                    }
-                }
-            } else if (!running) {
-                TextButton(onClick = { sim.runToEnd(); revealed = sim.events.size; tick++ }, modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Text("⏭ Sonuca git", color = TextDim)
-                }
             }
-            Spacer(Modifier.height(4.dp))
-            FmTabs(listOf("Anlatım", "İstatistik", "Oyuncular"), tab) { tab = it }
-            Box(Modifier.weight(1f)) {
-                when (tab) {
-                    0 -> Commentary(sim, homeC, awayC, shown)
-                    1 -> Stats(sim)
-                    else -> Ratings(sim)
-                }
-            }
+        }
+        if (!sim.finished) {
+            MatchControls(
+                sim, running, speed,
+                onPlay = { running = !running },
+                onSpeed = { speed = it },
+                onMentality = { GameRepo.setMentality(it); tick++ },
+                onShout = { if (sim.canShout) { sim.shout(it); revealed = sim.events.size; tick++ } },
+                onSubs = { running = false; showSubs = true },
+                onSkip = { running = false; sim.runToEnd(); revealed = sim.events.size; tick++ },
+            )
         }
     }
     if (showSubs) {
@@ -255,7 +244,8 @@ fun MatchScreen() {
 private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -> Unit, onStart: () -> Unit) {
     WideDialog(onDismissRequest = {}) {
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1)
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.verticalGradient(listOf(CardTop, CardBottom)))
+                .border(1.5.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
                 .verticalScroll(rememberScrollState()).padding(18.dp),
         ) {
             Text("🗣 Soyunma odası", fontWeight = FontWeight.Black, fontSize = 20.sp)
@@ -290,21 +280,21 @@ private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -
 }
 
 @Composable
-private fun TickerBox(t: Ticker?, homeC: Color, awayC: Color) {
+private fun TickerBox(t: Ticker?, homeC: Color, awayC: Color, modifier: Modifier = Modifier) {
     val c = when (t?.side) { 0 -> homeC; 1 -> awayC; else -> TextDim }
+    if (t == null) return
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 52.dp)
-            .background(if (t?.kind == 2) c.copy(alpha = 0.35f) else Surface2)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+        modifier.fillMaxWidth().heightIn(min = 40.dp)
+            .background(if (t.kind == 2) c.copy(alpha = 0.75f) else Color(0xD90B1028))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (t == null) return@Row
-        Text("${t.minute}'", color = TextDim, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.width(36.dp))
-        Box(Modifier.width(4.dp).height(36.dp).background(c))
+        Text("${t.minute}'", color = TextDim, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.width(32.dp))
+        Box(Modifier.width(4.dp).height(26.dp).background(c))
         Spacer(Modifier.width(10.dp))
         Text(
             if (t.kind == 1) "⚡ ${t.text}" else t.text,
-            fontSize = if (t.kind == 2) 16.sp else 14.sp,
+            fontSize = if (t.kind == 2) 15.sp else 13.sp,
             fontWeight = if (t.kind == 0) FontWeight.Medium else FontWeight.Bold,
             fontStyle = if (t.kind == 1) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
             color = if (t.kind == 1) Gold else TextMain,
@@ -543,11 +533,29 @@ fun SummaryScreen() {
     }
     BackHandler { GameRepo.closeSummary() }
     val motm = sim.manOfTheMatch()
-    Row(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            ScoreBoard(sim)
-            ScorersStrip(sim, motm)
-            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val homeC = Color(sim.home.team.color1)
+    val awayC = Color(sim.away.team.color1).let { if (colorDistance(it, homeC) < 0.5f) Color(sim.away.team.color2) else it }
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0C1131), Color(0xFF120E36), Color(0xFF080B20))))) {
+        SmScoreboard(sim, sim.home.goals, sim.away.goals, sim.events, true, homeC, awayC)
+        Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (motm != null) item {
+                    DashCard("⭐ Maçın Oyuncusu", Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val t = motm.p.teamId.let { sim.game.teamOrNull(it) }
+                            PlayerFace(motm.p, 56.dp, t?.let { Color(it.color1) } ?: Color.Gray, t?.let { Color(it.color2) } ?: Color.White)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(motm.p.name, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                Text("${t?.name ?: ""} · ${motm.goals} gol", color = TextDim, fontSize = 12.sp)
+                            }
+                            Box(
+                                Modifier.size(46.dp).clip(CircleShape).background(Color(0xFF0B1028)).border(2.5.dp, ratingColor(motm.rating), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) { Text("%.1f".format(motm.rating), fontWeight = FontWeight.Black, fontSize = 15.sp, color = ratingColor(motm.rating)) }
+                        }
+                    }
+                }
                 if (sim.userSide != null) item { PostTalkCard(sim) }
                 com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
                     item {
@@ -556,40 +564,38 @@ fun SummaryScreen() {
                         Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
                     }
                 }
+                sim.userSide?.let { us ->
+                    item {
+                        DashCard("Oyuncu Puanları", Modifier.fillMaxWidth()) {
+                            us.used.sortedByDescending { it.rating }.forEach { PimRow(it, onPitch = true) }
+                        }
+                    }
+                }
             }
-            Button(
-                onClick = { GameRepo.closeSummary() },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp).height(44.dp), shape = RoundedCornerShape(12.dp),
-            ) { Text("DEVAM", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-        }
-        LazyColumn(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item {
-                SectionCard("Maç istatistikleri") { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
-            }
-            sim.userSide?.let { us ->
+            LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
-                    SectionCard("Oyuncu puanları") {
-                        us.used.sortedByDescending { it.rating }.forEach { PimRow(it, onPitch = true) }
+                    DashCard("Maç İstatistikleri", Modifier.fillMaxWidth()) { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
+                }
+                item {
+                    DashCard("Diğer Sonuçlar · ${Comp.name(sim.fixture.comp)}", Modifier.fillMaxWidth()) {
+                        g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->
+                            if (i > 0) HorizontalDivider(color = CardLine)
+                            ResultRow(g, f)
+                        }
                     }
                 }
             }
-            item {
-                SectionCard("Diğer sonuçlar · ${Comp.name(sim.fixture.comp)}") {
-                    g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->
-                        if (i > 0) HorizontalDivider(color = Line)
-                        ResultRow(g, f)
-                    }
-                }
-            }
+        }
+        Box(Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+            SmActionButton("DEVAM  ▶", Modifier.fillMaxWidth()) { GameRepo.closeSummary() }
         }
     }
 }
 
-
 @Composable
 private fun PostTalkCard(sim: MatchSim) {
     var result by remember { mutableStateOf<Talks.Result?>(null) }
-    SectionCard("🗣 Maç sonu konuşması") {
+    DashCard("🗣 Maç Sonu Konuşması", Modifier.fillMaxWidth()) {
         val r = result
         if (r == null && !sim.talksDone[Talks.POST]) {
             Text("Soyunma odasında oyunculara ne diyeceksin?", fontSize = 13.sp, color = TextDim)
@@ -675,5 +681,171 @@ private fun ScorersStrip(sim: MatchSim, motm: PIM?) {
                 Text("  %.1f".format(motm.rating), color = ratingColor(motm.rating), fontWeight = FontWeight.Black, fontSize = 13.sp)
             }
         }
+    }
+}
+
+
+/* ---------- SM tarzı maç ekranı parçaları ---------- */
+
+/** Üst skor tabelası: armalar, isimler, golcüler, skor kutuları, dakika ve topa sahip olma. */
+@Composable
+private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEvent>, revealedAll: Boolean, homeC: Color, awayC: Color) {
+    val f = sim.fixture
+    val goals = events.filter { it.type == Ev.GOAL }
+    fun scorer(e: MatchEvent) = (sim.home.used + sim.away.used).firstOrNull { it.p.id == e.playerId }?.p?.name?.substringAfterLast(' ') ?: ""
+    Row(
+        Modifier.fillMaxWidth().height(64.dp)
+            .background(Brush.horizontalGradient(listOf(homeC.copy(alpha = 0.45f), Color(0xFF0C1131), Color(0xFF0C1131), awayC.copy(alpha = 0.45f))))
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (side in 0..1) {
+            val s = sim.sides[side]
+            if (side == 1) {
+                // Orta: skor kutuları ve dakika
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 10.dp)) {
+                    Text(
+                        (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") +
+                            if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}" else "${Comp.name(f.comp)} · ${sim.game.leagueWeekAt(f.week)}. hafta",
+                        color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ScoreBox(hg, homeC)
+                        Box(
+                            Modifier.padding(horizontal = 6.dp).clip(RoundedCornerShape(8.dp)).background(Teal).padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Text(
+                                if (sim.finished && revealedAll) "MS" else if (sim.minute == 45 && !sim.finished) "İY" else "${sim.minute}'",
+                                color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 14.sp,
+                            )
+                        }
+                        ScoreBox(ag, awayC)
+                    }
+                    val tot = (sim.home.poss + sim.away.poss).coerceAtLeast(1)
+                    val hp = if (sim.home.poss + sim.away.poss == 0) 0.5f else sim.home.poss.toFloat() / tot
+                    Row(Modifier.width(150.dp).padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${(hp * 100).roundToInt()}", fontSize = 9.sp, color = TextDim, modifier = Modifier.width(18.dp))
+                        Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(awayC)) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(hp).background(homeC))
+                        }
+                        Text("${100 - (hp * 100).roundToInt()}", fontSize = 9.sp, color = TextDim, modifier = Modifier.width(18.dp), textAlign = TextAlign.End)
+                    }
+                }
+            }
+            val mine = goals.filter { it.side == side }.joinToString(", ") { "${scorer(it)} ${it.minute}'" }
+            Row(
+                Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (side == 0) Arrangement.Start else Arrangement.End,
+            ) {
+                if (side == 0) { TeamBadge(s.team, 42.dp); Spacer(Modifier.width(8.dp)) }
+                Column(horizontalAlignment = if (side == 0) Alignment.Start else Alignment.End, modifier = Modifier.weight(1f, fill = false)) {
+                    Text(s.team.name, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (mine.isNotEmpty()) "⚽ $mine" else s.team.formation,
+                        color = if (mine.isNotEmpty()) TextMain else TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (side == 1) { Spacer(Modifier.width(8.dp)); TeamBadge(s.team, 42.dp) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreBox(v: Int, c: Color) {
+    Box(
+        Modifier.size(42.dp, 38.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028)).border(2.dp, c.copy(alpha = 0.9f), RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center,
+    ) { Text("$v", fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color.White) }
+}
+
+/** Sahanın ortasında açılan SM tarzı bilgi kartı (devre arası, maç sonu). */
+@Composable
+private fun OverlayCard(title: String, score: String, sub: String?, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Column(
+        Modifier.widthIn(max = 480.dp).fillMaxWidth(0.85f).clip(RoundedCornerShape(16.dp))
+            .background(Brush.verticalGradient(listOf(Color(0xF0182050), Color(0xF00B1028))))
+            .border(1.5.dp, Teal.copy(alpha = 0.7f), RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 10.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, fontWeight = FontWeight.Black, fontSize = 15.sp, color = Teal, letterSpacing = 2.sp)
+            Text("   $score", fontWeight = FontWeight.Black, fontSize = 22.sp)
+        }
+        if (sub != null) Text(sub, color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2)
+        Spacer(Modifier.height(6.dp))
+        content()
+    }
+}
+
+@Composable
+private fun SmActionButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.height(44.dp).clip(RoundedCornerShape(10.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF34F5C0), Color(0xFF12C795))))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 15.sp) }
+}
+
+/** Parçalı seçim (hız, mentalite). */
+@Composable
+private fun Segmented(options: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
+    Row(
+        modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF0B1028)).border(1.dp, CardLine, RoundedCornerShape(10.dp)),
+    ) {
+        options.forEachIndexed { i, o ->
+            val sel = i == selected
+            Box(
+                Modifier.weight(1f).fillMaxHeight().background(if (sel) Teal else Color.Transparent).clickable { onSelect(i) },
+                contentAlignment = Alignment.Center,
+            ) { Text(o, fontSize = 12.sp, fontWeight = FontWeight.Black, color = if (sel) Color(0xFF06231A) else TextMain, maxLines = 1) }
+        }
+    }
+}
+
+/** Alt kontrol çubuğu: oynat/duraklat, hız, mentalite, bağırma, değişiklik, sonuca git. */
+@Composable
+private fun MatchControls(
+    sim: MatchSim, running: Boolean, speed: Int,
+    onPlay: () -> Unit, onSpeed: (Int) -> Unit, onMentality: (Int) -> Unit, onShout: (Int) -> Unit, onSubs: () -> Unit, onSkip: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        RoundIconButton(if (running) "⏸" else "▶", 42.dp, onClick = onPlay)
+        Segmented(listOf("1x", "3x", "⚡"), speed, Modifier.width(150.dp), onSpeed)
+        val us = sim.userSide
+        if (us != null) {
+            Segmented(listOf("Defans", "Denge", "Hücum"), us.team.mentality, Modifier.weight(1f), onMentality)
+            var open by remember { mutableStateOf(false) }
+            Box {
+                Box(
+                    Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF0B1028))
+                        .border(1.dp, if (sim.canShout) Gold else CardLine, RoundedCornerShape(10.dp))
+                        .clickable(enabled = sim.canShout) { open = true }.padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (sim.canShout) "📣 Bağır" else "📣 ${10 - (sim.minute - sim.lastShout)}'",
+                        fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (sim.canShout) Gold else TextDim,
+                    )
+                }
+                androidx.compose.material3.DropdownMenu(open, onDismissRequest = { open = false }, modifier = Modifier.background(Color(0xFF141A36))) {
+                    listOf("📣 Coş", "😠 Bas!", "🎯 Odaklan", "🧘 Sakin ol").forEachIndexed { i, s ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(s) }, onClick = { open = false; onShout(i) })
+                    }
+                }
+            }
+            Box(
+                Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
+                    .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable(onClick = onSubs).padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("🔁 Değişiklik (${us.subsLeft})", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        if (!running) RoundIconButton("⏭", 42.dp, onClick = onSkip)
     }
 }

@@ -36,6 +36,7 @@ object GameRepo {
     var selectedPlayer by mutableStateOf<Player?>(null)
     /** Karşılaştırma: sabitlenen oyuncu ve açık karşılaştırma (iki oyuncu kimliği). */
     var comparePin by mutableStateOf<Int?>(null)
+    var tacticWizard by mutableStateOf(false)
     var compare by mutableStateOf<Pair<Int, Int>?>(null)
 
     fun toggleWatch(p: Player) {
@@ -299,9 +300,15 @@ object GameRepo {
         true
     }.getOrDefault(false)
 
-    fun newCareer(g: Game, manager: String, teamId: Int, difficulty: Int = 1, noFiring: Boolean = false) {
+    fun newCareer(
+        g: Game, manager: String, teamId: Int, difficulty: Int = 1, noFiring: Boolean = false,
+        nation: String = "TR", rep: Int = 1, intro: Boolean = false,
+    ) {
         g.difficulty = difficulty
         g.noFiring = noFiring
+        g.managerNation = nation
+        g.managerRep = listOf(25, 40, 60)[rep.coerceIn(0, 2)]
+        g.introDone = !intro
         advancing = false
         advanceJob?.cancel()
         g.managerName = manager.ifBlank { "Menajer" }
@@ -310,15 +317,39 @@ object GameRepo {
         StaffLogic.hireDefaults(g)
         val t = g.userTeam
         t.budget = (t.budget * Difficulty.budgetFactor(g)).toLong()
+        // İtibar: ünlü menajere yönetim daha çok güvenir
+        g.confidence = (g.confidence + (rep.coerceIn(0, 2) - 1) * 6).coerceIn(0.0, 100.0)
         g.addNews(
             "Hoş geldin hocam!",
             "${t.name} yönetimi seni yeni teknik direktör olarak açıkladı. Yönetimin bu sezonki hedefi: ${Season.objectiveText(t)}. Bütçen: ${money(t.budget)}.",
         )
+        if (intro) {
+            g.addNews("Hazırlık maçları", "Yardımcı antrenörün, kadroyu tanıman için hazırlık dönemi boyunca 3 hazırlık maçı oynayabileceğini hatırlatıyor. Ana sayfadaki maç hazırlığı kartından ayarlayabilirsin.")
+            g.addNews("Kaptanını seçmek ister misin?", "Takımın kaptanı ve duran top kullanıcıları şu an otomatik seçiliyor. Taktik → Talimatlar → Takım görevleri bölümünden kendin belirleyebilirsin. Kaptan, soyunma odasının morali ve uyumu üzerinde etkilidir.")
+            g.addNews("Takım raporu hazır", teamReport(g))
+        }
         game = g
         tab = 0
         save(force = true)
         screen = Screen.MAIN
         bump()
+    }
+
+    /** Yardımcı antrenörün yeni menajere hazırladığı kadro raporu. */
+    fun teamReport(g: Game): String {
+        val t = g.userTeam
+        val sq = g.squad(t.id)
+        val need = mapOf(com.supermenajer.game.model.Pos.GK to 1, com.supermenajer.game.model.Pos.DF to 4, com.supermenajer.game.model.Pos.MF to 4, com.supermenajer.game.model.Pos.FW to 2)
+        val avg = need.mapValues { (p, n) -> sq.filter { it.pos == p }.sortedByDescending { it.overall }.take(n).map { it.overall }.average().takeIf { !it.isNaN() } ?: 0.0 }
+        val best = avg.maxBy { it.value }
+        val worst = avg.minBy { it.value }
+        val stars = sq.sortedByDescending { it.overall }.take(3).joinToString { "${it.name} (${it.overall})" }
+        val young = sq.filter { it.age <= 21 }.maxByOrNull { it.potential }
+        val assistant = StaffLogic.of(g, StaffLogic.ASSISTANT)?.name ?: "Yardımcı antrenörün"
+        return "$assistant hazırladığı raporu sunuyor. Kadronun en güçlü bölgesi ${best.key.label.lowercase()} (ortalama ${best.value.toInt()}), " +
+            "en zayıf bölgesi ${worst.key.label.lowercase()} (ortalama ${worst.value.toInt()}). Öne çıkan oyuncular: $stars." +
+            (young?.let { " Geleceğin yıldızı olabilir: ${it.name} (${it.age} yaş)." } ?: "") +
+            " Önerisi: ${worst.key.label.lowercase()} bölgesine takviye ve ${t.formation} dizilişiyle başlamak."
     }
 
     fun playMatch(live: Boolean) {
@@ -662,7 +693,7 @@ object GameRepo {
         changed()
     }
 
-    private fun changed() {
+    fun changed() {
         save()
         bump()
     }

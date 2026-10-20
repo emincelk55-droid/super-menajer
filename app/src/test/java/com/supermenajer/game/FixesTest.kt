@@ -26,6 +26,15 @@ class FixesTest {
         assertTrue(g.userTeam.budget > base)
         assertTrue(g.noFiring)
 
+        // Taktik Oluştur: uygunluk 1-5, uygulanınca diziliş ve talimatlar değişir
+        val r = com.supermenajer.game.game.TacticStyles.ratings(g)
+        assertTrue(r.values.all { it in 1..5 } && r.values.contains(5))
+        val cat = com.supermenajer.game.game.TacticStyles.all.first { it.name == "Catenaccio" }
+        com.supermenajer.game.game.TacticStyles.apply(g, cat, "5-3-2")
+        assertEquals("5-3-2", g.userTeam.formation)
+        assertEquals(0, g.userTeam.mentality)
+        assertTrue(GameRepo.teamReport(g).contains("en zayıf"))
+
         // Kiralık gelen oyuncu tekrar kiralık gönderilemez
         val other = g.teams.first { it.id != teamId }
         val loanee = g.squad(other.id).first { it.age <= 23 }

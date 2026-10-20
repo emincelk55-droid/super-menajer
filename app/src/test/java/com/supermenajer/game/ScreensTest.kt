@@ -57,6 +57,10 @@ class ScreensTest {
         GameRepo.selectedPlayer = g.players.first { it.teamId == g.divisionTeams(14)[3].id && it.overall > 60 }
         shot("02_negotiate")
         GameRepo.selectedPlayer = null
+        g.introDone = false; GameRepo.tab = 0
+        shot("01b_intro_news")
+        g.introDone = true
+        GameRepo.tab = 4
         shot("03_transfer")
         val cmp = g.players.first { it.teamId >= 0 && it.teamId != g.userTeamId && it.pos == com.supermenajer.game.model.Pos.FW && it.overall > 75 }
         GameRepo.toggleWatch(cmp); GameRepo.compareWith(cmp)
@@ -108,6 +112,7 @@ class ScreensTest {
         GameRepo.tacticsPanel = 1; shot("10b_formations")
         GameRepo.tacticsPanel = 2; shot("10a_instructions")
         GameRepo.tacticsPanel = 3; shot("10c_roles"); GameRepo.tacticsPanel = 0
+        GameRepo.tacticWizard = true; shot("10d_tactic_wizard"); GameRepo.tacticWizard = false
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5; shot("10d_career")
         GameRepo.clubMode = 3; shot("10e_finance")
         // v1.5: dinamikler, yetenek ağacı, hoca pazarı, olay kartı
@@ -146,7 +151,9 @@ class ScreensTest {
         }
         playAnim(30, 1.3f)
         shot("11_match_ticker")
-        playAnim(35, 0f)
+        playAnim(15, 0f)
+        shot("11b_halftime")
+        playAnim(20, 0f)
         // Bir atağın ortasında dur
         run {
             val sim = GameRepo.match!!

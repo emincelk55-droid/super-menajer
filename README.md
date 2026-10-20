@@ -110,3 +110,13 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - SM tarzı taktik ekranı: perspektif saha, yüzlü oyuncu kartları (güç, mevki, moral, kondisyon); Kadro (yedekler + kadro kartları),
   Diziliş (küçük saha resimleri), Talimatlar (Genel/Hücum/Savunma/Takım görevleri, açılır seçimler ve sahada görsel oklar), Roller.
 - Transfer: detaylı mevki, yaş, en az güç ve en fazla bonservis filtreleri; ⭐ kısa liste; ⚖ oyuncu karşılaştırma; daha hızlı liste.
+
+### v2.3
+- SM tarzı maç ekranı: büyük skor tabelası (armalar, golcüler, skor kutuları, dakika, topa sahip olma), sahanın üstünde anlatım bandı,
+  sağda Olaylar/İstatistik/Oyuncular, altta kontrol çubuğu (oynat, hız, mentalite, 📣 bağır, değişiklik, sonuca git),
+  sahanın ortasında devre arası ve maç sonu kartları; yenilenen maç sonu özeti (maçın oyuncusu kartı).
+- FM tarzı 4 adımlı yeni kariyer: Takım seç (ülke → lig → kulüp, kulüp bilgi paneli, rastgele takım), Menajer profili (ad, soyad, uyruk, itibar),
+  Ek seçenekler (zorluk, kovulamaz ol), Özet ve kurulum ekranı.
+- Kariyer açılışı: "Son dakika" TV haberi, 6 sayfalık hoş geldin rehberi, yardımcı antrenörün takım raporu ve ilk mesajlar.
+- Taktik Oluştur: 7 oyun tarzı (Tiki-Taka, Gegenpress, Topa Sahip Ol, Kanat Oyunu, Uzun Top, Kontra Atak, Catenaccio),
+  kadroya uygunluk çubukları, artı/eksi yönler ve önerilen dizilişler; tek dokunuşla uygulanır.

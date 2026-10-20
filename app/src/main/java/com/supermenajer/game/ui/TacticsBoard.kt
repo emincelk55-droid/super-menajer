@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -417,8 +419,13 @@ fun TacticsBoard(g: Game) {
                     }
                 }
                 // Alt köşe: otomatik 11 ve diziliş / kimya kutusu
-                Row(Modifier.align(Alignment.BottomStart).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.align(Alignment.BottomStart).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     RoundIconButton("🪄", 44.dp) { sel = -1; benchSel = -1; GameRepo.autoLineup() }
+                    Box(
+                        Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple)))
+                            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(20.dp)).clickable { GameRepo.tacticWizard = true }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("🧠 Taktik Oluştur", fontWeight = FontWeight.Black, fontSize = 13.sp) }
                 }
                 Row(
                     Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xEE0B1028))
@@ -474,6 +481,7 @@ fun TacticsBoard(g: Game) {
                 }
             }
         }
+        if (GameRepo.tacticWizard) TacticWizard(g) { GameRepo.tacticWizard = false }
         // Sürüklenen oyuncu parmağı takip eder
         drag?.let { d ->
             val half = with(density) { 32.dp.toPx() }
@@ -719,6 +727,110 @@ private fun RolesPanel(g: Game) {
                 }
             }
             HorizontalDivider(color = CardLine.copy(alpha = 0.6f))
+        }
+    }
+}
+
+/** FM tarzı "Taktik Oluştur": oyun tarzı seç, kadroya uygunluğunu gör, önerilen dizilişle uygula. */
+@Composable
+fun TacticWizard(g: Game, onClose: () -> Unit) {
+    val S = com.supermenajer.game.game.TacticStyles
+    val ratings = remember { S.ratings(g) }
+    val best = remember { ratings.entries.sortedByDescending { it.value }.take(2).map { it.key }.toSet() }
+    var sel by remember { mutableStateOf(ratings.maxBy { it.value }.key) }
+    var formation by remember(sel) { mutableStateOf(sel.formations.first()) }
+    val (pros, cons) = remember(sel) { S.prosCons(g, sel) }
+    WideDialog(onDismissRequest = onClose, maxWidth = 900.dp) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(0.96f).clip(RoundedCornerShape(16.dp))
+                .background(Brush.verticalGradient(listOf(CardTop, CardBottom))).border(1.dp, CardLine, RoundedCornerShape(16.dp)).padding(14.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Taktik Oluştur", fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = Modifier.weight(1f))
+                Text("★ Kadrona önerilen tarz", color = Teal, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.weight(1f)) {
+                LazyColumn(Modifier.width(250.dp).fillMaxHeight()) {
+                    items(S.all.size) { i ->
+                        val s = S.all[i]
+                        val r = ratings.getValue(s)
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(8.dp))
+                                .background(if (s === sel) Purple.copy(alpha = 0.35f) else Color.Transparent)
+                                .clickable { sel = s }.padding(horizontal = 8.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier.size(18.dp).clip(CircleShape).background(if (s === sel) Purple else Color.Transparent)
+                                    .border(2.dp, if (s === sel) Purple else TextDim, CircleShape),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text((if (s in best) "★ " else "") + s.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = if (s in best) Teal else TextMain, modifier = Modifier.weight(1f))
+                            // Uygunluk: 5 parçalı çubuk
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                repeat(5) { k ->
+                                    Box(Modifier.size(7.dp, 14.dp).clip(RoundedCornerShape(2.dp)).background(if (k < r) (if (r >= 3) Green else Red) else Color.White.copy(alpha = 0.12f)))
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                    Text(sel.name, fontWeight = FontWeight.Black, fontSize = 18.sp, color = Teal)
+                    Text(sel.desc, fontSize = 14.sp)
+                    Spacer(Modifier.height(8.dp))
+                    pros.forEach { Text("✅ $it", fontSize = 13.sp, modifier = Modifier.padding(vertical = 2.dp)) }
+                    cons.forEach { Text("⛔ $it", fontSize = 13.sp, color = Color(0xFFFFB4A8), modifier = Modifier.padding(vertical = 2.dp)) }
+                    Spacer(Modifier.height(10.dp))
+                    Text("ÖNERİLEN DİZİLİŞLER", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        sel.formations.forEach { f ->
+                            val on = f == formation
+                            Column(
+                                Modifier.width(100.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF0B1028))
+                                    .border(if (on) 2.dp else 1.dp, if (on) Teal else CardLine, RoundedCornerShape(10.dp))
+                                    .clickable { formation = f }.padding(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                val fs = Formations.slots(f)
+                                val md = depthRange(fs)
+                                Canvas(Modifier.fillMaxWidth().aspectRatio(1.2f)) {
+                                    drawPerspectivePitch(mini = true)
+                                    fs.forEach { s ->
+                                        val (fx, fy) = slotFrac(s, md)
+                                        drawCircle(Color.White, size.width * 0.045f, Offset(fx * size.width, fy * size.height))
+                                    }
+                                }
+                                Text((if (f == sel.formations.first()) "★ " else "") + f, fontWeight = FontWeight.Black, fontSize = 13.sp, color = if (on) Teal else TextMain)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    val m = listOf("Defansif", "Dengeli", "Hücum")[sel.mentality]
+                    val lvl = listOf("Düşük", "Orta", "Yüksek")
+                    Text(
+                        "Ayarlar: $m · Tempo ${lvl[sel.tempo]} · Genişlik ${lvl[sel.width]} · Pres ${lvl[sel.pressing]} · Savunma hattı ${lvl[sel.defLine]}" +
+                            if (sel.counter) " · Kontra atak" else "",
+                        color = TextDim, fontSize = 12.sp,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452)).border(1.dp, CardLine, RoundedCornerShape(10.dp))
+                        .clickable(onClick = onClose),
+                    contentAlignment = Alignment.Center,
+                ) { Text("İptal", fontWeight = FontWeight.Bold) }
+                Box(
+                    Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(10.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple)))
+                        .clickable { S.apply(g, sel, formation); onClose() },
+                    contentAlignment = Alignment.Center,
+                ) { Text("Taktiği Onayla", fontWeight = FontWeight.Black) }
+            }
         }
     }
 }

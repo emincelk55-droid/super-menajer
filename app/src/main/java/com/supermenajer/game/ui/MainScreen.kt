@@ -102,6 +102,7 @@ fun MainScreen() {
             }
         }
         if (menu) MenuDrawer(g) { menu = false }
+        if (!g.introDone) CareerIntro(g)
     }
     GameRepo.selectedPlayer?.let { PlayerDialog(g, it) }
     GameRepo.compare?.let { (a, b) ->

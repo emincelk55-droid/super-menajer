@@ -357,6 +357,10 @@ class Game(
     /** Yönetimin güveni (0-100). 0'a inerse kovulursun. */
     var confidence: Double = 60.0,
     var fired: Boolean = false,
+    /** Menajerin uyruğu (bayrak kodu). */
+    var managerNation: String = "TR",
+    /** Kariyer açılış rehberi gösterildi mi. */
+    var introDone: Boolean = true,
     /** Zorluk: 0 Kolay, 1 Normal, 2 Zor. */
     var difficulty: Int = 1,
     /** Serbest mod: yönetim seni asla kovmaz. */
