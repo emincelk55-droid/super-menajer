@@ -45,7 +45,7 @@ import com.supermenajer.game.model.News
 @Composable
 fun ClubTab(g: Game) {
     // Telefonda tüm bölümler tek satırda görünsün diye kısa adlı sekmeler
-    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar")
+    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar", "Efsaneler")
     Column(Modifier.fillMaxSize()) {
         val dots = buildSet {
             if (g.sponsorOffers.isNotEmpty()) add(2)
@@ -61,6 +61,7 @@ fun ClubTab(g: Game) {
             4 -> TwoCards({ FansCard(g) }, { FanInfoCard() })
             5 -> CareerView(g)
             6 -> PerksView(g)
+            8 -> LegendsView(g)
             else -> ManagerMarketView(g)
         }
     }
@@ -294,4 +295,38 @@ private fun MessageAction(g: Game, n: News) {
         else -> return
     }
     OutlinedButton(onClick = go) { Text("$label →") }
+}
+
+
+/** Kulüp efsaneleri: en çok forma giyenler, en golcüler ve futbolu bırakmış efsaneler. */
+@Composable
+private fun LegendsView(g: Game) {
+    val rows = androidx.compose.runtime.remember(GameRepo.version / 10) { com.supermenajer.game.game.Legends.table(g) }
+    TwoCards({
+        SectionCard("🏟️ En Çok Forma Giyenler") {
+            rows.sortedByDescending { it.apps }.take(10).forEachIndexed { i, r -> LegendRow(i, r.name, "${r.apps} maç", r.active) }
+            if (rows.isEmpty()) Text("Henüz veri yok: sezonlar geçtikçe efsaneler oluşur.", color = TextDim, fontSize = 13.sp)
+        }
+    }, {
+        SectionCard("⚽ Kulübün Golcüleri") {
+            rows.filter { it.goals > 0 }.sortedByDescending { it.goals }.take(10).forEachIndexed { i, r -> LegendRow(i, r.name, "${r.goals} gol", r.active) }
+        }
+        Spacer(Modifier.height(10.dp))
+        SectionCard("👑 Şöhretler Galerisi") {
+            if (g.hallOfFame.isEmpty()) Text("Kulübümüzde en az 40 maç oynayıp futbolu bırakanlar burada anılır.", color = TextDim, fontSize = 13.sp)
+            g.hallOfFame.forEach { s ->
+                val c = s.split("|")
+                if (c.size >= 4) Text("${c[0]} · ${c[1]} maç, ${c[2]} gol · ${c[3]}'te veda etti", fontSize = 13.sp, modifier = Modifier.padding(vertical = 2.dp))
+            }
+        }
+    })
+}
+
+@Composable
+private fun LegendRow(i: Int, name: String, value: String, active: Boolean) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("${i + 1}.", color = if (i < 3) Gold else TextDim, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.width(28.dp))
+        Text(name + if (active) "" else " (ayrıldı)", fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
 }

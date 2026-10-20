@@ -362,6 +362,23 @@ fun PlayerDialog(g: Game, p: Player) {
                         modifier = Modifier.fillMaxWidth().height(46.dp),
                     ) { Text("🤝 Transfer görüşmesi başlat", fontWeight = FontWeight.Bold) }
                 }
+                if (p.teamId >= 0 && p.releaseClause > 0) {
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedButton(onClick = { message = GameRepo.payReleaseClause(p) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("💥 Serbest kalma bedelini öde: ${money(p.releaseClause)}")
+                    }
+                }
+                if (p.teamId >= 0 && p.contractYears <= 1) {
+                    Spacer(Modifier.height(6.dp))
+                    val pc = com.supermenajer.game.game.Contracts
+                    OutlinedButton(onClick = { message = GameRepo.signPreContract(p) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            if (p.preContract == g.userTeamId) "✍️ Ön sözleşme imzalandı · sezon sonu gelecek"
+                            else "✍️ Ön sözleşme teklif et (imza parası ${money(pc.signingBonus(p))})",
+                        )
+                    }
+                    if (p.preContract != g.userTeamId) Text("Sözleşmesi bu sezon bitiyor: 17. haftadan sonra bedelsiz gelmesi için ön sözleşme yapabilirsin.", color = TextDim, fontSize = 11.sp)
+                }
                 Text("Bütçen: ${money(g.userTeam.budget)}", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
@@ -471,6 +488,9 @@ fun PlayerDialog(g: Game, p: Player) {
                             else if (!own && !loaned && p.id in g.scouted) Text(com.supermenajer.game.game.Scouting.report(g, p), color = TextDim, fontSize = 12.sp)
                             InfoLine("Mevki", com.supermenajer.game.game.Positions.det(p).label)
                             if (!own) InfoLine("Maaş talebi", "${money(p.demandWage)}/hafta")
+                            if (p.releaseClause > 0) InfoLine("Serbest kalma bedeli", money(p.releaseClause))
+                            if (p.injuredWeeks > 0 && p.injuryType.isNotEmpty()) InfoLine("Sakatlık türü", p.injuryType, Red)
+                            if (p.fragileWeeks > 0) InfoLine("Sağlık uyarısı", "Yeniden sakatlanma riski (${p.fragileWeeks} hafta)", Gold)
                             InfoLine("Kişilik", if (known) com.supermenajer.game.game.Traits.name(p) else "? (gözlemci raporu gerekli)")
                             if (known) Text(com.supermenajer.game.game.Traits.info[com.supermenajer.game.game.Traits.of(p)], color = TextDim, fontSize = 11.sp)
                             if (p.squadRole >= 0 && p.teamId == g.userTeamId) InfoLine("Söz verilen rol", com.supermenajer.game.game.TransferTalks.roleNames[p.squadRole])

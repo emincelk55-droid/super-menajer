@@ -68,7 +68,7 @@ object Generator {
         }.toMutableList()
         val g = Game(
             managerName = "", userTeamId = -1, teams = teams, players = mutableListOf(),
-            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 15,
+            fixtures = mutableListOf(), news = mutableListOf(), nextPlayerId = 1, saveVersion = 16,
         )
         // Gerçek veri varsa gerçek kulüpler (benzer isimlerle), yoksa kurgusal dünya
         if (real) RealWorld.addLeague(g, 0, rnd) else for (t in teams) fillSquad(g, t, rnd, "TR")

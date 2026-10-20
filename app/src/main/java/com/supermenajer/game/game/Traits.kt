@@ -58,7 +58,7 @@ object Traits {
         else -> 1.0
     }
 
-    fun injuryFactor(p: Player) = if (of(p) == FRAGILE) 1.9 else if (of(p) == PRO) 0.85 else 1.0
+    fun injuryFactor(p: Player) = (if (of(p) == FRAGILE) 1.9 else if (of(p) == PRO) 0.85 else 1.0) * (if (p.fragileWeeks > 0) 2.2 else 1.0)
     fun foulFactor(p: Player) = if (of(p) == HOTHEAD) 1.6 else 1.0
     fun isLeader(p: Player) = of(p) == LEADER
 

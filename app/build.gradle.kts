@@ -16,8 +16,8 @@ android {
         applicationId = "com.supermenajer.game"
         minSdk = 26
         targetSdk = 34
-        versionCode = 27
-        versionName = "2.6"
+        versionCode = 28
+        versionName = "2.7"
     }
 
     // İmza anahtarı depoda tutulmaz: proje kökündeki keystore.properties dosyasından okunur.

@@ -82,6 +82,8 @@ object Season {
         Roles.ensureAllNumbers(g)
         Positions.ensureAll(g)
         ManagerMarket.ensure(g, rnd)
+        Contracts.assignClauses(g, rnd)
+        Missions.ensure(g, rnd)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
         Sponsors.refreshOffers(g, rnd)
@@ -205,6 +207,15 @@ object Season {
             g.addNews(
                 "Güncelleme: v1.4 · Detaylı mevkiler ve oyuncu özellikleri",
                 "Her oyuncunun artık detaylı mevkisi (KL, SLB, SĞB, STP, DOS, MO, OOS, SLK, SĞK, SF), tercih ettiği ayağı ve oyun özelliği var (ör. kanat bek, topla oynayan stoper, oyun kurucu). Oyuncular kendi mevkisinde ve özelliğine uygun rolde daha verimli oynar. İlk 11'in yeni sisteme göre otomatik dizildi.",
+            )
+        }
+        if (g.saveVersion < 16) {
+            g.saveVersion = 16
+            Contracts.assignClauses(g, rnd)
+            Missions.ensure(g, rnd)
+            g.addNews(
+                "Güncelleme: v2.7 · Yeni özellikler",
+                "Sakatlık türleri ve sağlık ekibi kararları, rakibe özel talimatlar, serbest kalma bedelleri ve ön sözleşmeler, rakip takım profilleri, sezon görevleri, taraftar sosyal medya akışı ve kulüp efsaneleri geldi!",
             )
         }
         if (g.saveVersion < 15) {
@@ -340,6 +351,14 @@ object Season {
     /** Kullanıcı maçından sonra haber, yönetim güveni ve basın toplantısı. */
     fun matchNews(g: Game, sim: MatchSim, rnd: Random = Random.Default) {
         val us = sim.userSide ?: return
+        Medical.afterMatch(g, us.used.filter { it.injured }.map { it.p })
+        g.oppInstr = -1
+        run {
+            val them0 = sim.other(us)
+            Missions.ensure(g)
+            Missions.afterMatch(g, us.goals, them0.goals, Talks.isDerby(g, sim.fixture), Comp.isLeague(sim.fixture.comp), us.onPitch.count { it.p.age <= 21 })
+            Social.afterMatch(g, us.goals, them0.goals, them0.team.name, us.used.filter { it.goals > 0 }.maxByOrNull { it.goals }?.p?.name)
+        }
         Matchday.afterMatch(g, us.goals > sim.other(us).goals || sim.fixture.winner == us.team.id)
         val them = sim.other(us)
         val h = sim.home
@@ -471,6 +490,8 @@ object Season {
             val mine = p.teamId == g.userTeamId
             p.morale += (70 - p.morale) * 0.08
             if (p.injuredWeeks > 0) p.injuredWeeks--
+            if (p.fragileWeeks > 0) p.fragileWeeks--
+            if (p.injuredWeeks == 0 && p.injuryType.isNotEmpty()) p.injuryType = ""
             // İyi fizyoterapist iyileşmeyi hızlandırır
             if (mine && p.injuredWeeks > 0 && rnd.nextDouble() < physioHeal) p.injuredWeeks--
             if (p.suspended > 0) p.suspended--
@@ -630,7 +651,7 @@ object Season {
             val candidates = (freeAgents + g.players.filter { it.teamId >= 0 && it.pos == weakest && it.overall >= bar + 2 })
                 .asSequence()
                 .filter { p ->
-                    p.pos == weakest && p.teamId != buyer.id && p.teamId != g.userTeamId && p.loanFrom < 0 && p.overall >= bar + 2 && p.age <= 31 &&
+                    p.pos == weakest && p.teamId != buyer.id && p.teamId != g.userTeamId && p.loanFrom < 0 && p.preContract < 0 && p.overall >= bar + 2 && p.age <= 31 &&
                         (p.teamId < 0 || g.teamOrNull(p.teamId)?.let { s -> s.reputation <= buyer.reputation + 4 && s.division != Leagues.LEGACY_EURO } == true) &&
                         p.value * (if (p.teamId < 0) 0.15 else 1.15) <= maxPrice &&
                         Economy.fitsWages(g, buyer, p.demandWage)
@@ -866,6 +887,11 @@ object Season {
         }
         g.retiring.clear()
         for (p in retired) if (p.teamId == g.userTeamId) g.addNews("Jübile", "${p.name} ${p.age} yaşında futbolu bıraktı.")
+        // Kulübümüzde iz bırakanlar efsaneler listesine girer
+        for (p in retired) {
+            val (apps, goals) = Legends.atClub(g, p, g.userTeam.name)
+            if (apps >= 40) g.hallOfFame += "${p.name}|$apps|$goals|${g.season}"
+        }
         g.removePlayers(retired)
         val retiredIds = retired.map { it.id }.toSet()
         g.teams.forEach { t -> t.lineup.replaceAll { if (it in retiredIds) -1 else it } }

@@ -143,3 +143,14 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   diğer maçlar aynı turda sonuçlanır; eleme maçlarında beraberlikte penaltılar.
 - Milli Takım ekranında grup tabloları (puan, averaj) ve eleme turu sonuçları; ana sayfada turnuva kartı.
 - Elenirsen turnuva arka planda tamamlanır ve şampiyon açıklanır; kazanırsan kupa dolabına girer, itibar ve XP kazanırsın.
+
+### v2.7
+- Sakatlık türleri (kas zorlanması, hamstring, diz bağı, kırık...) ve sağlık ekibi kararı: tam tedavi, uzman tedavisi (ücretli, daha hızlı)
+  ya da riskli hızlı dönüş (süre yarıya iner, 6 hafta yeniden sakatlanma riski).
+- Rakibe özel talimatlar (maç hazırlığı): yıldızını adam adama tut, kanatları kapat, önde baskı, arkaya koşu — maç motorunu etkiler.
+- Serbest kalma bedelleri (İspanya'da tüm oyuncular, diğer liglerde bazıları): bedeli öde, kulübün onayı gerekmez.
+- Ön sözleşme: sözleşmesinin son yılındaki oyuncuyla 17. haftadan sonra anlaş, sezon sonunda bedelsiz gelsin.
+- Rakip takım profili: lig tablosundan ya da maç kartından takıma dokun; kadro (tahmini güçler), form, son maçlar, hoca, stadyum.
+- Sezon görevleri (meydan okumalar) XP ve bütçe ödülüyle; taraftar sosyal medya akışı; Kulüp → Efsaneler (en çok forma giyenler,
+  golcüler, şöhretler galerisi).
+- Ana sayfada bekleyen kararlar (sağlık, milli maç, teklifler) üste taşındı; sık kayıtlarda atlanan kayıt artık kısa süre sonra yazılıyor.

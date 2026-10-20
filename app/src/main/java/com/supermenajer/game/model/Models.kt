@@ -56,6 +56,13 @@ class Player(
     var secondDet: Int = -1,
     /** Gerçek veride oyuncunun oynayabildiği diğer mevkiler (Positions.Det sıraları). */
     var extraDets: MutableList<Int> = mutableListOf(),
+    /** Sakatlık türü (boş = yok); hızlı dönüş sonrası hassasiyet (hafta). */
+    var injuryType: String = "",
+    var fragileWeeks: Int = 0,
+    /** Serbest kalma bedeli (0 = yok). */
+    var releaseClause: Long = 0,
+    /** Ön sözleşme imzaladığı kulüp (-1 yok): sözleşmesi bitince oraya bedelsiz geçer. */
+    var preContract: Int = -1,
     /** A2 (rezerv) takımında mı. */
     var reserve: Boolean = false,
     /** Geçmiş sezonlar: "sezon|kulüp|maç|gol|asist|ort. puan". */
@@ -368,6 +375,17 @@ class Game(
     var fired: Boolean = false,
     /** Milli takım görevi (ülke kodu, boş = yok), çağrılan kadro, sonuçlar ve puan. */
     var nationalTeam: String = "",
+    /** Kulüp efsaneleri (futbolu bırakanlar): "isim|maç|gol|sezon". */
+    var hallOfFame: MutableList<String> = mutableListOf(),
+    /** Sağlık ekibinin karar beklediği sakat oyuncular. */
+    var medical: MutableList<Int> = mutableListOf(),
+    /** Bu maç için rakibe özel talimat (-1 yok). */
+    var oppInstr: Int = -1,
+    /** Taraftar sosyal medya akışı (en yeni başta): "kullanıcı|mesaj|beğeni". */
+    var feed: MutableList<String> = mutableListOf(),
+    /** Sezon görevleri: "id|başlık|hedef|ilerleme|xp|bitti(0/1)". */
+    var missions: MutableList<String> = mutableListOf(),
+    var missionSeason: Int = -1,
     /** Oynanmayı bekleyen milli maç: "rakip|tür|evde(1/0)" (boş = yok). */
     var natPending: String = "",
     var natFormation: String = "4-3-3",

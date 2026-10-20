@@ -86,6 +86,40 @@ class FixesTest {
         com.supermenajer.game.game.National.summerTournament(g, Random(5)) // bu sezon oynandı: tekrar oynanmaz
         assertTrue(g.natResults.size >= 4)
 
+        // Sağlık: hızlı dönüş süreyi yarıya indirir, hassasiyet ekler
+        val hurt = g.squad(teamId).first { !it.reserve }
+        hurt.injuredWeeks = 6; hurt.injuryType = "Hamstring sakatlığı"
+        com.supermenajer.game.game.Medical.afterMatch(g, listOf(hurt))
+        assertTrue(hurt.id in g.medical)
+        GameRepo.medicalDecision(hurt, 2)
+        assertEquals(3, hurt.injuredWeeks)
+        assertTrue(hurt.fragileWeeks > 0 && hurt.id !in g.medical)
+        hurt.injuredWeeks = 0
+
+        // Serbest kalma bedeli: öde ve oyuncu gelsin
+        val star = g.players.first { it.teamId >= 0 && it.teamId != teamId && it.overall in 60..70 && it.preContract < 0 }
+        star.releaseClause = 1_000_000
+        g.userTeam.budget = 500_000_000; g.userTeam.wageBudget = 50_000_000
+        val res = GameRepo.payReleaseClause(star)
+        assertEquals(teamId, star.teamId)
+        assertTrue(res.contains("bizim"))
+
+        // Ön sözleşme: sözleşme bitince bedelsiz gelir
+        val pre = g.players.first { it.teamId >= 0 && it.teamId != teamId && it.contractYears > 1 && it.overall in 55..65 }
+        pre.contractYears = 1
+        pre.preContract = teamId
+        com.supermenajer.game.game.Economy.processContracts(g, Random(3))
+        assertEquals(teamId, pre.teamId)
+        assertEquals(-1, pre.preContract)
+
+        // Görevler ve sosyal medya
+        com.supermenajer.game.game.Missions.ensure(g)
+        assertEquals(5, g.missions.size)
+        com.supermenajer.game.game.Missions.progress(g, com.supermenajer.game.game.Missions.list(g).first().id, 99)
+        assertTrue(com.supermenajer.game.game.Missions.list(g).first().done)
+        com.supermenajer.game.game.Social.afterMatch(g, 3, 0, "Rakip", "Golcü")
+        assertTrue(g.feed.isNotEmpty())
+
         // Kiralık gelen oyuncu tekrar kiralık gönderilemez
         val other = g.teams.first { it.id != teamId }
         val loanee = g.squad(other.id).first { it.age <= 23 }

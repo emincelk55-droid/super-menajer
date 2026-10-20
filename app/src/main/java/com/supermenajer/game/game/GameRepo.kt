@@ -37,6 +37,7 @@ object GameRepo {
     /** Karşılaştırma: sabitlenen oyuncu ve açık karşılaştırma (iki oyuncu kimliği). */
     var comparePin by mutableStateOf<Int?>(null)
     var tacticWizard by mutableStateOf(false)
+    var openTeam by mutableIntStateOf(-1)
     var instrSub by mutableIntStateOf(0)
     var roleDialog by mutableIntStateOf(-1)
     var compare by mutableStateOf<Pair<Int, Int>?>(null)
@@ -265,12 +266,22 @@ object GameRepo {
     }
 
     private var lastSave = 0L
+    private var trailingSave = false
 
     /** Kaydı yazar. force=false iken sık değişikliklerde en fazla 4 saniyede bir yazar. */
     fun save(force: Boolean = false) {
         val g = game ?: return
         val now = System.currentTimeMillis()
-        if (!force && now - lastSave < 4_000) return
+        if (!force && now - lastSave < 4_000) {
+            // Atlanan kayıt kaybolmasın: kısa süre sonra bir kez daha yaz
+            if (!trailingSave) {
+                trailingSave = true
+                // Testlerde ana iş parçacığı yoktur: o durumda gecikmeli kayıt atlanır
+                runCatching { scope.launch { kotlinx.coroutines.delay(4_500); trailingSave = false; save() } }
+                    .onFailure { trailingSave = false }
+            }
+            return
+        }
         lastSave = now
         val text = runCatching { json.encodeToString(Game.serializer(), g) }.getOrNull() ?: return
         val target = saveFile
@@ -660,6 +671,21 @@ object GameRepo {
         changed()
     }
 
+    fun setOppInstr(v: Int) { game?.let { it.oppInstr = if (it.oppInstr == v) -1 else v }; changed() }
+    fun medicalDecision(p: Player, choice: Int): String { val g = game ?: return ""; val m = Medical.decide(g, p, choice); changed(); return m }
+
+    fun payReleaseClause(p: Player): String {
+        val g = game ?: return ""
+        Contracts.clauseBlock(g, p)?.let { return it }
+        val price = p.releaseClause
+        completeBuy(p, price)
+        p.releaseClause = 0
+        g.addNews("💥 Serbest kalma bedeli ödendi", "${p.name} için ${money(price)} tutarındaki serbest kalma bedeli yatırıldı.")
+        return "${p.name} artık bizim oyuncumuz!"
+    }
+
+    fun signPreContract(p: Player): String { val g = game ?: return ""; val m = Contracts.signPre(g, p); changed(); return m }
+
     fun setViceCaptain(id: Int) { game?.userTeam?.viceCaptain = id; changed() }
 
     fun setMarking(slot: Int, v: Int) {
@@ -925,6 +951,8 @@ object GameRepo {
         } else "serbest oyuncu"
         Economy.earn(us, Economy.BUYS, -price)
         g.logTransfer(p, g.teamOrNull(p.teamId), us, price)
+        Missions.progress(g, "sign1", 1)
+        Social.transfer(g, p.name, true, price)
         g.movePlayer(p, us.id)
         Fans.bought(g, p)
         p.morale = 80.0
@@ -968,6 +996,7 @@ object GameRepo {
         Career.sale(g, p.name, price)
         Dynamics.soldPlayer(g, p)
         g.logTransfer(p, us, buyer, price)
+        Social.transfer(g, p.name, false, price)
         p.listed = false
         p.squadRole = -1
         g.movePlayer(p, buyer.id)

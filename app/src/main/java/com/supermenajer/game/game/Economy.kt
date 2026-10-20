@@ -142,6 +142,19 @@ object Economy {
             p.contractYears--
             if (p.contractYears > 0) continue
             val t = g.teamOrNull(p.teamId) ?: continue
+            // Ön sözleşme: yeni kulübüne bedelsiz geçer
+            val pre = g.teamOrNull(p.preContract)
+            if (pre != null && pre.id != t.id) {
+                t.lineup.replaceAll { if (it == p.id) -1 else it }
+                g.logTransfer(p, t, pre, 0)
+                g.movePlayer(p, pre.id)
+                p.preContract = -1
+                p.contractYears = if (p.age >= 30) 2 else 3
+                p.salary = p.demandWage
+                p.releaseClause = 0
+                if (pre.id == g.userTeamId) g.addNews("✍️ Ön sözleşmeli oyuncu geldi", "${p.name} ön sözleşmesi gereği bedelsiz olarak kadromuza katıldı.")
+                continue
+            }
             if (t.id != g.userTeamId) {
                 // Yapay zekâ kulüpleri kadrosunu korur: işe yarayan oyuncuyla uzatır, yaşlılara 1 yıl verir
                 val str = Lineups.strength(g, t)
@@ -162,6 +175,7 @@ object Economy {
             p.salary = 0
             p.contractYears = 0
         }
+        Contracts.processPre(g)
         if (left.isNotEmpty()) g.addNews("Sözleşmesi bitenler", "Sözleşmesi sona eren oyuncular kulüpten ayrıldı: ${left.joinToString()}.")
         // Serbest oyuncu havuzu çok büyümesin: en yaşlıları emekli olur.
         val free = g.squad(-1).sortedByDescending { it.age * 100 - it.overall }

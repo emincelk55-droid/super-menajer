@@ -135,6 +135,14 @@ class ScreensTest {
         GameRepo.finishMatch()
         shot("10l_national_summary")
         GameRepo.closeSummary()
+        // Rakip takım profili, sağlık kararı, efsaneler
+        GameRepo.tab = 0; GameRepo.openTeam = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }.id
+        shot("10o_team_profile"); GameRepo.openTeam = -1
+        g.squad(g.userTeamId).first().let { it.injuredWeeks = 5; it.injuryType = "Diz bağı zedelenmesi"; g.medical += it.id }
+        g.pendingEvent = null
+        shot("10p_medical")
+        g.medical.clear(); g.squad(g.userTeamId).first().let { it.injuredWeeks = 0; it.injuryType = "" }
+        GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 8; shot("10q_legends"); GameRepo.clubMode = 0
         com.supermenajer.game.game.Tournament.start(g, kotlin.random.Random(11))
         com.supermenajer.game.game.National.simulatePending(g)
         com.supermenajer.game.game.National.simulatePending(g)

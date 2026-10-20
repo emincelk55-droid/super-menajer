@@ -105,6 +105,7 @@ fun MainScreen() {
         if (menu) MenuDrawer(g) { menu = false }
         if (!g.introDone) CareerIntro(g)
     }
+    g.teamOrNull(GameRepo.openTeam)?.let { TeamProfileDialog(g, it) }
     GameRepo.selectedPlayer?.let { PlayerDialog(g, it) }
     GameRepo.compare?.let { (a, b) ->
         val pa = g.player(a)
@@ -287,6 +288,12 @@ internal fun MatchPrep(g: Game) {
     val md = com.supermenajer.game.game.Matchday
     val nf = g.nextUserFixture()
     Column {
+        Text("RAKİBE ÖZEL TALİMAT", color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+            listOf("🎯 Yıldızını tut", "🚧 Kanatları kapat", "⚡ Önde baskı", "🏃 Arkaya koş").forEachIndexed { i, n ->
+                SmallChip(n, g.oppInstr == i, Modifier.weight(1f)) { GameRepo.setOppInstr(i) }
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             val done = nf != null && g.secretWeek == nf.week
             OutlinedButton(

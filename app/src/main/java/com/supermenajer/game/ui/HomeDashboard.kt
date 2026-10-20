@@ -319,6 +319,7 @@ fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
         if (!g.fired && g.natPending.isNotEmpty()) add { NationalMatchCard(g) }
+        g.medical.mapNotNull { g.player(it) }.filter { it.teamId == g.userTeamId }.forEach { p -> add { MedicalCard(g, p) } }
         if (g.seasonOver && g.tourSeason == g.season && g.tourTeams.size == 16) add { TournamentCard(g) }
         if (g.fired) add { FiredCard(g) }
         if (g.seasonOver && !g.fired) add { SeasonEndCard(g) }
@@ -337,14 +338,6 @@ fun HomeDashboard(g: Game) {
                 ClubStatusMini(g, Modifier.weight(1f).fillMaxHeight())
             }
         }
-        item {
-            Row(Modifier.fillMaxWidth().height(184.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InboxCard(g, Modifier.weight(1f).fillMaxHeight())
-                ManagerCard(g, Modifier.weight(1f).fillMaxHeight())
-                CompetitionCard(g, Modifier.weight(1f).fillMaxHeight())
-                SpotlightCard(g, Modifier.weight(1.05f).fillMaxHeight())
-            }
-        }
         if (pending.isNotEmpty()) {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -357,11 +350,25 @@ fun HomeDashboard(g: Game) {
             }
         }
         item {
+            Row(Modifier.fillMaxWidth().height(184.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                InboxCard(g, Modifier.weight(1f).fillMaxHeight())
+                ManagerCard(g, Modifier.weight(1f).fillMaxHeight())
+                CompetitionCard(g, Modifier.weight(1f).fillMaxHeight())
+                SpotlightCard(g, Modifier.weight(1.05f).fillMaxHeight())
+            }
+        }
+        item {
             Row(Modifier.fillMaxWidth().height(170.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TransfersCard(g, Modifier.weight(1f).fillMaxHeight())
                 FacilitiesMini(g, Modifier.weight(1f).fillMaxHeight())
                 UpcomingCard(g, Modifier.weight(1f).fillMaxHeight())
                 FormCard(g, Modifier.weight(1f).fillMaxHeight())
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().height(200.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MissionsCard(g, Modifier.weight(1f).fillMaxHeight())
+                FeedCard(g, Modifier.weight(1f).fillMaxHeight())
             }
         }
     }
@@ -432,7 +439,7 @@ private fun HeroMatchCard(g: Game, modifier: Modifier) {
                             Text(if (today) "BUGÜN" else "${GameCalendar.daysUntil(g, f.week)} GÜN SONRA", color = if (today) Green else TextDim, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
                         }
                     }
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.weight(1f).clickable { GameRepo.openTeam = t.id }, horizontalAlignment = Alignment.CenterHorizontally) {
                         TeamBadge(t, 56.dp)
                         Spacer(Modifier.height(4.dp))
                         Text(t.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
@@ -825,6 +832,64 @@ fun NationalMatchCard(g: Game) {
             SideButton("▶  MAÇA ÇIK", accent = true, modifier = Modifier.weight(1.3f).height(42.dp)) { GameRepo.playNational(live = true) }
             SideButton("⚡ Hızlı sonuç", modifier = Modifier.weight(1f).height(42.dp)) { GameRepo.playNational(live = false) }
             SideButton("👥 Kadro", modifier = Modifier.weight(0.9f).height(42.dp)) { GameRepo.tab = GameRepo.TAB_NATIONAL }
+        }
+    }
+}
+
+
+/** Sağlık ekibi kararı: tam tedavi, uzman tedavisi, riskli hızlı dönüş. */
+@Composable
+fun MedicalCard(g: Game, p: Player) {
+    var msg by remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    DashCard("🚑 Sağlık Ekibi · ${p.name}", Modifier.fillMaxWidth()) {
+        Text("${p.injuryType.ifEmpty { "Sakatlık" }} · tahmini ${p.injuredWeeks} hafta. Tedavi yöntemini seç:", fontSize = 13.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            SideButton("🩹 Tam tedavi", modifier = Modifier.weight(1f).height(40.dp)) { msg = GameRepo.medicalDecision(p, 0) }
+            SideButton("🏥 Uzman ${money(com.supermenajer.game.game.Medical.specialistCost(p))}", modifier = Modifier.weight(1.2f).height(40.dp)) { msg = GameRepo.medicalDecision(p, 1) }
+            SideButton("⚠️ Hızlı dönüş", modifier = Modifier.weight(1f).height(40.dp)) { msg = GameRepo.medicalDecision(p, 2) }
+        }
+        Text("Hızlı dönüş süreyi yarıya indirir ama 6 hafta boyunca yeniden sakatlanma riski iki katına çıkar.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+        msg?.let { Text(it, color = Gold, fontSize = 12.sp) }
+    }
+}
+
+/** Sezon görevleri ve ilerleme çubukları. */
+@Composable
+private fun MissionsCard(g: Game, modifier: Modifier) {
+    val list = com.supermenajer.game.game.Missions.list(g)
+    DashCard("🎯 Sezon Görevleri", modifier) {
+        if (list.isEmpty()) Text("Görevler yeni sezonda gelecek.", color = TextDim, fontSize = 13.sp)
+        list.forEach { m ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (m.done) "✅" else "▫️", fontSize = 12.sp, modifier = Modifier.width(22.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(m.title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (m.done) Green else TextMain)
+                    Bar((m.progress.toFloat() / m.target).coerceIn(0f, 1f), if (m.done) Green else Teal, Modifier.fillMaxWidth(), 4.dp)
+                }
+                Text("${m.progress}/${m.target}", color = TextDim, fontSize = 11.sp, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
+                Text("+${m.xp}", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(34.dp), textAlign = TextAlign.End)
+            }
+        }
+    }
+}
+
+/** Taraftar sosyal medya akışı. */
+@Composable
+private fun FeedCard(g: Game, modifier: Modifier) {
+    DashCard("💬 Taraftar Akışı", modifier) {
+        if (g.feed.isEmpty()) Text("Taraftarlar ilk maçı bekliyor...", color = TextDim, fontSize = 13.sp)
+        g.feed.take(4).forEachIndexed { i, s ->
+            val c = s.split("|")
+            if (c.size < 3) return@forEachIndexed
+            if (i > 0) HorizontalDivider(color = CardLine.copy(alpha = 0.6f))
+            Column(Modifier.padding(vertical = 3.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(c[0], color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text("♥ ${c[2]}", color = TextDim, fontSize = 10.sp)
+                }
+                Text(c[1], fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }

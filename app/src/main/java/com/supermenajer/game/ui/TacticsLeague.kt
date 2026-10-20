@@ -386,6 +386,7 @@ private fun LeagueTable(g: Game, div: Int) {
             Row(
                 Modifier.fillMaxWidth()
                     .background(if (me) Green.copy(alpha = 0.16f) else if (i % 2 == 0) Color.White.copy(alpha = 0.025f) else Color.Transparent)
+                    .clickable { GameRepo.openTeam = t.id }
                     .height(38.dp).padding(end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

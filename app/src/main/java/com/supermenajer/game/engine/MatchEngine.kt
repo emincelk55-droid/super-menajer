@@ -32,6 +32,7 @@ class PIM(val p: Player, var slot: Slot) {
     var assists = 0
     var injured = false
     var injWeeks = 0
+    var injType = ""
     var subbedOn = false
     /** Takım konuşmasından gelen maç içi motivasyon (performans çarpanı, ör. 0.03 = %3). */
     var boost = 0.0
@@ -108,6 +109,26 @@ class MatchSim(
             // Galibiyet primi motivasyonu
             val wb = us.team.winBonus
             if (wb > 0) us.onPitch.forEach { it.boost += 0.01 * wb }
+            // Rakibe özel talimat
+            val them = other(us)
+            when (game.oppInstr) {
+                0 -> them.onPitch.maxByOrNull { it.p.overall }?.let {
+                    it.boost -= 0.08
+                    ev(Ev.INFO, us.index, "🎯 Talimat: ${it.p.name} adam adama markajda, nefes aldırılmayacak.")
+                }
+                1 -> {
+                    them.onPitch.filter { it.slot.pos == Pos.FW || it.slot.pos == Pos.MF }.forEach { it.boost -= 0.015 }
+                    ev(Ev.INFO, us.index, "🎯 Talimat: Kanatlar kapatılacak, rakibin orta açmasına izin yok.")
+                }
+                2 -> {
+                    us.onPitch.filter { it.slot.pos == Pos.FW }.forEach { it.boost += 0.025 }
+                    ev(Ev.INFO, us.index, "🎯 Talimat: Forvetler rakip kaleciye ve stoperlere önde baskı yapacak.")
+                }
+                3 -> {
+                    them.onPitch.filter { it.slot.pos == Pos.DF }.forEach { it.boost -= 0.015 }
+                    ev(Ev.INFO, us.index, "🎯 Talimat: Rakibin yavaş savunmasının arkasına koşular.")
+                }
+            }
         }
         val fanBoost = if (nat != null) 0.01 else com.supermenajer.game.game.Fans.homeBoost(game, fixture)
         if (fanBoost > 0) {
@@ -134,7 +155,7 @@ class MatchSim(
             for (m in s.used) {
                 m.p.fitness = m.fit
                 m.p.morale = (m.p.morale + res * 3).coerceIn(5.0, 100.0)
-                if (m.injured) m.p.injuredWeeks = m.injWeeks
+                if (m.injured) { m.p.injuredWeeks = m.injWeeks; m.p.injuryType = m.injType }
             }
         }
     }
@@ -433,7 +454,9 @@ class MatchSim(
     private fun injury(s: Side) {
         val v = pickW(s.onPitch) { com.supermenajer.game.game.Traits.injuryFactor(it.p) } ?: return
         v.injured = true
-        v.injWeeks = rnd.nextInt(2, 7)
+        val t = com.supermenajer.game.game.Medical.types[rnd.nextInt(com.supermenajer.game.game.Medical.types.size)]
+        v.injType = t.first
+        v.injWeeks = rnd.nextInt(t.second.first, t.second.last + 1)
         v.rating -= 0.2
         ev(Ev.INJURY, s.index, Comms.injury(v.p.name, rnd), v.p.id)
         val rep = s.bench.filter { it.pos == v.slot.pos }.maxByOrNull { it.overall }
@@ -616,7 +639,7 @@ class MatchSim(
                     p.yellowCards++
                     if (p.yellowCards >= 4) { p.yellowCards = 0; p.suspended = 2 }
                 }
-                if (m.injured) p.injuredWeeks = m.injWeeks
+                if (m.injured) { p.injuredWeeks = m.injWeeks; p.injuryType = m.injType }
             }
             val playedIds = s.used.map { it.p.id }.toSet()
             val str = com.supermenajer.game.game.Lineups.strength(game, s.team)
