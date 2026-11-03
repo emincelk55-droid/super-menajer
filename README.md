@@ -183,3 +183,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 ### Geliştirmede (henüz APK yok)
 - Parlak oyuncu kartları: üstte cam parıltısı, ara ara kartın üzerinden geçen çapraz ışık; efsane (85+) kartlarda
   göz kırpan yıldızlar ve mor-altın kenar, altın (75+) kartlarda altın kenar ve parıltılı gölge, gümüş kartlarda gümüş kenar.
+- Ana sayfada canlı gece stadyumu: salınan projektör ışıkları, takım renklerinde tribün, tribünde dolaşan Meksika dalgası,
+  patlayan fotoğraf flaşları, yükselen ışık tozu ve perspektif saha (kartların arkasında, soluk).

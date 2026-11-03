@@ -88,6 +88,14 @@ fun MainScreen() {
     var menu by remember { mutableStateOf(false) }
     BackHandler(enabled = menu) { menu = false }
     Box(Modifier.fillMaxSize()) {
+        // Ana sayfada arkada canlı stadyum
+        androidx.compose.animation.AnimatedVisibility(
+            GameRepo.tab == GameRepo.TAB_HOME,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(500)),
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200)),
+        ) {
+            StadiumBackdrop(Color(g.userTeam.color1), Color(g.userTeam.color2), Modifier.fillMaxSize())
+        }
         Column(Modifier.fillMaxSize()) {
             SmTopBar(g) { menu = true }
             if (GameRepo.tab == GameRepo.TAB_HOME) QuickRow(g)

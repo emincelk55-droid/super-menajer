@@ -84,6 +84,18 @@ class ScreensTest {
         }
     }
 
+    /** Ana sayfanın arkasındaki canlı stadyum, kartlar olmadan. */
+    @Test
+    fun stadiumBackdrop() {
+        paparazzi.snapshot("23_stadium_backdrop") {
+            AppTheme {
+                com.supermenajer.game.ui.StadiumBackdrop(
+                    androidx.compose.ui.graphics.Color(0xFF6CABDD), androidx.compose.ui.graphics.Color.White, Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
+
     @Test
     fun screens() {
         GameRepo.init(Files.createTempDirectory("sm").toFile())
