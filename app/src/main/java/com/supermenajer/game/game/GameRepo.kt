@@ -236,6 +236,24 @@ object GameRepo {
 
     private fun slotFile(n: Int) = File(dir, if (n == 1) "kariyer.json" else "kariyer$n.json")
     private fun metaFile(n: Int) = File(dir, "kariyer$n.meta")
+    /** Döner yedekler: .bak1 en yeni, .bak3 en eski (en az 10 dakika arayla alınır). */
+    private fun backupFile(n: Int, k: Int) = File(dir, "kariyer$n.bak$k")
+    private const val BACKUPS = 3
+    private const val BACKUP_EVERY_MS = 10 * 60 * 1000L
+
+    /** Son yüklemede ana kayıt bozuktu ve yedekten dönüldüyse kullanıcıya gösterilecek not. */
+    var restoredNote by mutableStateOf<String?>(null)
+
+    private fun rotateBackups(n: Int, current: File) {
+        if (!current.exists()) return
+        val newest = backupFile(n, 1)
+        if (newest.exists() && System.currentTimeMillis() - newest.lastModified() < BACKUP_EVERY_MS) return
+        for (k in BACKUPS downTo 2) {
+            val from = backupFile(n, k - 1)
+            if (from.exists()) { val to = backupFile(n, k); to.delete(); from.renameTo(to) }
+        }
+        current.copyTo(newest, overwrite = true)
+    }
     private val saveFile get() = slotFile(slot)
     fun hasSave(): Boolean = (1..3).any { slotFile(it).exists() }
 
@@ -257,6 +275,7 @@ object GameRepo {
         if (n == slot && screen == Screen.TITLE) game = null
         slotFile(n).delete()
         metaFile(n).delete()
+        for (k in 1..BACKUPS) backupFile(n, k).delete()
         bump()
     }
 
@@ -294,6 +313,7 @@ object GameRepo {
             runCatching {
                 val tmp = File(dir, "kariyer.tmp")
                 tmp.writeText(text)
+                rotateBackups(n, target)
                 if (!tmp.renameTo(target)) {
                     target.delete()
                     tmp.renameTo(target)
@@ -308,18 +328,36 @@ object GameRepo {
         runCatching { writer.submit {}.get(3, java.util.concurrent.TimeUnit.SECONDS) }
     }
 
-    fun load(n: Int = slot): Boolean = runCatching {
+    /**
+     * Kaydı açar. Ana dosya bozuksa (yarım yazılmış, elektrik kesintisi vb.) en yeni sağlam yedekten
+     * döner ve [restoredNote] ile kullanıcıya söyler.
+     */
+    fun load(n: Int = slot): Boolean {
         advancing = false
         advanceJob?.cancel()
+        fun read(f: File): Game? = runCatching {
+            json.decodeFromString(Game.serializer(), f.readText()).also { Season.migrate(it) }
+        }.getOrNull()
         // Yuva ancak dosya sorunsuz okunursa değişir: bozuk kayıt başka kariyerle ezilmesin
-        val g = json.decodeFromString(Game.serializer(), slotFile(n).readText())
-        Season.migrate(g)
+        var g = read(slotFile(n))
+        if (g == null) {
+            for (k in 1..BACKUPS) {
+                val b = backupFile(n, k)
+                if (!b.exists()) continue
+                g = read(b) ?: continue
+                val date = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale("tr")).format(java.util.Date(b.lastModified()))
+                restoredNote = "Kayıt dosyası bozulmuştu; $date tarihli yedekten geri yüklendi."
+                g.addNews("🛟 Kayıt kurtarıldı", restoredNote!!)
+                break
+            }
+        }
+        if (g == null) return false
         slot = n
         game = g
         save(force = true)
         bump()
-        true
-    }.getOrDefault(false)
+        return true
+    }
 
     fun newCareer(
         g: Game, manager: String, teamId: Int, difficulty: Int = 1, noFiring: Boolean = false,

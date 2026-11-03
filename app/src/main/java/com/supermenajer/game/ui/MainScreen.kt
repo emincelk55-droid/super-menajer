@@ -852,12 +852,53 @@ fun SoundSettings() {
             androidx.compose.material3.Switch(S.musicOn, { S.changeMusic(it) })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🔋 Pil tasarrufu", fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text("sürekli dönen efektleri durdurur", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
+            androidx.compose.material3.Switch(Fx.lowPower, { Fx.changeLowPower(it) })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Ses düzeyi", fontSize = 14.sp, color = TextDim, modifier = Modifier.width(86.dp))
             androidx.compose.material3.Slider(
                 S.volume, { S.changeVolume(it) }, Modifier.weight(1f),
                 onValueChangeFinished = { S.click() },
             )
             Text("%${(S.volume * 100).toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(44.dp), textAlign = TextAlign.End)
+        }
+    }
+}
+
+/** Uygulama düzeyi uyarılar: önceki çökmenin raporu ve yedekten kurtarılan kayıt. */
+@Composable
+fun SystemNotices() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val crash = com.supermenajer.game.CrashGuard.pending
+    val restored = GameRepo.restoredNote
+    if (crash != null) {
+        WideDialog(onDismissRequest = { com.supermenajer.game.CrashGuard.dismiss() }, maxWidth = 460.dp) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1).padding(18.dp)) {
+                Text("😓 Oyun beklenmedik şekilde kapandı", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Özür dileriz. İlerlemen son kayıttan devam ediyor. Hatayı düzeltebilmemiz için raporu paylaşabilirsin " +
+                        "(WhatsApp, Telegram, e-posta). Raporda kişisel bilgi yok: sürüm, telefon modeli ve hatanın yeri.",
+                    color = TextDim, fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { com.supermenajer.game.CrashGuard.dismiss() }, modifier = Modifier.weight(1f)) { Text("Kapat") }
+                    Button(onClick = { com.supermenajer.game.CrashGuard.share(ctx) }, modifier = Modifier.weight(1f)) { Text("Raporu paylaş") }
+                }
+            }
+        }
+    } else if (restored != null) {
+        WideDialog(onDismissRequest = { GameRepo.restoredNote = null }, maxWidth = 460.dp) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1).padding(18.dp)) {
+                Text("🛟 Kayıt kurtarıldı", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(restored, color = TextDim, fontSize = 13.sp)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { GameRepo.restoredNote = null }, modifier = Modifier.fillMaxWidth()) { Text("Tamam") }
+            }
         }
     }
 }

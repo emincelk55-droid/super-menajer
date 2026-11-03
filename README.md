@@ -192,3 +192,9 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   %22, deplasman %33); yaşlanma gelişimin tersine işliyor, kaleciler sezonlar geçtikçe şişmiyor (gol/maç 2.6-2.8 sabit);
   kurtarış gücü kalecinin genel gücünden; sözleşmesi biten genç oyuncular silinmiyor; emeklilik 32'den başlıyor;
   yapay zekâ kadroyu ~26 kişide tutacak kadar genç alıyor, gençlerin potansiyeli kulüp seviyesine yakın.
+- Kayıt güvenliği: her kayıt yuvası için en az 10 dakika arayla alınan 3 döner yedek; ana kayıt bozulursa (yarım yazılmış
+  dosya, ani kapanma) en yeni sağlam yedekten açılır ve kullanıcıya söylenir.
+- Çökme raporu: beklenmedik kapanmada ayrıntı cihaza yazılır, bir sonraki açılışta "Raporu paylaş" ile WhatsApp/Telegram/
+  e-posta üzerinden gönderilebilir (kendiliğinden internete bir şey gönderilmez).
+- Pil tasarrufu (Ayarlar): sürekli dönen efektleri durdurur. Kart ışığı ve stadyum animasyonları artık her karede yalnız
+  yeniden çiziliyor (ekranı baştan oluşturmuyor), daha az işlemci harcıyor.

@@ -156,6 +156,9 @@ class ScreensTest {
         GameRepo.tab = GameRepo.TAB_HOME; GameRepo.settingsOpen = true
         shot("03g_settings")
         GameRepo.settingsOpen = false
+        com.supermenajer.game.CrashGuard.pending = "Süper Menajer çökme raporu"
+        shot("03h_crash_report")
+        com.supermenajer.game.CrashGuard.dismiss()
         g.offers += IncomingOffer(g.squad(g.userTeamId).maxBy { it.overall }.id, g.divisionTeams(12)[0].id, 20_000_000, g.week)
         g.press = PressQuestion("Rakip karşısında galibiyetin anahtarı neydi?", listOf("Oyuncularımın mücadelesi.", "Taktiğimiz tuttu, plan işledi.", "Henüz iyi oynamıyoruz."), 1)
         GameRepo.tab = 0; shot("04_home")

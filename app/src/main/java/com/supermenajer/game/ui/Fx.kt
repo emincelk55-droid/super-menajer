@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -28,7 +29,25 @@ import kotlinx.coroutines.delay
 /** Giriş animasyonları açık mı? Ekran görüntüsü testleri kapatır ki son hâl çizilsin. */
 object Fx {
     @JvmField var enabled = true
+
+    /** Pil tasarrufu: sürekli dönen efektler (parlama, stadyum, kart ışığı) durur; dokunma efektleri kalır. */
+    var lowPower by androidx.compose.runtime.mutableStateOf(false)
+        private set
+    private var prefs: android.content.SharedPreferences? = null
+
+    fun init(context: android.content.Context) {
+        prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also { lowPower = it.getBoolean("lowPower", false) }
+    }
+
+    fun changeLowPower(on: Boolean) {
+        lowPower = on
+        prefs?.edit()?.putBoolean("lowPower", on)?.apply()
+    }
 }
+
+/** Sürekli (sonsuz) animasyonlar kapalı mı: test, önizleme ya da pil tasarrufu. */
+@androidx.compose.runtime.Composable
+fun fxLoopsOff(): Boolean = fxStill() || Fx.lowPower
 
 /** Animasyonsuz çizim: önizleme ya da animasyonların kapalı olduğu testler. */
 @androidx.compose.runtime.Composable
@@ -84,7 +103,7 @@ fun Modifier.appear(delayMs: Int = 0, offsetDp: Float = 16f, fromScale: Float = 
 
 /** Düğmenin üstünden periyodik olarak geçen parlak ışık şeridi (birincil düğmeler). */
 fun Modifier.shine(periodMs: Int = 3200): Modifier = composed {
-    if (fxStill()) return@composed this
+    if (fxLoopsOff()) return@composed this
     val t by androidx.compose.animation.core.rememberInfiniteTransition(label = "shine").animateFloat(
         -0.4f, 1.6f,
         androidx.compose.animation.core.infiniteRepeatable(tween(periodMs, easing = androidx.compose.animation.core.LinearEasing)),
@@ -128,9 +147,10 @@ fun tierBorder(tier: Int): List<androidx.compose.ui.graphics.Color> = when (tier
  * [seed] kartların aynı anda parlamaması için başlangıcı kaydırır.
  */
 fun Modifier.cardShine(tier: Int, seed: Int): Modifier = composed {
-    val still = fxStill()
+    val still = fxLoopsOff()
     val period = 4200
-    val t = if (still) 0.18f else {
+    // Değer çizim sırasında okunur: her karede yalnız yeniden çizilir, yeniden oluşturulmaz (pil dostu)
+    val anim: androidx.compose.runtime.State<Float>? = if (still) null else {
         val tr = androidx.compose.animation.core.rememberInfiniteTransition(label = "card")
         tr.animateFloat(
             0f, 1f,
@@ -139,11 +159,12 @@ fun Modifier.cardShine(tier: Int, seed: Int): Modifier = composed {
                 initialStartOffset = androidx.compose.animation.core.StartOffset(Math.floorMod(seed * 977, period)),
             ),
             label = "cardT",
-        ).value
+        )
     }
     val strength = when (tier) { 3 -> 0.55f; 2 -> 0.42f; 1 -> 0.3f; else -> 0.12f }
     drawWithContent {
         drawContent()
+        val t = anim?.value ?: 0.18f
         val w = size.width
         val h = size.height
         val W = androidx.compose.ui.graphics.Color.White

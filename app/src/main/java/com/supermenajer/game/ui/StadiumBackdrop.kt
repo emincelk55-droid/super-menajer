@@ -32,12 +32,13 @@ private const val LOOP_MS = 16000
  */
 @Composable
 fun StadiumBackdrop(c1: Color, c2: Color, modifier: Modifier = Modifier) {
-    val t = if (fxStill()) 0.3f else rememberInfiniteTransition(label = "stadium").animateFloat(
+    // Değer çizim sırasında okunur: her karede yalnız tuval yeniden çizilir (pil tasarrufunda sabit kare)
+    val anim = if (fxLoopsOff()) null else rememberInfiniteTransition(label = "stadium").animateFloat(
         0f, 1f, infiniteRepeatable(tween(LOOP_MS, easing = LinearEasing)), label = "stadiumT",
-    ).value
+    )
     val crowd = remember(c1, c2) { crowdDots(c1, c2) }
     val dust = remember { List(28) { Random(it * 13 + 5).let { r -> Triple(r.nextFloat(), r.nextFloat(), 0.5f + r.nextFloat()) } } }
-    Canvas(modifier) { drawStadiumScene(t, c1, c2, crowd, dust) }
+    Canvas(modifier) { drawStadiumScene(anim?.value ?: 0.3f, c1, c2, crowd, dust) }
 }
 
 private class Fan(val u: Float, val row: Int, val color: Color, val flashPhase: Float, val flashes: Boolean)

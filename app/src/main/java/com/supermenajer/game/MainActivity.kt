@@ -20,7 +20,9 @@ import com.supermenajer.game.ui.TitleScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashGuard.install(this)
         GameRepo.init(filesDir)
+        com.supermenajer.game.ui.Fx.init(this)
         com.supermenajer.game.audio.Sound.init(this)
         // Tam ekran oyun: sistem çubukları gizli, kaydırınca geçici olarak görünür
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -65,5 +67,6 @@ fun AppRoot() {
             Screen.SUMMARY -> SummaryScreen()
         }
         GameRepo.busy?.let { com.supermenajer.game.ui.BusyOverlay(it) }
+        com.supermenajer.game.ui.SystemNotices()
     }
 }
