@@ -17,6 +17,8 @@ import com.supermenajer.game.ui.AppTheme
 import com.supermenajer.game.ui.Bg
 import org.junit.Rule
 import org.junit.Test
+import androidx.compose.foundation.background
+import com.supermenajer.game.ui.GoalCelebrationFrame
 import java.nio.file.Files
 
 class ScreensTest {
@@ -37,6 +39,22 @@ class ScreensTest {
         repeat(days) {
             if (g.seasonOver) return
             if (g.todayUserFixture() != null) { GameRepo.playMatch(live = false); GameRepo.closeSummary() } else GameRepo.skipToNextMatch()
+        }
+    }
+
+    /** Gol kutlaması: konfetinin havada olduğu bir kare. */
+    @Test
+    fun goalCelebration() {
+        paparazzi.snapshot("21_goal_celebration") {
+            AppTheme {
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF256F3B)),
+                ) {
+                    GoalCelebrationFrame(
+                        0.42f, androidx.compose.ui.graphics.Color(0xFF6CABDD), androidx.compose.ui.graphics.Color.White, true, 7,
+                    )
+                }
+            }
         }
     }
 

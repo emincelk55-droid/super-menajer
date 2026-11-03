@@ -174,3 +174,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Ana menü düğmeleri sırayla kayarak gelir; pencereler hafif büyüyerek açılır.
 - İlerleme çubukları soldan dolar ve renk geçişli; güç rozetleri parlak degrade.
 - Maçta gol olunca skor kutusu zıplar, takım renginde parlar ve rakam kayarak değişir.
+
+### v2.10
+- Gol kutlaması: gol anında sahada flaş ve genişleyen ışık halkaları, zıplayarak büyüyen dev "GOOOL!" yazısı ve
+  iki köşeden fırlatılan, takım renklerinde dönen konfeti yağmuru.
+- Rakip gol atınca konfeti yok; sönük bir "GOL" yazısı ve halka görünür. İki kişilik maçta ve izlenen maçlarda her gol kutlanır.

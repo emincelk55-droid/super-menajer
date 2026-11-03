@@ -154,7 +154,7 @@ fun MatchScreen() {
         revealed = sim.events.size
     }
     LaunchedEffect(goalFlash) {
-        if (goalFlash != null) { delay(2600); goalFlash = null }
+        if (goalFlash != null) { delay(GOAL_FX_MS.toLong()); goalFlash = null }
     }
     tick // yeniden çizim tetikleyicisi
     val shown = revealed.coerceAtMost(sim.events.size)
@@ -182,6 +182,13 @@ fun MatchScreen() {
                         anim, homeC, awayC, gkH, gkA, running, paces[speed].scale,
                         Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true),
                     )
+                    goalFlash?.let { e ->
+                        // Konfeti: kendi golümüzde, iki kişilik maçta ve izlenen maçlarda; rakip golünde sönük kutlama
+                        val ours = sim.userSide == null || sim.twoPlayer || e.side == sim.userSide?.index
+                        val sc = if (e.side == 0) homeC else awayC
+                        val team = sim.sides[e.side.coerceIn(0, 1)].team
+                        GoalCelebration(sc, Color(team.color2), ours, seed = sim.events.indexOf(e) * 31 + e.minute)
+                    }
                     androidx.compose.animation.AnimatedVisibility(
                         visible = goalFlash != null, enter = scaleIn() + fadeIn(), exit = fadeOut(),
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
