@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import com.supermenajer.game.audio.Sound
+
 import androidx.compose.ui.graphics.graphicsLayer
 
 import androidx.compose.animation.togetherWith
@@ -117,8 +119,11 @@ fun MatchScreen() {
     BackHandler { running = false }
 
     val anim = remember(sim) { GameRepo.pitchFor(sim) }
+    val whistled = remember { HashSet<Int>() }
     LaunchedEffect(running, speed) {
         val pace = paces[speed]
+        // Başlama düdüğü: maçın ve ikinci yarının başında bir kez
+        if (running && !sim.finished && (sim.minute == 0 || sim.minute == 45) && whistled.add(sim.minute)) Sound.play(Sound.Fx.KICKOFF)
         // Duraklatılınca bekleyen olayları göster
         if (!running) { revealed = sim.events.size; return@LaunchedEffect }
         while (running && !sim.finished) {
@@ -135,12 +140,25 @@ fun MatchScreen() {
                 anim.play(e)
                 if (e.buildUp.isNotEmpty()) {
                     ticker = Ticker(e.minute, e.buildUp, e.side, 1)
+                    // Atak başlarken tribün kabarır
+                    Sound.play(Sound.Fx.KICK, 0.6f)
+                    Sound.crowdLevel(1.4f)
                     // Atak sahada oynanır; sonuç top ağlara/kaleciye ulaşınca açıklanır
                     var waited = 0L
                     while (anim.outcomes == shotBefore && waited < 9000) { delay(40); waited += 40 }
                     delay(250)
                 }
                 revealed = before + k + 1
+                Sound.crowdLevel(1f)
+                val mine = sim.userSide == null || sim.twoPlayer || e.side == sim.userSide?.index
+                when (e.type) {
+                    Ev.GOAL -> Sound.play(Sound.Fx.GOAL, if (mine) 1f else 0.5f)
+                    Ev.SAVE, Ev.MISS, Ev.POST -> Sound.play(Sound.Fx.OOH, 0.8f)
+                    Ev.YELLOW, Ev.RED -> Sound.play(Sound.Fx.KICKOFF, 0.6f, 1.2f)
+                    Ev.HALF -> Sound.play(Sound.Fx.HALF)
+                    Ev.FULL -> Sound.play(Sound.Fx.FULL)
+                    else -> {}
+                }
                 val isGoal = e.type == Ev.GOAL
                 ticker = Ticker(e.minute, e.text, e.side, if (isGoal) 2 else 0)
                 if (isGoal) {

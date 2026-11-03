@@ -46,7 +46,10 @@ fun Modifier.pressClick(scaleTo: Float = 0.95f, enabled: Boolean = true, onClick
         spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium), label = "press",
     )
     graphicsLayer { scaleX = s; scaleY = s }
-        .clickable(interactionSource = src, indication = LocalIndication.current, enabled = enabled, onClick = onClick)
+        .clickable(interactionSource = src, indication = LocalIndication.current, enabled = enabled) {
+            com.supermenajer.game.audio.Sound.click()
+            onClick()
+        }
 }
 
 /** Basma efekti, tıklamayı zincirin sonunda ayrıca kuran yerler için (yalnız ölçek). */

@@ -185,3 +185,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   göz kırpan yıldızlar ve mor-altın kenar, altın (75+) kartlarda altın kenar ve parıltılı gölge, gümüş kartlarda gümüş kenar.
 - Ana sayfada canlı gece stadyumu: salınan projektör ışıkları, takım renklerinde tribün, tribünde dolaşan Meksika dalgası,
   patlayan fotoğraf flaşları, yükselen ışık tozu ve perspektif saha (kartların arkasında, soluk).
+- Ses: hakem düdükleri (başlama, devre, maç sonu, kart), maç boyunca tribün uğultusu (ataklarda kabarır), gol
+  kükremesi, kaçan pozisyonda "ooo", top vuruşu, dokunma tıkı, yeni karar kartında bildirim sesi ve menü müziği.
+  Ayarlar → efektler / müzik aç-kapa ve ses düzeyi. Tüm sesler `tools/gen_sounds.py` ile sentezlenir (lisans gerektirmez).

@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         GameRepo.init(filesDir)
+        com.supermenajer.game.audio.Sound.init(this)
         // Tam ekran oyun: sistem çubukları gizli, kaydırınca geçici olarak görünür
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
             systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -35,13 +36,25 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        com.supermenajer.game.audio.Sound.pause()
         GameRepo.save(force = true)
         GameRepo.flush()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.supermenajer.game.audio.Sound.resume()
     }
 }
 
 @Composable
 fun AppRoot() {
+    // Maçta tribün uğultusu, diğer ekranlarda menü müziği
+    androidx.compose.runtime.LaunchedEffect(GameRepo.screen) {
+        val match = GameRepo.screen == Screen.MATCH
+        com.supermenajer.game.audio.Sound.music(!match)
+        com.supermenajer.game.audio.Sound.crowd(match)
+    }
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         when (GameRepo.screen) {
             Screen.SPLASH -> com.supermenajer.game.ui.SplashScreen()

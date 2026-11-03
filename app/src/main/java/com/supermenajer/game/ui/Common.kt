@@ -305,7 +305,7 @@ fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, dot
                 val sel = i == selected
                 val col by androidx.compose.animation.animateColorAsState(if (sel) TextMain else TextDim, label = "fmC")
                 Column(
-                    Modifier.weight(1f).clickable { onSelect(i) }.padding(top = 9.dp),
+                    Modifier.weight(1f).clickable { com.supermenajer.game.audio.Sound.click(); onSelect(i) }.padding(top = 9.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {

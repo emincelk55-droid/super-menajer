@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.foundation.verticalScroll
+
 import androidx.compose.animation.togetherWith
 
 import androidx.activity.compose.BackHandler
@@ -142,11 +144,16 @@ private fun SettingsDialog() {
     var confirm by remember { mutableStateOf(0) } // 1 ana menü, 2 çıkış
     var saved by remember { mutableStateOf(false) }
     WideDialog(onDismissRequest = { GameRepo.settingsOpen = false }, maxWidth = 420.dp) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1).padding(18.dp)) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(18.dp),
+        ) {
             Text("⚙️ Ayarlar", fontWeight = FontWeight.Black, fontSize = 20.sp)
             Spacer(Modifier.height(12.dp))
             when (confirm) {
                 0 -> {
+                    SoundSettings()
+                    Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = { GameRepo.save(force = true); saved = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (saved) "✓ Kaydedildi" else "💾 Oyunu kaydet")
                     }
@@ -827,5 +834,30 @@ internal fun OpponentReport(g: Game, opp: Team) {
         val shownAdvice = if (aq >= 12) advice else advice.take(1)
         shownAdvice.forEach { Text("🗣 $it", fontSize = 12.sp, color = Gold, modifier = Modifier.padding(vertical = 1.dp)) }
         if (aq < 12 && advice.size > 1) Text("Daha detaylı analiz için daha iyi bir yardımcı antrenör gerekli.", color = TextDim, fontSize = 11.sp)
+    }
+}
+
+/** Ses ayarları: efektler, müzik ve genel ses düzeyi (cihazda saklanır). */
+@Composable
+fun SoundSettings() {
+    val S = com.supermenajer.game.audio.Sound
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface2.copy(alpha = 0.6f)).padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🔊 Efektler", fontSize = 14.sp, modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(S.sfxOn, { S.changeSfx(it) })
+            Spacer(Modifier.width(18.dp))
+            Text("🎵 Müzik", fontSize = 14.sp, modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(S.musicOn, { S.changeMusic(it) })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Ses düzeyi", fontSize = 14.sp, color = TextDim, modifier = Modifier.width(86.dp))
+            androidx.compose.material3.Slider(
+                S.volume, { S.changeVolume(it) }, Modifier.weight(1f),
+                onValueChangeFinished = { S.click() },
+            )
+            Text("%${(S.volume * 100).toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(44.dp), textAlign = TextAlign.End)
+        }
     }
 }

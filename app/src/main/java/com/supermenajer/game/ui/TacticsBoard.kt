@@ -324,7 +324,7 @@ fun SmTabBar(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, s
                 val sel = i == selected
                 val col by androidx.compose.animation.animateColorAsState(if (sel) Color.White else TextDim, label = "tabC")
                 Column(
-                    Modifier.weight(1f).clickable { onSelect(i) }.padding(top = if (small) 6.dp else 10.dp),
+                    Modifier.weight(1f).clickable { com.supermenajer.game.audio.Sound.click(); onSelect(i) }.padding(top = if (small) 6.dp else 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(

@@ -337,6 +337,12 @@ fun HomeDashboard(g: Game) {
         val eg = com.supermenajer.game.game.Europe.groupOf(g, g.userTeamId)
         if (eg >= 0) add { EuroGroupCard(g, eg) }
     }
+    // Yeni bir karar kartı düşünce kısa bildirim sesi
+    val prevPending = remember { intArrayOf(-1) }
+    LaunchedEffect(pending.size) {
+        if (prevPending[0] >= 0 && pending.size > prevPending[0]) com.supermenajer.game.audio.Sound.play(com.supermenajer.game.audio.Sound.Fx.NOTIFY, 0.7f)
+        prevPending[0] = pending.size
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().height(186.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
