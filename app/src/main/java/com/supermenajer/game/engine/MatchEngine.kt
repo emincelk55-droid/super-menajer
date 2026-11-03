@@ -242,7 +242,7 @@ class MatchSim(
                 com.supermenajer.game.game.Difficulty.matchFactor(game)
             a *= f; m *= f; d *= f
         }
-        if (s === home) { a *= 1.03; m *= 1.03; d *= 1.03 }
+        if (s === home) { a *= 1.06; m *= 1.06; d *= 1.06 }
         return Str(a.coerceAtLeast(5.0), m.coerceAtLeast(5.0), d.coerceAtLeast(5.0))
     }
 
@@ -354,7 +354,9 @@ class MatchSim(
         val skill = if (header) shooter.p.physical else shooter.p.shooting
         val shootF = (skill * (0.7 + 0.3 * shooter.fit / 100) / 70.0).pow(1.1)
         val keeper = def.gk()
-        val gkF = (keeper?.let { it.p.goalkeeping * (0.85 + 0.15 * it.fit / 100) } ?: 20.0) / 70.0
+        // Kurtarış gücü kalecinin genel kaleci gücünden (yalnız "kalecilik" niteliği değil): üretilen gençlerle
+        // gerçek verili kaleciler aynı güçte aynı kurtarışı yapar, sezonlar geçtikçe goller azalmaz.
+        val gkF = (keeper?.let { keeperSkill(it.p) * (0.85 + 0.15 * it.fit / 100) } ?: 20.0) / 70.0
         val pGoal = (q * shootF / gkF).coerceIn(0.01, 0.92)
         if (penalty) ev(Ev.INFO, atk.index, Comms.penalty(atk.team, rnd))
         val build = Comms.buildUp(shooter.p.name, assister?.p?.name, header, penalty, setPiece, rnd)
@@ -523,7 +525,7 @@ class MatchSim(
             val list = takers.getValue(s)
             if (list.isEmpty()) return false
             val taker = list[i % list.size]
-            val gk = other(s).gk()?.p?.goalkeeping ?: 40
+            val gk = other(s).gk()?.p?.let { keeperSkill(it) } ?: 40.0
             val p = (0.76 * (taker.p.shooting / 70.0).pow(0.5) / (gk / 70.0).pow(0.5)).coerceIn(0.5, 0.92)
             val scored = rnd.nextDouble() < p
             ev(Ev.INFO, s.index, (if (scored) "✅ " else "❌ ") + "Penaltı: ${taker.p.name}" + if (scored) " gol!" else " kaçırdı!")
@@ -666,3 +668,9 @@ class MatchSim(
         t.form = (t.form + c).takeLast(5)
     }
 }
+
+/** Kalecinin kurtarış gücü: kaleci mevkisindeki genel güç, eski "kalecilik" ölçeğine denk gelecek şekilde. */
+fun keeperSkill(p: com.supermenajer.game.model.Player): Double = p.ovrAt(com.supermenajer.game.model.Pos.GK) * GK_SCALE
+
+/** Gerçek verideki kalecilerde kalecilik / kaleci gücü oranı (denge raporundan). */
+const val GK_SCALE = 1.0

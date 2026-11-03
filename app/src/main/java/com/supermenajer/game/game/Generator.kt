@@ -128,7 +128,7 @@ object Generator {
         val target = (teamLevel(t.reputation) - rnd.nextInt(10, 20) + bonus).roundToInt()
         val p = makePlayer(g.nextPlayerId++, pos, target, rnd.nextInt(17, 19), t.id, rnd, nationOf(g, t))
         // Potansiyel takım seviyesinin etrafında; çok yüksek potansiyel nadir.
-        val pot = teamLevel(t.reputation) - 3 + bonus + gauss(rnd) * 6
+        val pot = teamLevel(t.reputation) - 1 + bonus + gauss(rnd) * 6
         p.potential = pot.roundToInt().coerceIn(p.overall + 4, 91)
         // Nadir "altın çocuk": küçük kulüpte bile dünya yıldızı potansiyeli
         if (rnd.nextDouble() < Facilities.wonderkidChance(t)) p.potential = rnd.nextInt(84, 95)

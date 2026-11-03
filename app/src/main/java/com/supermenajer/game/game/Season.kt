@@ -611,14 +611,20 @@ object Season {
         clamp(p)
     }
 
+    /**
+     * Yaşlanma: gelişimin ([improve]) tersine aynı niteliklerden düşer. Böylece uzun kariyerlerde
+     * mevkinin ana niteliği şişmez (önceden kaleciler her sezon biraz daha iyi kurtarış yapıyordu).
+     */
     fun decline(p: Player, n: Int, rnd: Random) {
         repeat(n) {
             if (p.pos == Pos.GK) {
-                if (rnd.nextBoolean()) p.goalkeeping-- else p.physical--
-            } else when (rnd.nextInt(3)) {
-                0 -> p.pace--
-                1 -> p.physical--
-                else -> when (p.pos) { Pos.DF -> p.defending--; Pos.MF -> p.passing--; else -> p.shooting-- }
+                p.goalkeeping--
+                return@repeat
+            }
+            when (p.pos) {
+                Pos.DF -> when (rnd.nextInt(4)) { 0 -> p.defending--; 1 -> p.physical--; 2 -> p.pace--; else -> p.passing-- }
+                Pos.MF -> when (rnd.nextInt(5)) { 0 -> p.passing--; 1 -> p.dribbling--; 2 -> p.defending--; 3 -> p.shooting--; else -> p.physical-- }
+                else -> when (rnd.nextInt(4)) { 0 -> p.shooting--; 1 -> p.dribbling--; 2 -> p.pace--; else -> p.physical-- }
             }
         }
         clamp(p)
@@ -873,10 +879,10 @@ object Season {
                 p.age <= 27 && gap > 0 -> improve(p, rnd.nextInt(0, 3), rnd)
                 p.age >= 31 -> decline(p, rnd.nextInt(1, 2 + (p.age - 30)), rnd)
             }
-            // Emeklilik: 33'ten itibaren artar, iyi oyuncular daha uzun oynar
+            // Emeklilik: 32'den itibaren artar, iyi oyuncular daha uzun oynar
             val retireChance = when {
                 p.age >= 40 || p.id in g.retiring -> 1.0
-                p.age >= 33 -> (doubleArrayOf(0.08, 0.18, 0.32, 0.5, 0.7, 0.88, 0.95)[p.age - 33]) * (if (p.overall >= 80) 0.5 else if (p.overall >= 72) 0.8 else 1.0)
+                p.age >= 32 -> (doubleArrayOf(0.06, 0.14, 0.26, 0.42, 0.58, 0.74, 0.88, 0.95)[p.age - 32]) * (if (p.overall >= 80) 0.5 else if (p.overall >= 72) 0.8 else 1.0)
                 else -> 0.0
             }
             if (rnd.nextDouble() < retireChance) {
@@ -911,7 +917,7 @@ object Season {
                 val pos = need() ?: break
                 val str = Lineups.strength(g, t)
                 val free = if (t.id == g.userTeamId) null else g.squad(-1)
-                    .filter { it.pos == pos && it.overall in (str - 12).toInt()..(str + 2).toInt() && it.age <= 33 }
+                    .filter { it.pos == pos && it.overall in (str - 15).toInt()..(str + 2).toInt() && it.age <= 34 }
                     .maxByOrNull { it.overall - (it.age - 26).coerceAtLeast(0) }
                 if (free != null) {
                     g.movePlayer(free, t.id)
@@ -924,9 +930,10 @@ object Season {
                 }
                 sq = g.squad(t.id)
             }
-            // Her yapay zekâ kulübü yılda 1-2 genci A takıma alır (dünya yenilensin, yeni yıldızlar doğsun)
+            // Yapay zekâ kulüpleri kadroyu ~26 kişide tutacak kadar genç alır; geniş kadroda ara sıra bir genç
+            // (dünya yenilensin, yeni yıldızlar doğsun ama yaş dengesi bozulmasın)
             if (t.id != g.userTeamId && sq.size < 30) {
-                repeat(if (sq.size < 27) 2 else 1) {
+                repeat(if (sq.size < 26) (26 - sq.size).coerceAtMost(3) else if (rnd.nextDouble() < 0.35) 1 else 0) {
                     val pos = Generator.squadPlan.maxBy { (pos, n) -> n - g.squad(t.id).count { it.pos == pos } }.key
                     g.addPlayer(Generator.youth(g, t, pos, rnd))
                 }

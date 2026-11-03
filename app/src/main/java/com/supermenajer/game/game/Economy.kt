@@ -160,6 +160,8 @@ object Economy {
                 val str = Lineups.strength(g, t)
                 val keep = when {
                     p.age >= 34 -> p.overall >= str - 4 && rnd.nextDouble() < 0.6
+                    // 30-33 yaş: yalnız hâlâ kadroya katkı verenler uzatılır (dünya yaşlanmasın)
+                    p.age >= 30 -> p.overall >= str - 7 && rnd.nextDouble() < 0.75
                     p.age <= 21 -> p.potential >= str - 6 || rnd.nextDouble() < 0.5
                     else -> p.overall >= str - 12 && rnd.nextDouble() < 0.88
                 }
@@ -177,8 +179,9 @@ object Economy {
         }
         Contracts.processPre(g)
         if (left.isNotEmpty()) g.addNews("Sözleşmesi bitenler", "Sözleşmesi sona eren oyuncular kulüpten ayrıldı: ${left.joinToString()}.")
-        // Serbest oyuncu havuzu çok büyümesin: en yaşlıları emekli olur.
+        // Serbest oyuncu havuzu çok büyümesin: yalnız 31 yaş üstünden en yaşlıları emekli olur
+        // (gençler alt liglerde/serbestte kalıp yeniden kulüp bulur; dünya erken gençleşmesin).
         val free = g.squad(-1).sortedByDescending { it.age * 100 - it.overall }
-        if (free.size > 150) g.removePlayers(free.take(free.size - 150))
+        if (free.size > 300) g.removePlayers(free.take(free.size - 300).filter { it.age >= 31 })
     }
 }

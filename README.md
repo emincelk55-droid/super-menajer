@@ -188,3 +188,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Ses: hakem düdükleri (başlama, devre, maç sonu, kart), maç boyunca tribün uğultusu (ataklarda kabarır), gol
   kükremesi, kaçan pozisyonda "ooo", top vuruşu, dokunma tıkı, yeni karar kartında bildirim sesi ve menü müziği.
   Ayarlar → efektler / müzik aç-kapa ve ses düzeyi. Tüm sesler `tools/gen_sounds.py` ile sentezlenir (lisans gerektirmez).
+- Denge (15 sezonluk otomatik test, `BalanceReportTest`): ev sahibi avantajı gerçek liglere çekildi (ev %45, beraberlik
+  %22, deplasman %33); yaşlanma gelişimin tersine işliyor, kaleciler sezonlar geçtikçe şişmiyor (gol/maç 2.6-2.8 sabit);
+  kurtarış gücü kalecinin genel gücünden; sözleşmesi biten genç oyuncular silinmiyor; emeklilik 32'den başlıyor;
+  yapay zekâ kadroyu ~26 kişide tutacak kadar genç alıyor, gençlerin potansiyeli kulüp seviyesine yakın.
