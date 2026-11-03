@@ -246,10 +246,18 @@ fun SmPlayerCard(
     shirt: Color, collar: Color, width: Dp = 64.dp, dim: Boolean = false,
 ) {
     val shape = RoundedCornerShape(6.dp)
+    val tier = if (p != null && ovr != null) cardTier(ovr) else 0
     Column(
-        Modifier.width(width).clip(shape)
+        Modifier.width(width)
+            .then(if (tier >= 2 && !dim) Modifier.shadow(6.dp, shape, ambientColor = Gold, spotColor = if (tier == 3) Color(0xFF9B59FF) else Gold) else Modifier)
+            .clip(shape)
             .background(Brush.verticalGradient(listOf(Color(0xFF2B3560), Color(0xFF141A36))))
-            .border(if (selected) 2.dp else 1.dp, if (selected) Gold else Color.White.copy(alpha = 0.25f), shape)
+            .then(if (p != null) Modifier.cardShine(tier, p.id) else Modifier)
+            .border(
+                if (selected || tier >= 2) 2.dp else 1.dp,
+                if (selected) Brush.verticalGradient(listOf(Gold, Gold)) else Brush.verticalGradient(tierBorder(tier)),
+                shape,
+            )
             .alpha(if (dim) 0.45f else 1f),
     ) {
         Box(Modifier.fillMaxWidth().height(width * 0.62f)) {

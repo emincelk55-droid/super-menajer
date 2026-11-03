@@ -179,3 +179,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Gol kutlaması: gol anında sahada flaş ve genişleyen ışık halkaları, zıplayarak büyüyen dev "GOOOL!" yazısı ve
   iki köşeden fırlatılan, takım renklerinde dönen konfeti yağmuru.
 - Rakip gol atınca konfeti yok; sönük bir "GOL" yazısı ve halka görünür. İki kişilik maçta ve izlenen maçlarda her gol kutlanır.
+
+### Geliştirmede (henüz APK yok)
+- Parlak oyuncu kartları: üstte cam parıltısı, ara ara kartın üzerinden geçen çapraz ışık; efsane (85+) kartlarda
+  göz kırpan yıldızlar ve mor-altın kenar, altın (75+) kartlarda altın kenar ve parıltılı gölge, gümüş kartlarda gümüş kenar.

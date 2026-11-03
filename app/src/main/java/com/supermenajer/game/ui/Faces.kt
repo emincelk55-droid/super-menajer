@@ -261,7 +261,13 @@ fun PlayerCard(
     Column(
         modifier.width(width).height(h).clip(RoundedCornerShape(width * 0.14f))
             .background(Brush.verticalGradient(cols))
-            .border(2.dp, if (highlight == Color.Transparent) cols.last() else highlight, RoundedCornerShape(width * 0.14f)),
+            .cardShine(cardTier(if (known) ovr else 0), p.id)
+            .border(
+                2.dp,
+                if (highlight == Color.Transparent) Brush.verticalGradient(tierBorder(cardTier(if (known) ovr else 0)) + cols.last())
+                else Brush.verticalGradient(listOf(highlight, highlight)),
+                RoundedCornerShape(width * 0.14f),
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(Modifier.fillMaxWidth().padding(start = width * 0.07f, top = width * 0.05f, end = width * 0.04f)) {

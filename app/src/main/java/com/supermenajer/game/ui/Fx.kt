@@ -100,3 +100,79 @@ fun Modifier.shine(periodMs: Int = 3200): Modifier = composed {
         )
     }
 }
+
+/* ---------- Parlak oyuncu kartları ---------- */
+
+/** Kart seviyesi: 3 efsane (85+), 2 altın (75+), 1 gümüş (65+), 0 bronz. */
+fun cardTier(ovr: Int): Int = when {
+    ovr >= 85 -> 3
+    ovr >= 75 -> 2
+    ovr >= 65 -> 1
+    else -> 0
+}
+
+/** Seviyeye göre kart kenarı renkleri (üstten alta). */
+fun tierBorder(tier: Int): List<androidx.compose.ui.graphics.Color> = when (tier) {
+    3 -> listOf(androidx.compose.ui.graphics.Color(0xFFFFF1A8), androidx.compose.ui.graphics.Color(0xFFD4AF37), androidx.compose.ui.graphics.Color(0xFF9B59FF))
+    2 -> listOf(androidx.compose.ui.graphics.Color(0xFFFFF1A8), androidx.compose.ui.graphics.Color(0xFFD4AF37))
+    1 -> listOf(androidx.compose.ui.graphics.Color(0xFFF4F7FA), androidx.compose.ui.graphics.Color(0xFF9AA5AE))
+    else -> listOf(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f), androidx.compose.ui.graphics.Color.White.copy(alpha = 0.15f))
+}
+
+/**
+ * Oyuncu kartı parlaklığı: üstte sabit cam parıltısı, ara ara kartın üstünden çapraz geçen
+ * ışık şeridi (seviye yükseldikçe güçlenir) ve efsane kartlarda göz kırpan yıldızlar.
+ * [seed] kartların aynı anda parlamaması için başlangıcı kaydırır.
+ */
+fun Modifier.cardShine(tier: Int, seed: Int): Modifier = composed {
+    val still = fxStill()
+    val period = 4200
+    val t = if (still) 0.18f else {
+        val tr = androidx.compose.animation.core.rememberInfiniteTransition(label = "card")
+        tr.animateFloat(
+            0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(
+                tween(period, easing = androidx.compose.animation.core.LinearEasing),
+                initialStartOffset = androidx.compose.animation.core.StartOffset(Math.floorMod(seed * 977, period)),
+            ),
+            label = "cardT",
+        ).value
+    }
+    val strength = when (tier) { 3 -> 0.55f; 2 -> 0.42f; 1 -> 0.3f; else -> 0.12f }
+    drawWithContent {
+        drawContent()
+        val w = size.width
+        val h = size.height
+        val W = androidx.compose.ui.graphics.Color.White
+        val T = androidx.compose.ui.graphics.Color.Transparent
+        // Üst yarıda hafif cam parıltısı
+        drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(W.copy(alpha = 0.16f * (tier + 1) / 4f), T), 0f, h * 0.45f))
+        // Döngünün ilk %40'ında soldan sağa çapraz ışık şeridi
+        val q = t / 0.4f
+        if (q in 0f..1f) {
+            val x = -w * 0.6f + q * (w * 2.2f)
+            drawRect(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(T, W.copy(alpha = strength), T),
+                    start = androidx.compose.ui.geometry.Offset(x - w * 0.35f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(x + w * 0.35f, h * 0.6f),
+                ),
+            )
+        }
+        if (tier == 3) {
+            // Efsane kart: seed'e göre yerleşen, sırayla parlayan 4 yıldız
+            val r = kotlin.random.Random(seed)
+            repeat(4) { k ->
+                val sx = w * (0.3f + r.nextFloat() * 0.4f)
+                val sy = h * (0.12f + r.nextFloat() * 0.28f)
+                val ph = ((t * 2f + k * 0.25f) % 1f)
+                val a = if (still) 0.8f else kotlin.math.sin(ph * Math.PI.toFloat()).coerceAtLeast(0f)
+                val len = w * 0.07f * (0.6f + a * 0.4f)
+                val c = androidx.compose.ui.graphics.Color(0xFFFFF6C8).copy(alpha = a)
+                drawLine(c, androidx.compose.ui.geometry.Offset(sx - len, sy), androidx.compose.ui.geometry.Offset(sx + len, sy), w * 0.012f + 1f)
+                drawLine(c, androidx.compose.ui.geometry.Offset(sx, sy - len), androidx.compose.ui.geometry.Offset(sx, sy + len), w * 0.012f + 1f)
+                drawCircle(c, w * 0.018f + 1f, androidx.compose.ui.geometry.Offset(sx, sy))
+            }
+        }
+    }
+}

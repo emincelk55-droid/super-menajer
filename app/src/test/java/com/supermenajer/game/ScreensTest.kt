@@ -19,6 +19,8 @@ import org.junit.Rule
 import org.junit.Test
 import androidx.compose.foundation.background
 import com.supermenajer.game.ui.GoalCelebrationFrame
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import java.nio.file.Files
 
 class ScreensTest {
@@ -53,6 +55,30 @@ class ScreensTest {
                     GoalCelebrationFrame(
                         0.42f, androidx.compose.ui.graphics.Color(0xFF6CABDD), androidx.compose.ui.graphics.Color.White, true, 7,
                     )
+                }
+            }
+        }
+    }
+
+    /** Parlak kart seviyeleri: efsane, altın, gümüş, bronz (FUT kartı ve saha kartı). */
+    @Test
+    fun cardTiers() {
+        val w = com.supermenajer.game.game.Generator.newWorld(kotlin.random.Random(3))
+        val ps = w.players.take(4)
+        val ovrs = listOf(91, 80, 70, 60)
+        paparazzi.snapshot("22_card_tiers") {
+            AppTheme {
+                androidx.compose.foundation.layout.Row(
+                    Modifier.fillMaxSize().background(com.supermenajer.game.ui.Bg).padding(24.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    ps.forEachIndexed { i, pl ->
+                        com.supermenajer.game.ui.PlayerCard(pl, ovrs[i], "OOS", 100.dp, androidx.compose.ui.graphics.Color(0xFF6CABDD), androidx.compose.ui.graphics.Color.White)
+                    }
+                    ps.forEachIndexed { i, pl ->
+                        com.supermenajer.game.ui.SmPlayerCard(w, pl, ovrs[i], "OOS", com.supermenajer.game.ui.Teal, false, androidx.compose.ui.graphics.Color(0xFF6CABDD), androidx.compose.ui.graphics.Color.White, 72.dp)
+                    }
                 }
             }
         }
