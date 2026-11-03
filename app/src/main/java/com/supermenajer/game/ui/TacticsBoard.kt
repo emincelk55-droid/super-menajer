@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.ui.draw.shadow
+
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 
 import androidx.compose.foundation.Canvas
@@ -286,26 +288,43 @@ fun SmPlayerCard(
     }
 }
 
-/** SM tarzı sekme çubuğu: kenarlıklı kutu, seçilende turkuaz alt çizgi. */
+/** SM tarzı sekme çubuğu: kenarlıklı kutu, seçili sekmenin altında kayan turkuaz çizgi. */
 @Composable
 fun SmTabBar(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, small: Boolean = false, onSelect: (Int) -> Unit) {
-    Row(
+    BoxWithConstraints(
         modifier.fillMaxWidth().then(
-            if (small) Modifier else Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF0E1430)).border(1.dp, Teal.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
+            if (small) Modifier else Modifier.clip(RoundedCornerShape(12.dp)).background(Brush.verticalGradient(listOf(Color(0xFF131A3C), Color(0xFF0B1029))))
+                .border(1.dp, Teal.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
         ),
     ) {
-        tabs.forEachIndexed { i, t ->
-            val sel = i == selected
-            Column(
-                Modifier.weight(1f).clickable { onSelect(i) }.padding(top = if (small) 6.dp else 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    t, fontSize = if (small) 13.sp else if (tabs.size > 4) 14.sp else 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (sel) FontWeight.Black else FontWeight.SemiBold, color = if (sel) Color.White else TextDim,
-                )
-                Spacer(Modifier.height(if (small) 5.dp else 8.dp))
-                Box(Modifier.fillMaxWidth(0.75f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(if (sel) Teal else Color.Transparent))
+        val tabW = maxWidth / tabs.size.coerceAtLeast(1)
+        val x by androidx.compose.animation.core.animateDpAsState(
+            tabW * selected.coerceIn(0, (tabs.size - 1).coerceAtLeast(0)),
+            androidx.compose.animation.core.spring(dampingRatio = 0.75f, stiffness = 500f), label = "tabX",
+        )
+        // Seçili sekmenin arkasındaki hafif parıltı ve altındaki çizgi birlikte kayar.
+        Box(Modifier.matchParentSize().offset(x = x).width(tabW)) {
+            Box(Modifier.width(tabW).fillMaxHeight().background(Brush.verticalGradient(listOf(Color.Transparent, Teal.copy(alpha = 0.13f)))))
+            Box(
+                Modifier.align(Alignment.BottomStart).padding(start = tabW * 0.125f).width(tabW * 0.75f).height(3.dp)
+                    .shadow(6.dp, RoundedCornerShape(2.dp), ambientColor = Teal, spotColor = Teal)
+                    .clip(RoundedCornerShape(2.dp)).background(Brush.horizontalGradient(listOf(Teal, Color(0xFF7CF5FF)))),
+            )
+        }
+        Row(Modifier.fillMaxWidth()) {
+            tabs.forEachIndexed { i, t ->
+                val sel = i == selected
+                val col by androidx.compose.animation.animateColorAsState(if (sel) Color.White else TextDim, label = "tabC")
+                Column(
+                    Modifier.weight(1f).clickable { onSelect(i) }.padding(top = if (small) 6.dp else 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        t, fontSize = if (small) 13.sp else if (tabs.size > 4) 14.sp else 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        fontWeight = if (sel) FontWeight.Black else FontWeight.SemiBold, color = col,
+                    )
+                    Spacer(Modifier.height(if (small) 8.dp else 11.dp))
+                }
             }
         }
     }

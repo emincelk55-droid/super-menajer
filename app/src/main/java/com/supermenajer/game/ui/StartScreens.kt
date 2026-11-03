@@ -198,13 +198,12 @@ fun NewGameScreen() {
 private fun WizardButton(label: String, primary: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Box(
-        modifier.height(44.dp).clip(shape)
+        modifier.height(44.dp).pressClick(0.95f, enabled = enabled, onClick = onClick).clip(shape)
             .background(
                 if (primary && enabled) Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple))
                 else Brush.horizontalGradient(listOf(Color(0xFF1A2150), Color(0xFF141A3A))),
             )
-            .border(1.dp, if (primary && enabled) Color.White.copy(alpha = 0.4f) else CardLine, shape)
-            .clickable(enabled = enabled, onClick = onClick),
+            .border(1.dp, if (primary && enabled) Color.White.copy(alpha = 0.4f) else CardLine, shape),
         contentAlignment = Alignment.Center,
     ) { Text(label, fontWeight = FontWeight.Black, fontSize = 15.sp, color = if (enabled) Color.White else TextDim) }
 }

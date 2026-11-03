@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -70,6 +71,8 @@ val CardTop = Color(0xFF161D42)
 val CardBottom = Color(0xFF0E1431)
 val CardLine = Color(0xFF2A3570)
 val Teal = Color(0xFF2EE6C5)
+/** Kart kenarının üstündeki ışık parıltısı. */
+val CardSheen = Color(0xFF5A6BC0)
 
 /** Koyu, ince kenarlıklı SM kartı. */
 @Composable
@@ -79,13 +82,15 @@ fun DashCard(
 ) {
     val shape = RoundedCornerShape(16.dp)
     Column(
-        modifier.clip(shape).background(Brush.verticalGradient(listOf(CardTop, CardBottom)))
-            .border(1.dp, CardLine, shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+        modifier.then(if (onClick != null) Modifier.pressClick(0.97f, onClick = onClick) else Modifier)
+            .shadow(8.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(shape).background(Brush.verticalGradient(listOf(CardTop, CardBottom)))
+            .border(androidx.compose.foundation.BorderStroke(1.dp, Brush.verticalGradient(listOf(CardSheen, CardLine, CardLine.copy(alpha = 0.6f)))), shape)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         if (title != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.padding(end = 7.dp).width(3.dp).height(15.dp).clip(RoundedCornerShape(2.dp)).background(Brush.verticalGradient(listOf(Teal, Blue))))
                 Text(title, fontWeight = FontWeight.Black, fontSize = 15.sp, color = TextMain, modifier = Modifier.weight(1f), maxLines = 1)
                 if (badge > 0) {
                     Box(Modifier.clip(CircleShape).background(Red).padding(horizontal = 7.dp, vertical = 1.dp)) {
@@ -104,8 +109,9 @@ fun DashCard(
 fun RoundIconButton(icon: String, size: Dp = 40.dp, dot: Boolean = false, onClick: () -> Unit) {
     Box(Modifier.size(size)) {
         Box(
-            Modifier.fillMaxSize().clip(CircleShape).background(Brush.verticalGradient(listOf(Color(0xFF2A3360), Color(0xFF141A3A))))
-                .border(1.dp, Color(0xFF414C82), CircleShape).clickable(onClick = onClick),
+            Modifier.fillMaxSize().pressClick(0.88f, onClick = onClick).shadow(6.dp, CircleShape).clip(CircleShape)
+                .background(Brush.verticalGradient(listOf(Color(0xFF2E3870), Color(0xFF141A3A))))
+                .border(1.dp, Brush.verticalGradient(listOf(Color(0xFF6876C0), Color(0xFF353F75))), CircleShape),
             contentAlignment = Alignment.Center,
         ) { Text(icon, fontSize = (size.value * 0.45f).sp, color = TextMain, fontWeight = FontWeight.Bold) }
         if (dot) Box(Modifier.align(Alignment.TopEnd).size(12.dp).clip(CircleShape).background(Red).border(1.5.dp, Color.White, CircleShape))
@@ -187,9 +193,9 @@ private fun DevamButton(g: Game) {
     }
     val main = if (GameRepo.advancing) listOf(Color(0xFFF5C542), Color(0xFFE0A21B)) else listOf(Color(0xFF34F5C0), Color(0xFF12C795))
     Row(
-        Modifier.height(48.dp).width(210.dp).clip(shape).background(Brush.horizontalGradient(main))
-            .border(1.5.dp, Color.White.copy(alpha = 0.5f), shape)
-            .clickable(enabled = active) { GameRepo.continueGame() },
+        Modifier.height(48.dp).width(210.dp).pressClick(0.94f, enabled = active) { GameRepo.continueGame() }
+            .shadow(10.dp, shape, ambientColor = main[1], spotColor = main[1]).clip(shape).background(Brush.horizontalGradient(main))
+            .shine().border(1.5.dp, Color.White.copy(alpha = 0.5f), shape),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
@@ -205,8 +211,8 @@ private fun DevamButton(g: Game) {
 @Composable
 private fun TaskChip(icon: String, label: String, onClick: () -> Unit) {
     Row(
-        Modifier.height(38.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF0E1430))
-            .border(1.dp, Teal.copy(alpha = 0.55f), RoundedCornerShape(10.dp)).clickable(onClick = onClick)
+        Modifier.height(38.dp).pressClick(0.94f, onClick = onClick).clip(RoundedCornerShape(10.dp)).background(Color(0xFF0E1430))
+            .border(1.dp, Teal.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
             .padding(start = 4.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -398,10 +404,10 @@ private fun InfoCell(icon: String, title: String, sub: String, modifier: Modifie
 private fun SideButton(label: String, accent: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Box(
-        modifier.fillMaxWidth().clip(shape)
+        modifier.fillMaxWidth().pressClick(0.96f, onClick = onClick).clip(shape)
             .background(if (accent) Brush.horizontalGradient(listOf(Color(0xFF34F5C0), Color(0xFF12C795))) else Brush.verticalGradient(listOf(Color(0xFF1B2452), Color(0xFF111735))))
             .border(1.dp, if (accent) Color.White.copy(alpha = 0.5f) else Teal.copy(alpha = 0.6f), shape)
-            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+            .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart,
     ) { Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = if (accent) Color(0xFF06231A) else TextMain, maxLines = 1) }
 }

@@ -1,5 +1,9 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
+
+import androidx.compose.animation.togetherWith
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -52,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -771,10 +776,31 @@ private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEven
 
 @Composable
 private fun ScoreBox(v: Int, c: Color) {
+    // Gol olunca skor zıplar ve kutu takım renginde parlar.
+    val pop = remember { Animatable(0f) }
+    var last by remember { mutableStateOf(v) }
+    LaunchedEffect(v) {
+        if (v != last) {
+            last = v
+            pop.snapTo(1f)
+            pop.animateTo(0f, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+        }
+    }
     Box(
-        Modifier.size(42.dp, 38.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028)).border(2.dp, c.copy(alpha = 0.9f), RoundedCornerShape(8.dp)),
+        Modifier.size(42.dp, 38.dp).graphicsLayer { val sc = 1f + pop.value * 0.35f; scaleX = sc; scaleY = sc }
+            .shadow((pop.value * 14).dp, RoundedCornerShape(8.dp), ambientColor = c, spotColor = c)
+            .clip(RoundedCornerShape(8.dp)).background(androidx.compose.ui.graphics.lerp(Color(0xFF0B1028), c, pop.value * 0.6f))
+            .border(2.dp, c.copy(alpha = 0.9f), RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center,
-    ) { Text("$v", fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color.White) }
+    ) {
+        androidx.compose.animation.AnimatedContent(
+            v, label = "score",
+            transitionSpec = {
+                (androidx.compose.animation.slideInVertically { -it } + androidx.compose.animation.fadeIn())
+                    .togetherWith(androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut())
+            },
+        ) { n -> Text("$n", fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color.White) }
+    }
 }
 
 /** Sahanın ortasında açılan SM tarzı bilgi kartı (devre arası, maç sonu). */
@@ -800,8 +826,9 @@ private fun OverlayCard(title: String, score: String, sub: String?, content: @Co
 @Composable
 private fun SmActionButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
-        modifier.height(44.dp).clip(RoundedCornerShape(10.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF34F5C0), Color(0xFF12C795))))
-            .clickable(onClick = onClick),
+        modifier.height(44.dp).pressClick(0.95f, onClick = onClick)
+            .shadow(8.dp, RoundedCornerShape(10.dp), ambientColor = Color(0xFF12C795), spotColor = Color(0xFF12C795))
+            .clip(RoundedCornerShape(10.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF34F5C0), Color(0xFF12C795)))),
         contentAlignment = Alignment.Center,
     ) { Text(label, color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 15.sp) }
 }

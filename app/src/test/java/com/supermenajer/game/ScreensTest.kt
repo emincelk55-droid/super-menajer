@@ -20,6 +20,8 @@ import org.junit.Test
 import java.nio.file.Files
 
 class ScreensTest {
+    init { com.supermenajer.game.ui.Fx.enabled = false }
+
     @get:Rule
     val paparazzi = Paparazzi(
         deviceConfig = DeviceConfig.PIXEL_5.copy(screenWidth = 2340, screenHeight = 1080, orientation = ScreenOrientation.LANDSCAPE),

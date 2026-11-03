@@ -1,5 +1,13 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.foundation.layout.width
+
+import androidx.compose.foundation.layout.offset
+
+import androidx.compose.runtime.getValue
+
+import androidx.compose.ui.graphics.lerp
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -93,7 +101,9 @@ fun contentOn(c: Color): Color = if (c.luminance() > 0.5f) Color.Black else Colo
 @Composable
 fun OvrBadge(ovr: Int, size: Dp = 34.dp) {
     Box(
-        Modifier.size(size).clip(RoundedCornerShape(8.dp)).background(ovrColor(ovr)),
+        Modifier.size(size).clip(RoundedCornerShape(8.dp))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(lerp(ovrColor(ovr), Color.White, 0.28f), ovrColor(ovr), lerp(ovrColor(ovr), Color.Black, 0.18f))))
+            .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Text("$ovr", fontWeight = FontWeight.Bold, color = Color.Black, fontSize = (size.value * 0.42f).sp)
@@ -194,8 +204,16 @@ fun TeamBadge(team: Team, size: Dp = 36.dp) {
 
 @Composable
 fun Bar(value: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 6.dp) {
+    val target = value.coerceIn(0f, 1f)
+    // İlk görünüşte soldan dolar, değer değişince yumuşakça kayar (ekran görüntüsünde direkt son hâli).
+    val still = fxStill()
+    val anim = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (still) target else 0f) }
+    androidx.compose.runtime.LaunchedEffect(target) { anim.animateTo(target, androidx.compose.animation.core.tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
     Box(modifier.height(height).clip(RoundedCornerShape(3.dp)).background(Surface2)) {
-        Box(Modifier.fillMaxHeight().fillMaxWidth(value.coerceIn(0f, 1f)).background(color))
+        Box(
+            Modifier.fillMaxHeight().fillMaxWidth(anim.value).clip(RoundedCornerShape(3.dp))
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(color.copy(alpha = 0.65f), color))),
+        )
     }
 }
 
@@ -217,13 +235,13 @@ fun SectionCard(title: String? = null, modifier: Modifier = Modifier, content: @
 fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
+            .pressClick(0.93f, onClick = onClick)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) Green else Surface2)
-            .clickable(onClick = onClick)
+            .background(chipBg(selected))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = if (selected) Color.Black else TextMain, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(text, color = chipFg(selected), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -257,39 +275,48 @@ fun WideDialog(onDismissRequest: () -> Unit, maxWidth: Dp = 600.dp, content: @Co
     androidx.activity.compose.BackHandler(onBack = onDismissRequest)
     val none = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+        Modifier.fillMaxSize().appear(offsetDp = 0f).background(Color.Black.copy(alpha = 0.6f))
             .clickable(interactionSource = none, indication = null, onClick = onDismissRequest),
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.fillMaxWidth(0.92f).widthIn(max = maxWidth).padding(vertical = 10.dp)
+            Modifier.fillMaxWidth(0.92f).widthIn(max = maxWidth).padding(vertical = 10.dp).appear(offsetDp = 24f, fromScale = 0.94f)
                 .clickable(interactionSource = none, indication = null) {},
         ) { content() }
     }
 }
 
-/** FM tarzı sekme şeridi: seçili sekmenin altında renkli çizgi. */
+/** FM tarzı sekme şeridi: seçili sekmenin altında kayan renkli çizgi. */
 @Composable
 fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, dots: Set<Int> = emptySet(), onSelect: (Int) -> Unit) {
-    androidx.compose.foundation.layout.Row(
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier.fillMaxWidth().background(Surface1).border(1.dp, Line.copy(alpha = 0.5f)),
     ) {
-        tabs.forEachIndexed { i, n ->
-            val sel = i == selected
-            Column(
-                Modifier.weight(1f).background(if (sel) Purple.copy(alpha = 0.22f) else Color.Transparent)
-                    .clickable { onSelect(i) }.padding(top = 9.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        n, fontSize = 13.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = if (sel) TextMain else TextDim,
-                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (i in dots) Box(Modifier.padding(start = 4.dp).size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Red))
+        val tabW = maxWidth / tabs.size.coerceAtLeast(1)
+        val x by androidx.compose.animation.core.animateDpAsState(
+            tabW * selected.coerceIn(0, (tabs.size - 1).coerceAtLeast(0)),
+            androidx.compose.animation.core.spring(dampingRatio = 0.75f, stiffness = 500f), label = "fmX",
+        )
+        Box(Modifier.matchParentSize().offset(x = x).width(tabW).background(Purple.copy(alpha = 0.22f))) {
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Green, Teal))))
+        }
+        androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth()) {
+            tabs.forEachIndexed { i, n ->
+                val sel = i == selected
+                val col by androidx.compose.animation.animateColorAsState(if (sel) TextMain else TextDim, label = "fmC")
+                Column(
+                    Modifier.weight(1f).clickable { onSelect(i) }.padding(top = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            n, fontSize = 13.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = col,
+                            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (i in dots) Box(Modifier.padding(start = 4.dp).size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Red))
+                    }
+                    Spacer(Modifier.height(10.dp))
                 }
-                Spacer(Modifier.height(7.dp))
-                Box(Modifier.fillMaxWidth().height(3.dp).background(if (sel) Green else Color.Transparent))
             }
         }
     }
@@ -299,13 +326,21 @@ fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, dot
 @Composable
 fun SmallChip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
-        modifier.clip(RoundedCornerShape(16.dp)).background(if (selected) Green else Surface2)
-            .clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 8.dp),
+        modifier.pressClick(0.93f, onClick = onClick).clip(RoundedCornerShape(16.dp)).background(chipBg(selected))
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text, color = if (selected) Color.Black else TextMain, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            text, color = chipFg(selected), fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }
+
+@Composable
+private fun chipBg(selected: Boolean): Color =
+    androidx.compose.animation.animateColorAsState(if (selected) Green else Surface2, label = "chipBg").value
+
+@Composable
+private fun chipFg(selected: Boolean): Color =
+    androidx.compose.animation.animateColorAsState(if (selected) Color.Black else TextMain, label = "chipFg").value

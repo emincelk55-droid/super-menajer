@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.animation.togetherWith
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,8 +91,16 @@ fun MainScreen() {
         Column(Modifier.fillMaxSize()) {
             SmTopBar(g) { menu = true }
             if (GameRepo.tab == GameRepo.TAB_HOME) QuickRow(g)
-            Box(Modifier.weight(1f)) {
-                when (GameRepo.tab) {
+            androidx.compose.animation.AnimatedContent(
+                GameRepo.tab, Modifier.weight(1f),
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)) +
+                        androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(300)) { it / 30 })
+                        .togetherWith(androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)))
+                },
+                label = "tab",
+            ) { tab ->
+                when (tab) {
                     GameRepo.TAB_HOME -> HomeDashboard(g)
                     GameRepo.TAB_SQUAD -> SquadTab(g)
                     GameRepo.TAB_TACTICS -> TacticsTab(g)

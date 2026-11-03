@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -58,7 +59,7 @@ import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Screen
 import kotlin.math.sin
 
-const val APP_VERSION = "v2.8"
+const val APP_VERSION = "v2.9"
 
 private val tips = listOf(
     "İpucu: DEVAM düğmesi günleri tek tek geçirir, önemli bir olayda durur.",
@@ -253,18 +254,18 @@ fun TitleScreen() {
                 }
                 Spacer(Modifier.height(12.dp))
                 if (last != null) {
-                    MenuButton("▶", "DEVAM ET", "${last.team} · ${last.detail.substringAfterLast(" · ")}", primary = true) { load(last.n) }
+                    MenuButton("▶", "DEVAM ET", "${last.team} · ${last.detail.substringAfterLast(" · ")}", primary = true, enterDelay = 80) { load(last.n) }
                     Spacer(Modifier.height(6.dp))
                 }
-                MenuButton("＋", "YENİ KARİYER", "Kulübünü seç, efsaneni yaz", selected = panel == 2) { panel = 2 }
+                MenuButton("＋", "YENİ KARİYER", "Kulübünü seç, efsaneni yaz", selected = panel == 2, enterDelay = 140) { panel = 2 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("📂", "KARİYER YÜKLE", "${slots.count { it.exists }}/3 kayıt", selected = panel == 1) { panel = 1 }
+                MenuButton("📂", "KARİYER YÜKLE", "${slots.count { it.exists }}/3 kayıt", selected = panel == 1, enterDelay = 200) { panel = 1 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("👥", "İKİ KİŞİLİK MAÇ", "Aynı telefonda arkadaşınla oyna", selected = panel == 4) { panel = 4 }
+                MenuButton("👥", "İKİ KİŞİLİK MAÇ", "Aynı telefonda arkadaşınla oyna", selected = panel == 4, enterDelay = 260) { panel = 4 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("❓", "NASIL OYNANIR", "Kısa rehber", selected = panel == 3) { panel = 3 }
+                MenuButton("❓", "NASIL OYNANIR", "Kısa rehber", selected = panel == 3, enterDelay = 320) { panel = 3 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("✕", "ÇIKIŞ", null) { (ctx as? android.app.Activity)?.finishAndRemoveTask() }
+                MenuButton("✕", "ÇIKIŞ", null, enterDelay = 380) { (ctx as? android.app.Activity)?.finishAndRemoveTask() }
             }
             // Sağ: seçili panel
             Column(
@@ -329,14 +330,16 @@ fun TitleScreen() {
 }
 
 @Composable
-private fun MenuButton(icon: String, title: String, sub: String?, primary: Boolean = false, selected: Boolean = false, onClick: () -> Unit) {
+private fun MenuButton(icon: String, title: String, sub: String?, primary: Boolean = false, selected: Boolean = false, enterDelay: Int = 0, onClick: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
     val bg = if (primary) Brush.horizontalGradient(listOf(Color(0xFF0FB98A), Green))
     else Brush.horizontalGradient(listOf(Color(0xE6182046), Color(0xE6101734)))
     Row(
-        Modifier.fillMaxWidth().height(if (sub != null) 52.dp else 44.dp).clip(shape).background(bg)
+        Modifier.appear(enterDelay, offsetDp = 22f).fillMaxWidth().height(if (sub != null) 52.dp else 44.dp).pressClick(0.96f, onClick = onClick)
+            .then(if (primary) Modifier.shadow(10.dp, shape, ambientColor = Green, spotColor = Green) else Modifier)
+            .clip(shape).background(bg).then(if (primary) Modifier.shine() else Modifier)
             .border(if (selected) 2.dp else 1.dp, if (selected) Green else Green.copy(alpha = if (primary) 0f else 0.25f), shape)
-            .clickable(onClick = onClick).padding(horizontal = 14.dp),
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val fg = if (primary) Color.Black else TextMain

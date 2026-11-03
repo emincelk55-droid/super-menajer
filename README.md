@@ -166,3 +166,11 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Çok oyunculu: ana menüden "İki Kişilik Maç" — aynı telefonda iki oyuncu birer takım seçer; ikisi de mentalite ve
   oyuncu değişikliğini yönetir.
 - Düzeltmeler: rakibe özel talimat hazırlık maçında harcanmıyor; iyileşen oyuncunun sağlık kartı kalmıyor.
+
+### v2.9
+- Görsel yenileme: sekmeler arası yumuşak geçiş, sekme çubuklarında kayan parlak gösterge, kartlarda gölge ve
+  ışıklı kenar, başlıklarda renkli şerit.
+- Düğmeler dokununca yaylı şekilde küçülür; DEVAM ET ve ana menünün birincil düğmesinde periyodik parlama.
+- Ana menü düğmeleri sırayla kayarak gelir; pencereler hafif büyüyerek açılır.
+- İlerleme çubukları soldan dolar ve renk geçişli; güç rozetleri parlak degrade.
+- Maçta gol olunca skor kutusu zıplar, takım renginde parlar ve rakam kayarak değişir.

@@ -98,10 +98,10 @@ fun CareerIntro(g: Game) {
 @Composable
 private fun IntroButton(label: String, primary: Boolean, onClick: () -> Unit) {
     Box(
-        Modifier.height(42.dp).clip(RoundedCornerShape(10.dp))
+        Modifier.height(42.dp).pressClick(0.95f, onClick = onClick).clip(RoundedCornerShape(10.dp))
             .background(if (primary) Brush.horizontalGradient(listOf(Color(0xFF34F5C0), Color(0xFF12C795))) else Brush.horizontalGradient(listOf(Color(0xFF1B2452), Color(0xFF111735))))
             .border(1.dp, if (primary) Color.White.copy(alpha = 0.4f) else CardLine, RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick).padding(horizontal = 18.dp),
+            .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) { Text(label, fontWeight = FontWeight.Black, color = if (primary) Color(0xFF06231A) else TextMain) }
 }
