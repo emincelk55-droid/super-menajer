@@ -12,15 +12,15 @@ import androidx.compose.runtime.setValue
 import com.supermenajer.game.R
 
 /**
- * Oyunun sesleri: kısa efektler SoundPool'dan, tribün uğultusu döngüsel SoundPool akışı,
- * menü müziği MediaPlayer ile. [init] çağrılmadan (testler) her şey sessizce yok sayılır.
+ * Oyunun sesleri: kısa efektler SoundPool'dan, tribün uğultusu ve menü müziği döngüsel MediaPlayer ile
+ * (uzun kayıtlar SoundPool'un ~1 MB sınırına takılmasın). Kaynaklar: docs/SES_KAYNAKLARI.md. [init] çağrılmadan (testler) her şey sessizce yok sayılır.
  * Ayarlar (efekt, müzik, ses düzeyi) cihazda saklanır.
  */
 object Sound {
     enum class Fx(val res: Int) {
         CLICK(R.raw.sfx_click), NOTIFY(R.raw.sfx_notify), KICKOFF(R.raw.sfx_whistle_kickoff),
         HALF(R.raw.sfx_whistle_half), FULL(R.raw.sfx_whistle_full), GOAL(R.raw.sfx_goal),
-        OOH(R.raw.sfx_ooh), KICK(R.raw.sfx_kick),
+        OOH(R.raw.sfx_ooh),
     }
 
     var sfxOn by mutableStateOf(true)
@@ -34,9 +34,8 @@ object Sound {
     private var prefs: SharedPreferences? = null
     private var pool: SoundPool? = null
     private val ids = HashMap<Fx, Int>()
-    private var crowdId = 0
     private val loaded = HashSet<Int>()
-    private var crowdStream = 0
+    private var crowdPlayer: MediaPlayer? = null
     private var crowdLevel = 1f
     private var music: MediaPlayer? = null
     private var wantMusic = false
@@ -54,12 +53,8 @@ object Sound {
         val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
         pool = SoundPool.Builder().setMaxStreams(8).setAudioAttributes(attrs).build().also { p ->
-            p.setOnLoadCompleteListener { _, id, status ->
-                if (status == 0) loaded += id
-                if (id == crowdId) refresh()
-            }
+            p.setOnLoadCompleteListener { _, id, status -> if (status == 0) loaded += id }
             Fx.entries.forEach { ids[it] = p.load(context, it.res, 1) }
-            crowdId = p.load(context, R.raw.sfx_crowd_loop, 1)
         }
     }
 
@@ -84,8 +79,7 @@ object Sound {
     /** Uğultu şiddeti (gerilimli anlarda yükselir), 0..1.5. */
     fun crowdLevel(level: Float) {
         crowdLevel = level
-        val p = pool ?: return
-        if (crowdStream != 0) p.setVolume(crowdStream, crowdVol(), crowdVol())
+        crowdPlayer?.setVolume(crowdVol(), crowdVol())
     }
 
     fun pause() { paused = true; refresh() }
@@ -117,13 +111,16 @@ object Sound {
             music?.let { if (it.isPlaying) it.pause() }
         }
         // Tribün
-        val p = pool ?: return
-        val crowdOk = wantCrowd && sfxOn && !paused && crowdId in loaded
-        if (crowdOk && crowdStream == 0) {
-            crowdStream = p.play(crowdId, crowdVol(), crowdVol(), 0, -1, 1f)
-        } else if (!crowdOk && crowdStream != 0) {
-            p.stop(crowdStream)
-            crowdStream = 0
+        val crowdOk = wantCrowd && sfxOn && !paused
+        if (crowdOk) {
+            val cp = crowdPlayer ?: runCatching { MediaPlayer.create(c, R.raw.sfx_crowd_loop) }.getOrNull()?.also {
+                it.isLooping = true
+                crowdPlayer = it
+            }
+            cp?.setVolume(crowdVol(), crowdVol())
+            if (cp != null && !cp.isPlaying) cp.start()
+        } else {
+            crowdPlayer?.let { if (it.isPlaying) it.pause() }
         }
     }
 }

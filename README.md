@@ -203,3 +203,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Play Store hazırlığı: hedef Android sürümü API 35; yeni uygulama ikonu (oyun logosu kalkan); `docs/store/` altında
   512 px ikon, 1024x500 tanıtım görseli, 1920x1080 ekran görüntüleri ve Türkçe/İngilizce mağaza metinleri;
   `docs/gizlilik-politikasi.md`. Görseller `tools/store_assets.sh` ile yeniden üretilir. Mağaza paketi: `gradle :app:bundleRelease`.
+- Gerçek sesler: tribün uğultusu ve "ooo" 58 bin kişilik bir maçtan, gol kükremesi Avusturya-İsveç maçından, hakem
+  düdüğü gerçek kayıttan; menü müziği Kevin MacLeod "Carefree". Kaynaklar ve lisanslar: `docs/SES_KAYNAKLARI.md`.

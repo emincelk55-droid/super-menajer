@@ -163,6 +163,11 @@ private fun SettingsDialog() {
                     Spacer(Modifier.height(6.dp))
                     Button(onClick = { GameRepo.settingsOpen = false }, modifier = Modifier.fillMaxWidth()) { Text("Oyuna dön") }
                     Text("İlerlemen her gün sonunda otomatik kaydedilir.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(
+                        "Ses kaynakları: tribün ve düdük kayıtları Romainbehar ve SpliceSound (CC0); gol kaydı Work With Sounds / " +
+                            "Torsten Nilsson (CC BY 4.0); müzik \"Carefree\" Kevin MacLeod, incompetech.com (CC BY 3.0).",
+                        color = TextDim.copy(alpha = 0.7f), fontSize = 10.sp, lineHeight = 13.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
                 }
                 else -> {
                     Text(if (confirm == 1) "Ana menüye dönülsün mü?" else "Oyundan çıkılsın mı?", fontWeight = FontWeight.Bold)

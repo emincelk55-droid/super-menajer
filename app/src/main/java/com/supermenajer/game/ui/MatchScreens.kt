@@ -141,7 +141,6 @@ fun MatchScreen() {
                 if (e.buildUp.isNotEmpty()) {
                     ticker = Ticker(e.minute, e.buildUp, e.side, 1)
                     // Atak başlarken tribün kabarır
-                    Sound.play(Sound.Fx.KICK, 0.6f)
                     Sound.crowdLevel(1.4f)
                     // Atak sahada oynanır; sonuç top ağlara/kaleciye ulaşınca açıklanır
                     var waited = 0L

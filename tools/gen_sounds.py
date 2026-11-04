@@ -1,4 +1,6 @@
-"""Oyunun ses efektlerini ve menü müziğini sıfırdan sentezler (lisans gerektirmez).
+"""Arayüz seslerini (tık, bildirim) sıfırdan sentezler. Maç sesleri ve müzik gerçek kayıtlardan
+gelir: tools/import_sounds.py ve docs/SES_KAYNAKLARI.md. Buradaki maç sesi fonksiyonları eski sentetik
+sürümlerdir, yalnız karşılaştırma için durur.
 
 Kullanım: python3 tools/gen_sounds.py app/src/main/res/raw
 Çıktılar OGG Vorbis (ffmpeg + libvorbis gerekir).
@@ -216,14 +218,10 @@ def music():
 def main():
     outdir = sys.argv[1] if len(sys.argv) > 1 else "app/src/main/res/raw"
     os.makedirs(outdir, exist_ok=True)
-    sounds = {
-        "sfx_click": click(), "sfx_notify": notify(), "sfx_whistle_kickoff": whistle_kickoff(),
-        "sfx_whistle_half": whistle_half(), "sfx_whistle_full": whistle_full(), "sfx_crowd_loop": crowd_loop(),
-        "sfx_goal": goal_roar(), "sfx_ooh": ooh(), "sfx_kick": kick(),
-    }
+    sounds = {"sfx_click": click(), "sfx_notify": notify()}
     for name, x in sounds.items():
         save(os.path.join(outdir, name + ".ogg"), x)
-    save(os.path.join(outdir, "music_menu.ogg"), music(), quality=3)
+
 
 
 if __name__ == "__main__":
