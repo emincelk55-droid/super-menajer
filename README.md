@@ -180,7 +180,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   iki köşeden fırlatılan, takım renklerinde dönen konfeti yağmuru.
 - Rakip gol atınca konfeti yok; sönük bir "GOL" yazısı ve halka görünür. İki kişilik maçta ve izlenen maçlarda her gol kutlanır.
 
-### Geliştirmede (henüz APK yok)
+### v2.11
 - Parlak oyuncu kartları: üstte cam parıltısı, ara ara kartın üzerinden geçen çapraz ışık; efsane (85+) kartlarda
   göz kırpan yıldızlar ve mor-altın kenar, altın (75+) kartlarda altın kenar ve parıltılı gölge, gümüş kartlarda gümüş kenar.
 - Ana sayfada canlı gece stadyumu: salınan projektör ışıkları, takım renklerinde tribün, tribünde dolaşan Meksika dalgası,
