@@ -198,3 +198,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   e-posta üzerinden gönderilebilir (kendiliğinden internete bir şey gönderilmez).
 - Pil tasarrufu (Ayarlar): sürekli dönen efektleri durdurur. Kart ışığı ve stadyum animasyonları artık her karede yalnız
   yeniden çiziliyor (ekranı baştan oluşturmuyor), daha az işlemci harcıyor.
+
+### Geliştirmede (henüz APK yok)
+- Play Store hazırlığı: hedef Android sürümü API 35; yeni uygulama ikonu (oyun logosu kalkan); `docs/store/` altında
+  512 px ikon, 1024x500 tanıtım görseli, 1920x1080 ekran görüntüleri ve Türkçe/İngilizce mağaza metinleri;
+  `docs/gizlilik-politikasi.md`. Görseller `tools/store_assets.sh` ile yeniden üretilir. Mağaza paketi: `gradle :app:bundleRelease`.

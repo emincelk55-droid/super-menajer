@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Oyun logosu (ana menüdeki GameCrest ile aynı): yeşil-lacivert kalkan, top ve üç yıldız. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M24,54 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0 Z" />
-    <path android:fillColor="#FF0D1117"
-        android:pathData="M54,43 L64.46,50.6 L60.47,62.9 L47.53,62.9 L43.54,50.6 Z" />
-    <path android:strokeColor="#FF0D1117" android:strokeWidth="2.6"
-        android:pathData="M54,43 L54,25 M64.46,50.6 L81.6,45 M60.47,62.9 L71,77.4 M47.53,62.9 L37,77.4 M43.54,50.6 L26.4,45" />
-    <path android:strokeColor="#FFF5C542" android:strokeWidth="3"
-        android:pathData="M24,54 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0" />
+    <path android:pathData="M54.0,26.0 L78.0,33.84 L75.12,60.72 Q68.4,75.28 54.0,82.0 Q39.6,75.28 32.88,60.72 L30.0,33.84 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="54" android:startY="26.0" android:endX="54" android:endY="82.0">
+                <item android:offset="0" android:color="#FF1DF0B0" />
+                <item android:offset="0.5" android:color="#FF0B8F78" />
+                <item android:offset="1" android:color="#FF14204A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:strokeColor="#D9FFFFFF" android:strokeWidth="1.68" android:strokeLineJoin="round" android:pathData="M54.0,26.0 L78.0,33.84 L75.12,60.72 Q68.4,75.28 54.0,82.0 Q39.6,75.28 32.88,60.72 L30.0,33.84 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M43.44,54.0 a10.56,10.56 0 1,0 21.12,0 a10.56,10.56 0 1,0 -21.12,0 Z" />
+    <path android:strokeColor="#FF14204A" android:strokeWidth="0.96" android:pathData="M43.44,54.0 a10.56,10.56 0 1,0 21.12,0 a10.56,10.56 0 1,0 -21.12,0 Z" />
+    <path android:fillColor="#FF14204A" android:pathData="M54.0,49.56 L58.22,52.63 L56.61,57.59 L51.39,57.59 L49.78,52.63 Z" />
+    <path android:fillColor="#FFF5C542" android:pathData="M46.32,35.52 a1.44,1.44 0 1,0 2.88,0 a1.44,1.44 0 1,0 -2.88,0 Z" />
+    <path android:fillColor="#FFF5C542" android:pathData="M52.56,35.52 a1.44,1.44 0 1,0 2.88,0 a1.44,1.44 0 1,0 -2.88,0 Z" />
+    <path android:fillColor="#FFF5C542" android:pathData="M58.8,35.52 a1.44,1.44 0 1,0 2.88,0 a1.44,1.44 0 1,0 -2.88,0 Z" />
 </vector>

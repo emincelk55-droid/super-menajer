@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace = "com.supermenajer.game"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.supermenajer.game"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 32
         versionName = "2.11"
     }
