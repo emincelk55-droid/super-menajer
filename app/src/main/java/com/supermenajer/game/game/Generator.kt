@@ -189,6 +189,10 @@ object Generator {
 
     /** Baskın uyruktan isim (yerli oranı %70-78), kalanı ağırlıklı yabancı uyruklar. */
     @Synchronized
+    /** Uyruğa uygun uydurma kişi adı (kurgusal isim modu ve teknik direktörler için). */
+    fun fictionalName(rnd: Random, nation: String): String =
+        Names.pool(nation)?.let { Names.name(it, rnd) } ?: randomName(rnd, nation).first
+
     private fun randomName(rnd: Random, nation: String): Pair<String, String> {
         val r = rnd.nextDouble()
         val pool = when {

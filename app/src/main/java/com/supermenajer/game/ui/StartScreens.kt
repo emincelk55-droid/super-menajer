@@ -103,6 +103,15 @@ fun NewGameScreen() {
     var noFiring by remember { mutableStateOf(false) }
     var national by remember { mutableStateOf("") }
     var starting by remember { mutableStateOf(false) }
+    // Kurgusal isimler (önerilen): gerçek kulüp/oyuncu adları uydurma adlarla değişir; kapatınca geri alınır
+    var fictional by remember { mutableStateOf(true) }
+    var undo by remember { mutableStateOf<com.supermenajer.game.game.Fictional.Undo?>(null) }
+    LaunchedEffect(world, fictional) {
+        val wd = world ?: return@LaunchedEffect
+        if (fictional && !wd.fictionalNames) undo = com.supermenajer.game.game.Fictional.apply(wd)
+        else if (!fictional && wd.fictionalNames) undo?.let { com.supermenajer.game.game.Fictional.undo(wd, it) }
+        GameRepo.bump()
+    }
     val hasSave = remember { GameRepo.slots().getOrNull(GameRepo.slot - 1)?.exists == true }
     BackHandler { if (step > 1) step-- else GameRepo.screen = Screen.TITLE }
     val w = world
@@ -162,7 +171,10 @@ fun NewGameScreen() {
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (step) {
-                    1 -> TeamStep(w, country, div, selected, onCountry = { country = it; div = Leagues.top(it).id; selected = -1 }, onDiv = { div = it; selected = -1 }) { selected = it }
+                    1 -> TeamStep(
+                        w, country, div, selected, fictional, onFictional = { fictional = it },
+                        onCountry = { country = it; div = Leagues.top(it).id; selected = -1 }, onDiv = { div = it; selected = -1 },
+                    ) { selected = it }
                     2 -> ProfileStep(first, last, nation, rep, { first = it.take(16) }, { last = it.take(16) }, { nation = it }) { rep = it }
                     3 -> OptionsStep(w, difficulty, noFiring, national, { difficulty = it }, { national = it }) { noFiring = it }
                     else -> if (w != null) SummaryStep(w, w.team(selected), name, nation, rep, difficulty, noFiring, national)
@@ -224,12 +236,18 @@ private fun Tile(selected: Boolean, modifier: Modifier = Modifier, onClick: () -
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TeamStep(
-    w: Game?, country: String, div: Int, selected: Int,
+    w: Game?, country: String, div: Int, selected: Int, fictional: Boolean, onFictional: (Boolean) -> Unit,
     onCountry: (String) -> Unit, onDiv: (Int) -> Unit, onSelect: (Int) -> Unit,
 ) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         // Sol: ülke ve lig
         Column(Modifier.width(250.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
+            ToggleRow(
+                "🎭 Kurgusal isimler",
+                if (fictional) "Kulüp ve oyuncu adları uydurma; güçler ve kadrolar gerçek veriden." else "Gerçeğe benzer adlar (bir iki harf değişik).",
+                fictional,
+            ) { onFictional(!fictional) }
+            Spacer(Modifier.height(6.dp))
             Text("ÜLKE", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

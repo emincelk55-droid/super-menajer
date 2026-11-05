@@ -131,8 +131,8 @@ class Player(
 @Serializable
 class Team(
     val id: Int,
-    val name: String,
-    val short: String,
+    var name: String,
+    var short: String,
     val city: String,
     val color1: Long,
     val color2: Long,
@@ -433,6 +433,8 @@ class Game(
     var euroWinner: Int = -1,
     /** Eski (v0.1) kayıtlarda alan yoktur ve 1 okunur. */
     var saveVersion: Int = 1,
+    /** Gerçek veriden gelen adlar kurgusal adlarla değiştirildi mi (bkz. Fictional). */
+    var fictionalNames: Boolean = false,
     /** Ülke kupası kimliği -> şampiyon takım. */
     var cupWinners: MutableMap<Int, Int> = mutableMapOf(),
     /** v0.4 kayıtlarında yeni ligler bir sonraki sezon başında kurulur. */

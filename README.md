@@ -215,3 +215,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   "Maçın Oyuncusu"; gollerde bağlamlı anlatım (hat-trick, eşitlik, öne geçiş, fark, son dakika golü).
 - Haftalık gazete (ana sayfada 📰): oyunun gerçek durumundan manşetler (son maçın, lig zirvesi, küme hattı, gol
   krallığı, son transfer, yönetimin sabrı) ve transfer söylentileri (yıldızımıza talip olanlar, bizimle anılanlar).
+- Kurgusal isimler (yeni kariyerde varsayılan, ilk adımda kapatılabilir): gerçek veriden gelen kulüp, kısa kod, stadyum,
+  teknik direktör ve oyuncu adları ülkeye uygun uydurma adlarla değişir (gerçek bir kulüp ya da futbolcuyla aynı ad
+  çıkmaz); güçler, renkler, şehirler ve kadro yapısı aynı kalır. Mevcut kayıtlar etkilenmez.
