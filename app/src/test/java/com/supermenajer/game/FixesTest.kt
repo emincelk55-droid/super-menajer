@@ -165,6 +165,12 @@ class FixesTest {
         assertTrue(com.supermenajer.game.game.Vision.list(g).first { it.id == "finance" }.status == 2)
         g.userTeam.budget = 10_000_000
 
+        // Gazete: manşet ve haberler dolu, aynı hafta aynı sayı
+        val ed1 = com.supermenajer.game.game.Newspaper.edition(g)
+        val ed2 = com.supermenajer.game.game.Newspaper.edition(g)
+        assertEquals(ed1.main.headline, ed2.main.headline)
+        assertTrue(ed1.side.isNotEmpty() && ed1.main.headline.isNotBlank())
+
         // Veri editörü
         val ed = g.squad(g.userTeamId).first { it.pos != com.supermenajer.game.model.Pos.GK }
         GameRepo.editPlayer(ed, "Yeni İsim", 22, 95, listOf(90, 90, 90, 90, 90, 90, 10))

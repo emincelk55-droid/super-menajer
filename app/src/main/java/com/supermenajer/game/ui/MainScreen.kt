@@ -135,6 +135,7 @@ fun MainScreen() {
     GameRepo.negotiation?.let { NegotiationDialog(g, it) }
     if (GameRepo.settingsOpen) SettingsDialog()
     if (GameRepo.editorOpen) EditorDialog(g)
+    if (GameRepo.newspaperOpen) NewspaperDialog(g)
 }
 
 /** Ayarlar: kaydet, ana menü, oyundan çık. */

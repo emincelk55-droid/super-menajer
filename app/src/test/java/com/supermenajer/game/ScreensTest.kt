@@ -314,6 +314,9 @@ class ScreensTest {
         // gün atlama kartı
         while (g.todayUserFixture() != null && !g.seasonOver && !g.fired) advance(1)
         GameRepo.tab = 0; shot("14_restday")
+        GameRepo.newspaperOpen = true
+        shot("14b_newspaper")
+        GameRepo.newspaperOpen = false
         while (!g.seasonOver && !g.fired) advance(1)
         GameRepo.tab = 0; shot("15_seasonend")
         GameRepo.startNewSeason()

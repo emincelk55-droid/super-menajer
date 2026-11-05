@@ -213,3 +213,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   atakta sarı kesik ofsayt çizgisi; serbest vuruşta 4 kişilik baraj.
 - Maç sunumu: devre arası ve maç sonu kartlarında takım renklerinde istatistik çubukları; maç özetinde parlak kartlı
   "Maçın Oyuncusu"; gollerde bağlamlı anlatım (hat-trick, eşitlik, öne geçiş, fark, son dakika golü).
+- Haftalık gazete (ana sayfada 📰): oyunun gerçek durumundan manşetler (son maçın, lig zirvesi, küme hattı, gol
+  krallığı, son transfer, yönetimin sabrı) ve transfer söylentileri (yıldızımıza talip olanlar, bizimle anılanlar).

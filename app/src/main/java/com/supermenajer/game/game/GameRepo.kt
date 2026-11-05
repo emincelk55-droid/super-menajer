@@ -80,6 +80,9 @@ object GameRepo {
     var inboxCat by mutableIntStateOf(0)
     var inboxSel by mutableStateOf<com.supermenajer.game.model.News?>(null)
     var settingsOpen by mutableStateOf(false)
+
+    /** Haftanın gazetesi açık mı. */
+    var newspaperOpen by mutableStateOf(false)
     var tacticsPanel by mutableIntStateOf(0)
 
     // Ana menü sekmeleri

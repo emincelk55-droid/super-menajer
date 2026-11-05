@@ -361,6 +361,7 @@ fun HomeDashboard(g: Game) {
                 }
             }
         }
+        item { NewspaperTeaser(g, Modifier.fillMaxWidth()) }
         item {
             Row(Modifier.fillMaxWidth().height(184.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InboxCard(g, Modifier.weight(1f).fillMaxHeight())
