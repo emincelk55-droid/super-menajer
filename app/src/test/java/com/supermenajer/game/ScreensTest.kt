@@ -267,6 +267,13 @@ class ScreensTest {
             repeat(60) { an.update(1f / 30f) }
         }
         shot("12_match")
+        // Düdük çaldı: oyuncular tokalaşıp tünele yürür
+        run {
+            val an = GameRepo.pitchFor(GameRepo.match!!)
+            an.play(com.supermenajer.game.engine.MatchEvent(90, com.supermenajer.game.engine.Ev.FULL, -1, "Bitti"))
+            repeat(30 * 6) { an.update(1f / 30f) }
+        }
+        shot("12b_walkoff")
         GameRepo.finishMatch()
         shot("13_summary")
         GameRepo.closeSummary()

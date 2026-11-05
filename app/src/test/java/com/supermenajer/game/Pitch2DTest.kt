@@ -72,4 +72,33 @@ class Pitch2DTest {
         assertTrue("topa dokunan ${owners.size}", owners.size >= 16)
         assertTrue(changes >= 20)
     }
+
+    /** Devre arası ve maç sonu: oyuncular tünelden soyunma odasına girer, sahne durur; ikinci yarıda geri çıkarlar. */
+    @Test
+    fun walkOffToDressingRoom() {
+        GameRepo.init(Files.createTempDirectory("sm16w").toFile())
+        val world = Generator.newWorld(Random(16)).also { Season.computeExpectations(it) }
+        GameRepo.newCareer(world, "Test", world.divisionTeams(0)[2].id)
+        val g = GameRepo.game!!
+        val f = g.fixtures.first { it.home == g.userTeamId || it.away == g.userTeamId }
+        val sim = MatchSim(g, f, g.userTeamId, true, Random(3))
+        val anim = Pitch2D(sim)
+        repeat(60) { anim.update(1f / 30f) }
+        anim.play(com.supermenajer.game.engine.MatchEvent(45, Ev.HALF, -1, "Devre"))
+        assertTrue(anim.busy)
+        repeat(30 * 40) { anim.update(1f / 30f) }
+        assertTrue("devre arasında herkes soyunma odasında", anim.offPitch && !anim.busy)
+        // İkinci yarı: takımlar sahaya çıkar ve santra yerlerine koşar
+        anim.secondHalf()
+        assertTrue(anim.agents.all { it.alpha == 1f })
+        repeat(30 * 8) { anim.update(1f / 30f) }
+        assertTrue(anim.agents.all { it.y in 0f..Pitch2D.W })
+        // Maç sonu: düdükten sonra kimse topla oynamaz, sonunda sahne tamamen durur
+        anim.play(com.supermenajer.game.engine.MatchEvent(90, Ev.FULL, -1, "Bitti"))
+        repeat(30 * 40) { anim.update(1f / 30f) }
+        assertTrue(anim.offPitch && anim.owner == null)
+        val bx = anim.ballX
+        repeat(30 * 5) { anim.update(1f / 30f) }
+        assertEquals(bx, anim.ballX)
+    }
 }

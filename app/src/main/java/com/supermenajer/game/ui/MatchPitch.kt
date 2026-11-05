@@ -66,14 +66,15 @@ fun MatchPitch(
         drawMetricPitch(sx, sy)
         val r = 1.35f * sx
         // Oyuncu gölgeleri
-        for (a in anim.agents) drawCircle(Color.Black.copy(alpha = 0.22f), r, Offset(px(a.x) + r * 0.25f, py(a.y) + r * 0.3f))
+        for (a in anim.agents) if (a.alpha > 0f) drawCircle(Color.Black.copy(alpha = 0.22f * a.alpha), r, Offset(px(a.x) + r * 0.25f, py(a.y) + r * 0.3f))
         val focus = anim.focus()
         for (a in anim.agents) {
+            if (a.alpha <= 0f) continue
             val fill = if (a.gk) (if (a.side == 0) homeGk else awayGk) else if (a.side == 0) homeC else awayC
             val c = Offset(px(a.x), py(a.y))
-            drawCircle(fill, r, c)
-            drawCircle(if (a === focus) Color(0xFFFFE14D) else Color.White.copy(alpha = 0.85f), r, c, style = Stroke(if (a === focus) r * 0.22f else r * 0.12f))
-            if (a.number > 0) {
+            drawCircle(fill.copy(alpha = a.alpha), r, c)
+            drawCircle(if (a === focus) Color(0xFFFFE14D) else Color.White.copy(alpha = 0.85f * a.alpha), r, c, style = Stroke(if (a === focus) r * 0.22f else r * 0.12f))
+            if (a.number > 0 && a.alpha > 0.5f) {
                 val key = "${a.number}-${contentOn(fill).hashCode()}-${r.toInt()}"
                 val tl = numCache.getOrPut(key) {
                     measurer.measure(

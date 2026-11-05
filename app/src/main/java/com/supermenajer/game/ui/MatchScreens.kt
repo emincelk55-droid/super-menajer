@@ -123,7 +123,11 @@ fun MatchScreen() {
     LaunchedEffect(running, speed) {
         val pace = paces[speed]
         // Başlama düdüğü: maçın ve ikinci yarının başında bir kez
-        if (running && !sim.finished && (sim.minute == 0 || sim.minute == 45) && whistled.add(sim.minute)) Sound.play(Sound.Fx.KICKOFF)
+        if (running && !sim.finished && (sim.minute == 0 || sim.minute == 45) && whistled.add(sim.minute)) {
+            Sound.play(Sound.Fx.KICKOFF)
+            // İkinci yarı: takımlar soyunma odasından sahaya çıkar
+            if (sim.minute == 45) anim.secondHalf()
+        }
         // Duraklatılınca bekleyen olayları göster
         if (!running) { revealed = sim.events.size; return@LaunchedEffect }
         while (running && !sim.finished) {
@@ -215,7 +219,7 @@ fun MatchScreen() {
                     TickerBox(ticker, homeC, awayC, Modifier.align(Alignment.BottomCenter))
                     // Devre arası ve maç sonu: sahanın ortasında SM tarzı kart
                     if (sim.minute == 45 && !running && !sim.finished) {
-                        OverlayCard("DEVRE ARASI", "$scoreH - $scoreA", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
+                        OverlayCard("DEVRE ARASI · SOYUNMA ODASI", "$scoreH - $scoreA", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
                             halfResult?.let { r -> Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center) }
                             if (!sim.talkDone && sim.userSide != null && !sim.twoPlayer) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -229,7 +233,7 @@ fun MatchScreen() {
                         }
                     } else if (sim.finished && shown >= sim.events.size) {
                         OverlayCard("MAÇ BİTTİ", "$scoreH - $scoreA" + if (sim.penHome >= 0) "  (P ${sim.penHome}-${sim.penAway})" else "", null) {
-                            SmActionButton("MAÇ SONUCU  ▶", Modifier.fillMaxWidth()) { GameRepo.finishMatchAsync() }
+                            SmActionButton("🚪 SOYUNMA ODASI  ▶", Modifier.fillMaxWidth()) { GameRepo.finishMatchAsync() }
                         }
                     }
                 }

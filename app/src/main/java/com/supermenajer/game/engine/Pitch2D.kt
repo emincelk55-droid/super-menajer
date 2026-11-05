@@ -22,6 +22,10 @@ class Agent(val id: Int, val side: Int, val number: Int, val name: String, val g
     var tx = 0f
     var ty = 0f
     var boost = 1f
+    /** Görünürlük: devre arası ve maç sonunda tünele girerken söner. */
+    var alpha = 1f
+    /** Soyunma odasına yürümeye başlamadan önce sahada geçen süre (tokalaşma). */
+    var offDelay = 0f
 }
 
 /**
@@ -42,7 +46,7 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         val to: Agent?, val kind: Int, var t: Float = 0f,
     )
 
-    private enum class Mode { NORMAL, ATTACK, SETPIECE, DEAD, CELEBRATE, KICKOFF }
+    private enum class Mode { NORMAL, ATTACK, SETPIECE, DEAD, CELEBRATE, KICKOFF, WALKOFF }
 
     private val rnd = Random(seed)
     val agents = mutableListOf<Agent>()
@@ -71,7 +75,14 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         private set
 
     /** Sahnede gösterilecek kısa etiket (ör. topu süren oyuncunun adı). */
-    val busy: Boolean get() = mode == Mode.ATTACK || mode == Mode.SETPIECE || queue.isNotEmpty()
+    val busy: Boolean get() = mode == Mode.ATTACK || mode == Mode.SETPIECE || queue.isNotEmpty() || (mode == Mode.WALKOFF && !offPitch)
+
+    /** Devre arası / maç sonu: herkes tünelden soyunma odasına girdi, sahne durur. */
+    val offPitch: Boolean get() = mode == Mode.WALKOFF && agents.all { it.alpha <= 0f }
+
+    /** Soyunma odası tüneli: orta çizginin üst kenarı (ana tribün tarafı). */
+    private val tunnelX = L / 2
+    private val tunnelY = -2.6f
 
     // Atak senaryosu
     private val queue = ArrayDeque<MatchEvent>()
@@ -142,14 +153,46 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
 
     /** Motor olayını sahaya yansıt. */
     fun play(e: MatchEvent) {
+        if (mode == Mode.WALKOFF && e.type != Ev.HALF && e.type != Ev.FULL) secondHalf(instant = true)
         when (e.type) {
             Ev.GOAL, Ev.SAVE, Ev.MISS, Ev.POST, Ev.CORNER -> queue.addLast(e)
             Ev.YELLOW, Ev.RED, Ev.INJURY -> if (!busy) stoppage(e.side)
-            Ev.HALF -> kickoff(1)
+            Ev.HALF, Ev.FULL -> walkOff()
             Ev.SUB -> sync()
             else -> {}
         }
         if (mode == Mode.NORMAL) nextScene()
+    }
+
+    /** Hakem düdüğü: oyuncular tokalaşır, sonra tünele yürüyüp soyunma odasına girer. */
+    private fun walkOff() {
+        queue.clear()
+        cur = null
+        steps.clear()
+        shooter = null
+        celebrator = null
+        flight = null
+        owner = null
+        ballX = L / 2; ballY = W / 2; ballZ = 0f
+        for (a in agents) a.offDelay = 0.8f + rnd.nextFloat() * 1.8f
+        setMode(Mode.WALKOFF)
+    }
+
+    /**
+     * İkinci yarı: takımlar tünelden sahaya koşar, santra yapılır. [instant] iken (ikinci yarı başlatılmadan
+     * olay geldiyse) doğrudan santra yerlerinde belirirler.
+     */
+    fun secondHalf(instant: Boolean = false) {
+        if (mode != Mode.WALKOFF) return
+        sync()
+        for (a in agents) {
+            a.alpha = 1f
+            a.x = tunnelX + (if (a.side == 0) -1.5f else 1.5f) + rnd.nextFloat() - 0.5f
+            a.y = tunnelY + 0.5f
+            a.vx = 0f; a.vy = 0f
+        }
+        kickoff(1, instant)
+        if (!instant) deadFor = 5f
     }
 
     private fun stoppage(foulSide: Int) {
@@ -264,6 +307,10 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
                 if (sh != null) { owner = sh; possSide = sh.side; shoot(sh) }
             }
             Mode.ATTACK -> attackLogic(dt)
+            Mode.WALKOFF -> for (a in agents) {
+                // Kenar çizgisini geçip tünele girdikçe söner
+                if (modeTime > a.offDelay && a.y < 0.5f) a.alpha = (a.alpha - dt * 1.2f).coerceAtLeast(0f)
+            }
             Mode.NORMAL -> {
                 if (queue.isNotEmpty()) nextScene() else normalLogic(dt)
             }
@@ -455,6 +502,22 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
             for (a in agents) if (a !== o) { a.tx = fromD(a.side, min(a.baseD * 0.95f, L / 2 - 2f)); a.ty = a.baseY }
             return
         }
+        if (mode == Mode.WALKOFF) {
+            for (a in agents) {
+                if (modeTime < a.offDelay) {
+                    // Düdükten sonra kısa bir an: yavaşlar, orta çizgiye doğru toplanıp tokalaşır
+                    a.tx = a.x + (L / 2 - a.x) * 0.15f
+                    a.ty = a.y + (W / 2 - a.y) * 0.1f
+                    a.boost = 0.35f
+                } else {
+                    // Tünele yürüyüş: tek sıra hâlinde, takımlar kendi tarafından
+                    a.tx = tunnelX + (if (a.side == 0) -1.2f else 1.2f)
+                    a.ty = tunnelY - 2f
+                    a.boost = 0.55f
+                }
+            }
+            return
+        }
         if (mode == Mode.CELEBRATE) {
             val c = celebrator
             val cx = fromD(c?.side ?: 0, L - 6f)
@@ -533,8 +596,8 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
             val k = if (dl > acc) acc / dl else 1f
             a.vx += dvx * k
             a.vy += dvy * k
-            // Takım arkadaşlarıyla çarpışmayı önle
-            for (b in agents) {
+            // Takım arkadaşlarıyla çarpışmayı önle (tünele girerken sıkışmasınlar diye soyunma odası yürüyüşünde kapalı)
+            if (mode != Mode.WALKOFF) for (b in agents) {
                 if (b === a || b.side != a.side) continue
                 val sx = a.x - b.x
                 val sy = a.y - b.y
@@ -542,7 +605,7 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
                 if (sd in 0.01f..2.4f) { a.vx += sx / sd * (2.4f - sd) * 2f * dt * 10f; a.vy += sy / sd * (2.4f - sd) * 2f * dt * 10f }
             }
             a.x = (a.x + a.vx * dt).coerceIn(-3f, L + 3f)
-            a.y = (a.y + a.vy * dt).coerceIn(-3f, W + 3f)
+            a.y = (a.y + a.vy * dt).coerceIn(if (mode == Mode.WALKOFF) -6f else -3f, W + 3f)
             if (a.boost > 1.5f) a.boost = (a.boost - dt * 0.6f).coerceAtLeast(1f)
         }
     }

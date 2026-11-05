@@ -205,3 +205,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   `docs/gizlilik-politikasi.md`. Görseller `tools/store_assets.sh` ile yeniden üretilir. Mağaza paketi: `gradle :app:bundleRelease`.
 - Gerçek sesler: tribün uğultusu ve "ooo" 58 bin kişilik bir maçtan, gol kükremesi Avusturya-İsveç maçından, hakem
   düdüğü gerçek kayıttan; menü müziği Kevin MacLeod "Carefree". Kaynaklar ve lisanslar: `docs/SES_KAYNAKLARI.md`.
+
+### Geliştirmede (henüz APK yok)
+- 2D maç: devre arası ve maç sonu düdüğünde oyuncular tokalaşıp tünelden soyunma odasına yürür ve sahne durur (önceden
+  maç bittikten sonra da oynamaya devam ediyorlardı); ikinci yarıda takımlar tünelden sahaya çıkar.
