@@ -96,6 +96,40 @@ class ScreensTest {
         }
     }
 
+    /** 2D saha: atakta ofsayt çizgisi ve gol tekrarı (ağır çekim, sinema bandı). */
+    @Test
+    fun pitchReplay() {
+        GameRepo.init(Files.createTempDirectory("smr").toFile())
+        val world = Generator.newWorld(kotlin.random.Random(16)).also { Season.computeExpectations(it) }
+        GameRepo.newCareer(world, "Test", world.divisionTeams(10)[0].id)
+        val g = GameRepo.game!!
+        val f = g.fixtures.first { it.home == g.userTeamId || it.away == g.userTeamId }
+        val sim = com.supermenajer.game.engine.MatchSim(g, f, g.userTeamId, true, kotlin.random.Random(3))
+        val anim = com.supermenajer.game.engine.Pitch2D(sim)
+        repeat(30 * 6) { anim.update(1f / 30f) }
+        anim.play(com.supermenajer.game.engine.MatchEvent(10, com.supermenajer.game.engine.Ev.GOAL, 0, "Gol", sim.home.onPitch.last().p.id, "Atak", sim.home.onPitch[6].p.id, 0))
+        var n = 0
+        while (anim.offsideLineX == null && n++ < 200) anim.update(1f / 30f)
+        repeat(12) { anim.update(1f / 30f) }
+        val c1 = androidx.compose.ui.graphics.Color(sim.home.team.color1)
+        val c2 = androidx.compose.ui.graphics.Color(sim.away.team.color1)
+        val pitch = @androidx.compose.runtime.Composable {
+            AppTheme {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF256F3B))) {
+                    com.supermenajer.game.ui.MatchPitch(
+                        anim, c1, c2, androidx.compose.ui.graphics.Color(0xFF26C6DA), androidx.compose.ui.graphics.Color(0xFFFF7043), false, 1f,
+                        Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        }
+        paparazzi.snapshot("24_offside_line") { pitch() }
+        n = 0
+        while (anim.replayView == null && n++ < 30 * 20) anim.update(1f / 30f)
+        while ((anim.replayView?.progress ?: 1f) < 0.7f && n++ < 30 * 40) anim.update(1f / 30f)
+        paparazzi.snapshot("25_goal_replay") { pitch() }
+    }
+
     @Test
     fun screens() {
         GameRepo.init(Files.createTempDirectory("sm").toFile())

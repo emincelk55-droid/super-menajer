@@ -36,6 +36,9 @@ class Agent(val id: Int, val side: Int, val number: Int, val name: String, val g
  */
 class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
     companion object {
+        /** Tekrar kayıt sıklığı (kare/sn) ve süresi (sn). */
+        const val REC_HZ = 20f
+        const val REC_SEC = 5f
         const val L = 105f
         const val W = 68f
         const val GOAL_HALF = 3.66f
@@ -46,7 +49,16 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         val to: Agent?, val kind: Int, var t: Float = 0f,
     )
 
-    private enum class Mode { NORMAL, ATTACK, SETPIECE, DEAD, CELEBRATE, KICKOFF, WALKOFF }
+    private enum class Mode { NORMAL, ATTACK, SETPIECE, DEAD, CELEBRATE, KICKOFF, WALKOFF, REPLAY }
+
+    /** Tekrar için kaydedilen kare: oyuncu konumları ve top. */
+    class Frame(val ids: IntArray, val xs: FloatArray, val ys: FloatArray, val bx: Float, val by: Float, val bz: Float)
+
+    /** Tekrarda çizilecek oyuncu bilgisi. */
+    class ReplayAgent(val side: Int, val gk: Boolean, val number: Int, val x: Float, val y: Float)
+
+    /** Tekrarın o anki karesi (gösterilmiyorsa null). */
+    class ReplayView(val agents: List<ReplayAgent>, val ballX: Float, val ballY: Float, val ballZ: Float, val progress: Float)
 
     private val rnd = Random(seed)
     val agents = mutableListOf<Agent>()
@@ -75,7 +87,65 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         private set
 
     /** Sahnede gösterilecek kısa etiket (ör. topu süren oyuncunun adı). */
-    val busy: Boolean get() = mode == Mode.ATTACK || mode == Mode.SETPIECE || queue.isNotEmpty() || (mode == Mode.WALKOFF && !offPitch)
+    val busy: Boolean get() = mode == Mode.ATTACK || mode == Mode.SETPIECE || mode == Mode.REPLAY || mode == Mode.CELEBRATE ||
+        queue.isNotEmpty() || (mode == Mode.WALKOFF && !offPitch)
+
+    // Gol tekrarı: son birkaç saniye 20 kare/sn kaydedilir, golden sonra ağır çekim oynatılır
+    private val history = ArrayDeque<Frame>()
+    private var recordAcc = 0f
+    private var replay: List<Frame> = emptyList()
+    private val replaySpeed = 0.55f
+
+    /** Gol sevinci ya da tekrarı sürüyor: maç ekranı sıradaki ataktan önce bitmesini bekler. */
+    val celebrating: Boolean get() = mode == Mode.CELEBRATE || mode == Mode.REPLAY
+
+    /** Gol tekrarı açık mı (ayarlardan kapatılabilir). */
+    var replaysOn = true
+
+    /** Tekrar oynuyorsa çizilecek kare. */
+    val replayView: ReplayView?
+        get() {
+            if (mode != Mode.REPLAY || replay.isEmpty()) return null
+            val pos = (modeTime * replaySpeed * REC_HZ).coerceAtMost(replay.size - 1f)
+            val i = pos.toInt().coerceAtMost(replay.size - 1)
+            val j = (i + 1).coerceAtMost(replay.size - 1)
+            val u = pos - i
+            val a = replay[i]
+            val b = replay[j]
+            val list = ArrayList<ReplayAgent>(a.ids.size)
+            for (k in a.ids.indices) {
+                val ag = agents.firstOrNull { it.id == a.ids[k] } ?: continue
+                val kb = b.ids.indexOf(a.ids[k])
+                val x = if (kb >= 0) a.xs[k] + (b.xs[kb] - a.xs[k]) * u else a.xs[k]
+                val y = if (kb >= 0) a.ys[k] + (b.ys[kb] - a.ys[k]) * u else a.ys[k]
+                list += ReplayAgent(ag.side, ag.gk, ag.number, x, y)
+            }
+            return ReplayView(list, a.bx + (b.bx - a.bx) * u, a.by + (b.by - a.by) * u, a.bz + (b.bz - a.bz) * u, pos / (replay.size - 1).coerceAtLeast(1))
+        }
+
+    /** Tekrarı geç (sahaya dokununca). */
+    fun skipReplay() { if (mode == Mode.REPLAY) endReplay() }
+
+    private fun endReplay() {
+        replay = emptyList()
+        val e = cur
+        cur = null
+        kickoff(if (e != null) 1 - e.side else 0)
+    }
+
+    /**
+     * Ofsayt çizgisi: atak sırasında savunmanın sondan ikinci oyuncusunun hizası (kendi yarı sahasını geçemez).
+     * Atak yoksa null.
+     */
+    val offsideLineX: Float?
+        get() {
+            if (mode != Mode.ATTACK) return null
+            val atk = cur?.side ?: return null
+            val def = 1 - atk
+            val ds = agents.filter { it.side == def }.map { d(def, it.x) }.sorted()
+            if (ds.size < 2) return null
+            return fromD(def, ds[1].coerceAtMost(L / 2))
+        }
 
     /** Devre arası / maç sonu: herkes tünelden soyunma odasına girdi, sahne durur. */
     val offPitch: Boolean get() = mode == Mode.WALKOFF && agents.all { it.alpha <= 0f }
@@ -248,6 +318,20 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
                 flight = Flight(ballX, ballY, fromD(atk, pd), py, 0.7f, 1.2f, null, 3)
                 owner = null
                 spot[shooterA.id] = fromD(atk, pd - 1.6f) to py
+                if (e.style == 3) {
+                    // Baraj: topla kale arasında 9,15 m'de 4 savunmacı yan yana
+                    val bx = fromD(atk, pd)
+                    val gx = fromD(atk, L)
+                    val len = hypot(gx - bx, W / 2 - py)
+                    val ux = (gx - bx) / len
+                    val uy = (W / 2 - py) / len
+                    val wallX = bx + ux * 9.15f
+                    val wallY = py + uy * 9.15f
+                    agents.filter { it.side != atk && !it.gk }.sortedBy { dist(it.x, it.y, wallX, wallY) }.take(4).forEachIndexed { k, a ->
+                        val off = (k - 1.5f) * 0.9f
+                        spot[a.id] = wallX - uy * off to wallY + ux * off
+                    }
+                }
                 setMode(Mode.SETPIECE)
                 deadFor = 1.9f
                 return
@@ -292,15 +376,25 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         time += dt
         modeTime += dt
         hold += dt
+        if (mode != Mode.REPLAY) {
+            recordAcc += dt
+            if (recordAcc >= 1f / REC_HZ) {
+                recordAcc = 0f
+                history.addLast(Frame(IntArray(agents.size) { agents[it].id }, FloatArray(agents.size) { agents[it].x }, FloatArray(agents.size) { agents[it].y }, ballX, ballY, ballZ))
+                while (history.size > (REC_HZ * REC_SEC).toInt()) history.removeFirst()
+            }
+        }
         when (mode) {
             Mode.KICKOFF, Mode.DEAD -> if (modeTime > deadFor && flight == null) {
                 if (queue.isNotEmpty()) nextScene() else setMode(Mode.NORMAL)
                 if (owner == null) looseBall()
             }
             Mode.CELEBRATE -> if (modeTime > 2.6f) {
-                val e = cur
-                cur = null
-                kickoff(if (e != null) 1 - e.side else 0)
+                if (replay.isNotEmpty()) setMode(Mode.REPLAY) else endReplay()
+            }
+            Mode.REPLAY -> {
+                if (modeTime * replaySpeed * REC_HZ >= replay.size - 1 + REC_HZ * 0.4f) endReplay()
+                return
             }
             Mode.SETPIECE -> if (modeTime > deadFor && flight == null) {
                 val sh = shooter
@@ -460,6 +554,8 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         when (e.type) {
             Ev.GOAL -> {
                 celebrator = shooter
+                // Golün son 4 saniyesi (topun ağlara gidişi dahil) tekrar için saklanır
+                replay = if (replaysOn) history.toList().takeLast((REC_HZ * 4f).toInt()) else emptyList()
                 setMode(Mode.CELEBRATE)
             }
             Ev.SAVE -> {

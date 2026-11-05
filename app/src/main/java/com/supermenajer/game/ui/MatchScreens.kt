@@ -119,6 +119,7 @@ fun MatchScreen() {
     BackHandler { running = false }
 
     val anim = remember(sim) { GameRepo.pitchFor(sim) }
+    anim.replaysOn = Fx.replays
     val whistled = remember { HashSet<Int>() }
     LaunchedEffect(running, speed) {
         val pace = paces[speed]
@@ -169,6 +170,9 @@ fun MatchScreen() {
                     if (e.side == sim.userSide?.index) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
                 if (isGoal || e.buildUp.isNotEmpty() || e.type == Ev.RED || e.type == Ev.HALF || e.type == Ev.FULL) delay(pace.pause)
+                // Gol sevinci ve tekrar bitmeden sıradaki pozisyona geçilmez
+                var cw = 0L
+                while (anim.celebrating && cw < 15_000) { delay(50); cw += 50 }
             }
             if (sim.minute == 45) running = false
         }

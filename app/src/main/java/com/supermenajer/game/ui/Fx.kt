@@ -35,8 +35,20 @@ object Fx {
         private set
     private var prefs: android.content.SharedPreferences? = null
 
+    /** Gol tekrarı (ağır çekim) açık mı. */
+    var replays by androidx.compose.runtime.mutableStateOf(true)
+        private set
+
     fun init(context: android.content.Context) {
-        prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also { lowPower = it.getBoolean("lowPower", false) }
+        prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also {
+            lowPower = it.getBoolean("lowPower", false)
+            replays = it.getBoolean("replays", true)
+        }
+    }
+
+    fun changeReplays(on: Boolean) {
+        replays = on
+        prefs?.edit()?.putBoolean("replays", on)?.apply()
     }
 
     fun changeLowPower(on: Boolean) {

@@ -62,6 +62,9 @@ class Pitch2DTest {
                     while (anim.outcomes == o && w < 12f) { tick(0.1f); w += 0.1f }
                     assertTrue("${e.type} ${e.style} sahada sonuçlanmadı (dk ${e.minute})", anim.outcomes > o)
                 }
+                // Maç ekranı gibi: gol sevinci ve tekrar bitince devam
+                var cw = 0f
+                while (anim.celebrating && cw < 15f) { tick(0.1f); cw += 0.1f }
             }
             tick(0.65f)
         }
@@ -100,5 +103,45 @@ class Pitch2DTest {
         val bx = anim.ballX
         repeat(30 * 5) { anim.update(1f / 30f) }
         assertEquals(bx, anim.ballX)
+    }
+
+    /** Gol tekrarı ağır çekim oynar ve sonra santra yapılır; atakta ofsayt çizgisi görünür; serbest vuruşta baraj kurulur. */
+    @Test
+    fun replayOffsideAndWall() {
+        GameRepo.init(Files.createTempDirectory("sm16r").toFile())
+        val world = Generator.newWorld(Random(16)).also { Season.computeExpectations(it) }
+        GameRepo.newCareer(world, "Test", world.divisionTeams(0)[2].id)
+        val g = GameRepo.game!!
+        val f = g.fixtures.first { it.home == g.userTeamId || it.away == g.userTeamId }
+        val sim = MatchSim(g, f, g.userTeamId, true, Random(3))
+        val anim = Pitch2D(sim)
+        repeat(30 * 6) { anim.update(1f / 30f) }
+        val scorer = sim.home.onPitch.last().p.id
+        anim.play(com.supermenajer.game.engine.MatchEvent(10, Ev.GOAL, 0, "Gol", scorer, "Atak...", sim.home.onPitch[6].p.id, 0))
+        var sawOffside = false
+        var t = 0
+        while (anim.outcomes == 0 && t++ < 30 * 12) { anim.update(1f / 30f); if (anim.offsideLineX != null) sawOffside = true }
+        assertTrue("gol sahada oynandı", anim.outcomes == 1)
+        assertTrue("atakta ofsayt çizgisi", sawOffside)
+        var sawReplay = false
+        var progress = 0f
+        repeat(30 * 14) {
+            anim.update(1f / 30f)
+            anim.replayView?.let { sawReplay = true; assertTrue(it.agents.size >= 20); progress = maxOf(progress, it.progress) }
+        }
+        assertTrue("tekrar oynadı", sawReplay && progress > 0.95f)
+        assertEquals(null, anim.replayView)
+        assertTrue("tekrardan sonra oyun devam ediyor", !anim.busy)
+
+        // Serbest vuruş: savunmadan 4 oyuncu baraj kurar (topa ~9 m)
+        val def = sim.away.onPitch.filter { it.slot.pos != com.supermenajer.game.model.Pos.GK }.map { it.p.id }.toSet()
+        anim.play(com.supermenajer.game.engine.MatchEvent(20, Ev.SAVE, 0, "Frikik", scorer, "Serbest vuruş...", -1, 3))
+        var best = 0
+        repeat(30 * 8) {
+            anim.update(1f / 30f)
+            val n = anim.agents.count { it.id in def && kotlin.math.hypot(it.x - anim.ballX, it.y - anim.ballY) in 7.5f..11f }
+            best = maxOf(best, n)
+        }
+        assertTrue("baraj $best", best >= 3)
     }
 }

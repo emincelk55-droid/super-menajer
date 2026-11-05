@@ -209,3 +209,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 ### Geliştirmede (henüz APK yok)
 - 2D maç: devre arası ve maç sonu düdüğünde oyuncular tokalaşıp tünelden soyunma odasına yürür ve sahne durur (önceden
   maç bittikten sonra da oynamaya devam ediyorlardı); ikinci yarıda takımlar tünelden sahaya çıkar.
+- 2D maç: goller ağır çekim tekrar edilir (sinema bandı, "TEKRAR", sahaya dokununca geçilir; Ayarlar'dan kapatılabilir);
+  atakta sarı kesik ofsayt çizgisi; serbest vuruşta 4 kişilik baraj.

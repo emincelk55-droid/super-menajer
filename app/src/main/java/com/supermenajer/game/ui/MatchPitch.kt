@@ -1,5 +1,9 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
+
+import androidx.compose.ui.input.pointer.pointerInput
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +60,7 @@ fun MatchPitch(
     }
     val measurer = rememberTextMeasurer()
     val numCache = remember { HashMap<String, TextLayoutResult>() }
-    Canvas(modifier) {
+    Canvas(modifier.pointerInput(anim) { detectTapGestures { anim.skipReplay() } }) {
         frame // her karede yeniden çiz
         if (size.minDimension <= 0f) return@Canvas
         val sx = size.width / (L + 2 * M)
@@ -65,6 +69,18 @@ fun MatchPitch(
         fun py(y: Float) = (y + M) * sy
         drawMetricPitch(sx, sy)
         val r = 1.35f * sx
+        val rv = anim.replayView
+        if (rv != null) {
+            drawReplay(rv, r, sx, ::px, ::py, homeC, awayC, homeGk, awayGk, measurer, numCache, size)
+            return@Canvas
+        }
+        // Ofsayt çizgisi: atakta savunmanın sondan ikinci oyuncusunun hizası
+        anim.offsideLineX?.let { ox ->
+            drawLine(
+                Color(0xFFFFE14D).copy(alpha = 0.55f), Offset(px(ox), py(0f)), Offset(px(ox), py(W)), strokeWidth = 0.18f * sx,
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(1.2f * sx, 0.8f * sx)),
+            )
+        }
         // Oyuncu gölgeleri
         for (a in anim.agents) if (a.alpha > 0f) drawCircle(Color.Black.copy(alpha = 0.22f * a.alpha), r, Offset(px(a.x) + r * 0.25f, py(a.y) + r * 0.3f))
         val focus = anim.focus()
@@ -148,4 +164,42 @@ private fun DrawScope.drawMetricPitch(sx: Float, sy: Float) {
         drawRect(Color.White.copy(alpha = 0.25f), Offset(px(gx), py(W / 2 - Pitch2D.GOAL_HALF)), Size(2f * sx, 2 * Pitch2D.GOAL_HALF * sy))
         drawRect(Color.White, Offset(px(gx), py(W / 2 - Pitch2D.GOAL_HALF)), Size(2f * sx, 2 * Pitch2D.GOAL_HALF * sy), style = Stroke(sw))
     }
+}
+
+/** Gol tekrarı: kayıttan ağır çekim, kenarlarda sinema bandı ve "TEKRAR" etiketi. */
+private fun DrawScope.drawReplay(
+    rv: Pitch2D.ReplayView, r: Float, sx: Float, px: (Float) -> Float, py: (Float) -> Float,
+    homeC: Color, awayC: Color, homeGk: Color, awayGk: Color,
+    measurer: androidx.compose.ui.text.TextMeasurer, numCache: HashMap<String, TextLayoutResult>, sz: Size,
+) {
+    for (a in rv.agents) drawCircle(Color.Black.copy(alpha = 0.22f), r, Offset(px(a.x) + r * 0.25f, py(a.y) + r * 0.3f))
+    for (a in rv.agents) {
+        val fill = if (a.gk) (if (a.side == 0) homeGk else awayGk) else if (a.side == 0) homeC else awayC
+        val c = Offset(px(a.x), py(a.y))
+        drawCircle(fill, r, c)
+        drawCircle(Color.White.copy(alpha = 0.85f), r, c, style = Stroke(r * 0.12f))
+        if (a.number > 0) {
+            val key = "${a.number}-${contentOn(fill).hashCode()}-${r.toInt()}"
+            val tl = numCache.getOrPut(key) {
+                measurer.measure("${a.number}", TextStyle(color = contentOn(fill), fontSize = (r * 0.95f / density / fontScale).sp, fontWeight = FontWeight.Black))
+            }
+            drawText(tl, topLeft = Offset(c.x - tl.size.width / 2f, c.y - tl.size.height / 2f))
+        }
+    }
+    val bx = px(rv.ballX)
+    val by = py(rv.ballY)
+    val br = 0.62f * sx * (1f + rv.ballZ * 0.06f)
+    drawCircle(Color.Black.copy(alpha = 0.3f), 0.6f * sx, Offset(bx + rv.ballZ * sx * 0.25f, by + rv.ballZ * sx * 0.12f))
+    val ball = Offset(bx, by - rv.ballZ * sx * 0.55f)
+    drawCircle(Color.White, br, ball)
+    drawCircle(Color(0xFF263238), br, ball, style = Stroke(br * 0.25f))
+    // Sinema bandı ve hafif kararma
+    val band = sz.height * 0.07f
+    drawRect(Color.Black.copy(alpha = 0.18f), size = sz)
+    drawRect(Color.Black.copy(alpha = 0.75f), size = Size(sz.width, band))
+    drawRect(Color.Black.copy(alpha = 0.75f), Offset(0f, sz.height - band), Size(sz.width, band))
+    val label = measurer.measure("⟲ TEKRAR · dokun: geç", TextStyle(color = Color(0xFFFFE14D), fontSize = (band * 0.42f / density / fontScale).sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp))
+    drawText(label, topLeft = Offset(sz.width * 0.03f, (band - label.size.height) / 2f))
+    // İlerleme çizgisi
+    drawRect(Color(0xFFFFE14D), Offset(0f, sz.height - band * 0.2f), Size(sz.width * rv.progress, band * 0.12f))
 }

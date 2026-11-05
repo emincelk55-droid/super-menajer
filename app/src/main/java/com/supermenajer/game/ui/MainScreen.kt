@@ -857,6 +857,11 @@ fun SoundSettings() {
             androidx.compose.material3.Switch(S.musicOn, { S.changeMusic(it) })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🎬 Gol tekrarı", fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text("golden sonra ağır çekim", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
+            androidx.compose.material3.Switch(Fx.replays, { Fx.changeReplays(it) })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text("🔋 Pil tasarrufu", fontSize = 14.sp, modifier = Modifier.weight(1f))
             Text("sürekli dönen efektleri durdurur", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
             androidx.compose.material3.Switch(Fx.lowPower, { Fx.changeLowPower(it) })
