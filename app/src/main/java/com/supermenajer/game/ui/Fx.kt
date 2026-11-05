@@ -158,7 +158,7 @@ fun tierBorder(tier: Int): List<androidx.compose.ui.graphics.Color> = when (tier
  * ışık şeridi (seviye yükseldikçe güçlenir) ve efsane kartlarda göz kırpan yıldızlar.
  * [seed] kartların aynı anda parlamaması için başlangıcı kaydırır.
  */
-fun Modifier.cardShine(tier: Int, seed: Int): Modifier = composed {
+fun Modifier.cardShine(tier: Int, seed: Int, sparkleRight: Boolean = false): Modifier = composed {
     val still = fxLoopsOff()
     val period = 4200
     // Değer çizim sırasında okunur: her karede yalnız yeniden çizilir, yeniden oluşturulmaz (pil dostu)
@@ -199,7 +199,8 @@ fun Modifier.cardShine(tier: Int, seed: Int): Modifier = composed {
             // Efsane kart: seed'e göre yerleşen, sırayla parlayan 4 yıldız
             val r = kotlin.random.Random(seed)
             repeat(4) { k ->
-                val sx = w * (0.3f + r.nextFloat() * 0.4f)
+                // Yıldızlar güç sayısının olmadığı yarıda: FUT kartında sağ, saha kartında sol
+                val sx = w * ((if (sparkleRight) 0.52f else 0.1f) + r.nextFloat() * 0.36f)
                 val sy = h * (0.12f + r.nextFloat() * 0.28f)
                 val ph = ((t * 2f + k * 0.25f) % 1f)
                 val a = if (still) 0.8f else kotlin.math.sin(ph * Math.PI.toFloat()).coerceAtLeast(0f)

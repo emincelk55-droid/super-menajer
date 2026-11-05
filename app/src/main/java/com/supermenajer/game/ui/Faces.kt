@@ -261,7 +261,7 @@ fun PlayerCard(
     Column(
         modifier.width(width).height(h).clip(RoundedCornerShape(width * 0.14f))
             .background(Brush.verticalGradient(cols))
-            .cardShine(cardTier(if (known) ovr else 0), p.id)
+            .cardShine(cardTier(if (known) ovr else 0), p.id, sparkleRight = true)
             .border(
                 2.dp,
                 if (highlight == Color.Transparent) Brush.verticalGradient(tierBorder(cardTier(if (known) ovr else 0)) + cols.last())

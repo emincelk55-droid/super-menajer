@@ -374,7 +374,9 @@ class MatchSim(
             def.onPitch.filter { it.slot.pos == Pos.GK || it.slot.pos == Pos.DF }.forEach { it.rating -= 0.25 }
             ev(
                 Ev.GOAL, atk.index,
-                Comms.goal(shooter.p.name, assister?.p?.name, penalty, header, rnd) + "  (${home.goals}-${away.goals})",
+                Comms.goal(shooter.p.name, assister?.p?.name, penalty, header, rnd) +
+                    Comms.goalContext(minute, shooter.goals, atk.goals, def.goals, rnd).let { if (it.isEmpty()) "" else " $it" } +
+                    "  (${home.goals}-${away.goals})",
                 shooter.p.id, build, aId, style,
             )
             ballX = 0.5f; ballY = 0.5f

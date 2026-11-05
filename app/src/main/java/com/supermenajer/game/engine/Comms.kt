@@ -13,6 +13,31 @@ object Comms {
         "Ve maç başlıyor! Ev sahibi ${h.name}, konuk ${a.name}.",
     ).r(rnd)
 
+    /**
+     * Golün maçtaki anlamı: hat-trick, eşitlik, öne geçiş, fark, son dakika. Boşsa sıradan bir gol.
+     * [scorerGoals] golcünün bu maçtaki gol sayısı (bu gol dahil), skorlar gol sonrası.
+     */
+    fun goalContext(minute: Int, scorerGoals: Int, forGoals: Int, againstGoals: Int, rnd: Random): String {
+        val parts = mutableListOf<String>()
+        when {
+            scorerGoals == 3 -> parts += listOf("HAT-TRICK! 🎩 Maçın yıldızı o!", "Üçüncü golü! Hat-trick tamam! 🎩").random(rnd)
+            scorerGoals == 2 -> parts += listOf("Maçtaki ikinci golü!", "Bugün durdurulamıyor, ikinci gol!").random(rnd)
+            scorerGoals >= 4 -> parts += "İnanılmaz! Bu maçtaki $scorerGoals. golü!"
+        }
+        val diff = forGoals - againstGoals
+        when {
+            diff == 0 -> parts += listOf("Skor eşitlendi!", "Maç yeniden başa döndü!", "Beraberlik golü!").random(rnd)
+            diff == 1 && forGoals == 1 -> parts += listOf("İlk gol geldi!", "Kilit açıldı!").random(rnd)
+            diff == 1 -> parts += listOf("Yeniden öne geçtiler!", "Eşitlik bozuldu, öne geçtiler!").random(rnd)
+            diff >= 3 -> parts += listOf("Fark $diff oldu, maç koptu!", "Gol yağmuru sürüyor!").random(rnd)
+            diff == 2 -> parts += listOf("Fark ikiye çıktı!", "Rahatladılar, fark iki!").random(rnd)
+            diff == -1 -> parts += listOf("Farkı bire indirdiler!", "Maça ortak oldular!").random(rnd)
+        }
+        if (minute >= 88) parts.add(0, listOf("SON DAKİKA GOLÜ!", "Son nefeste!", "Uzatmalarda dram!").random(rnd))
+        else if (minute <= 3) parts.add(0, "Daha ilk dakikalarda!")
+        return parts.joinToString(" ")
+    }
+
     fun goal(shooter: String, assist: String?, penalty: Boolean, header: Boolean, rnd: Random): String {
         if (penalty) return listOf(
             "GOOOL! $shooter penaltıyı soğukkanlılıkla gole çevirdi!",

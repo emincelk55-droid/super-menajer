@@ -22,7 +22,7 @@ object Talks {
         "⚠️ Bu maç bizim için hayati!",
     )
     val halfOptions = listOf("👏 Övgü", "🧘 Sakin", "😠 Sert")
-    val postOptions = listOf("👏 Tebrikler", "🙂 Fena değil", "😠 Hayal kırıklığı")
+    val postOptions = listOf("👏 Tebrikler", "🙂 Fena değil", "😠 Yetersiz")
 
     class Result(val message: String, val reactions: List<String>)
 

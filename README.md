@@ -211,3 +211,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   maç bittikten sonra da oynamaya devam ediyorlardı); ikinci yarıda takımlar tünelden sahaya çıkar.
 - 2D maç: goller ağır çekim tekrar edilir (sinema bandı, "TEKRAR", sahaya dokununca geçilir; Ayarlar'dan kapatılabilir);
   atakta sarı kesik ofsayt çizgisi; serbest vuruşta 4 kişilik baraj.
+- Maç sunumu: devre arası ve maç sonu kartlarında takım renklerinde istatistik çubukları; maç özetinde parlak kartlı
+  "Maçın Oyuncusu"; gollerde bağlamlı anlatım (hat-trick, eşitlik, öne geçiş, fark, son dakika golü).
