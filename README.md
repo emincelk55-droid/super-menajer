@@ -236,3 +236,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Oyuncu talepleri: forma şansı isteyen yedek (6 maçta 3 kez oynatma sözü verebilirsin; tutulmazsa moral çöker,
   soyunma odası görür), zam isteyen yıldız (maaş bütçesine bağlı), büyük kulübe gitmek isteyen oyuncu. Verilen sözün
   durumu oyuncu profilinde görünür.
+- Lig → 📈 Analiz: sezon özeti (G-B-M, gol, xG, topa sahip olma, gol yemeden), maç maç gol beklentisi grafiği,
+  puan çizgisi (oyuna göre beklenen puanla), gollerin dakika dilimleri ve otomatik yorumlar (bitiricilik, geç gol
+  yeme, topa sahip olma...).

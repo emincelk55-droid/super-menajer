@@ -183,7 +183,7 @@ fun LeagueTab(g: Game) {
     val sel = GameRepo.leagueSel
     var day by remember { mutableIntStateOf(g.week.coerceIn(1, g.totalDays)) }
     Column(Modifier.fillMaxSize()) {
-        FmTabs(listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "İstatistik", "Geçmiş", "Takvim"), view) { GameRepo.leagueTab = it }
+        FmTabs(listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "İstatistik", "Geçmiş", "Takvim", "📈 Analiz"), view) { GameRepo.leagueTab = it }
         if (view == 0 || view == 4) {
             // Lig seçici: önce ülke, sonra lig
             val country = Leagues.of(sel)?.country ?: g.userCountry
@@ -231,6 +231,7 @@ fun LeagueTab(g: Game) {
             }
             4 -> Scorers(g, sel)
             6 -> CalendarView(g)
+            7 -> AnalysisView(g)
             else -> HistoryView(g)
         }
     }

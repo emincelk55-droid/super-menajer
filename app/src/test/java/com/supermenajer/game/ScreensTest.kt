@@ -387,6 +387,9 @@ class ScreensTest {
             shot("15c_trophy")
             g0.ceremonySeen = 999
         }
+        GameRepo.tab = GameRepo.TAB_LEAGUE; GameRepo.leagueTab = 7
+        shot("15d_analysis")
+        GameRepo.leagueTab = 0; GameRepo.tab = GameRepo.TAB_HOME
         GameRepo.startNewSeason()
         GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("16_history")
         GameRepo.leagueTab = 6; shot("16b_calendar")

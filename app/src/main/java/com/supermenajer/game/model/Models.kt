@@ -484,6 +484,14 @@ class Game(
     var achievements: MutableSet<String> = mutableSetOf(),
     var managerRep: Int = 40,
     var trophies: MutableList<String> = mutableListOf(),
+    /**
+     * Maç kaydı (analiz ekranı): "sezon|gün|turnuva|rakip|evde(1/0)|attığımız|yediğimiz|xG|rakip xG|topa sahip olma|şut|rakip şut".
+     * En fazla 120 maç.
+     */
+    var matchLog: MutableList<String> = mutableListOf(),
+    /** Bu sezon attığımız ve yediğimiz goller, 15'er dakikalık dilimlerde (6 dilim, uzatmalar sonuncuda). */
+    var goalsByPeriod: MutableList<Int> = MutableList(12) { 0 },
+
     /** Töreni gösterilmiş kupa sayısı (-1: eski kayıt, ilk açılışta mevcut kupalar sayılır). */
     var ceremonySeen: Int = -1,
     var recBigWin: String = "",
