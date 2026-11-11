@@ -221,9 +221,18 @@ fun MatchScreen() {
                 ) {
                     val gkH = keeperColor(homeC, awayC, Color(0xFF26C6DA))
                     val gkA = keeperColor(homeC, awayC, Color(0xFFFF7043))
-                    MatchPitch(
+                    if (Fx.tvView) MatchPitchTV(anim, homeC, awayC, gkH, gkA, running, paces[speed].scale, Modifier.fillMaxSize())
+                    else MatchPitch(
                         anim, homeC, awayC, gkH, gkA, running, paces[speed].scale,
                         Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true),
+                    )
+                    // Kamera seçimi: TV (2,5D) ↔ üstten 2D
+                    Text(
+                        if (Fx.tvView) "🗺️ 2D" else "📺 TV",
+                        color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(10.dp))
+                            .background(Color.Black.copy(alpha = 0.55f)).pressClick { Fx.changeTvView(!Fx.tvView) }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
                     )
                     goalFlash?.let { e ->
                         // Konfeti: kendi golümüzde, iki kişilik maçta ve izlenen maçlarda; rakip golünde sönük kutlama

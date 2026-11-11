@@ -61,12 +61,22 @@ object Fx {
     var replays by androidx.compose.runtime.mutableStateOf(true)
         private set
 
+    /** Maç görünümü: true 2,5D TV kamerası, false klasik üstten 2D. */
+    var tvView by androidx.compose.runtime.mutableStateOf(true)
+        private set
+
+    fun changeTvView(on: Boolean) {
+        tvView = on
+        prefs?.edit()?.putBoolean("tvView", on)?.apply()
+    }
+
     fun init(context: android.content.Context) {
         prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also {
             lowPower = it.getBoolean("lowPower", false)
             replays = it.getBoolean("replays", true)
             textSize = it.getInt("textSize", 0)
             homeSimple = it.getBoolean("homeSimple", true)
+            tvView = it.getBoolean("tvView", true)
         }
     }
 

@@ -130,6 +130,14 @@ class ScreensTest {
         while (anim.replayView == null && n++ < 30 * 20) anim.update(1f / 30f)
         while ((anim.replayView?.progress ?: 1f) < 0.7f && n++ < 30 * 40) anim.update(1f / 30f)
         paparazzi.snapshot("25_goal_replay") { pitch() }
+        paparazzi.snapshot("25b_goal_replay_tv") {
+            AppTheme {
+                com.supermenajer.game.ui.MatchPitchTV(
+                    anim, c1, androidx.compose.ui.graphics.Color(0xFFF2F2F2), androidx.compose.ui.graphics.Color(0xFF26C6DA), androidx.compose.ui.graphics.Color(0xFFFF7043), false, 1f,
+                    Modifier.fillMaxSize(),
+                )
+            }
+        }
     }
 
     /** Derbi: aynı şehrin kulüpleri ve iki devin maçı derbi sayılır; derbi haftası kartı ve tribün koreografisi. */
@@ -355,6 +363,7 @@ class ScreensTest {
             repeat(60) { an.update(1f / 30f) }
         }
         shot("12_match")
+        com.supermenajer.game.ui.Fx.changeTvView(false); shot("12a_match_2d"); com.supermenajer.game.ui.Fx.changeTvView(true)
         run {
             val sim = GameRepo.match!!
             paparazzi.snapshot("12c_match_tactics") {

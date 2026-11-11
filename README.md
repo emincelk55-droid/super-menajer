@@ -255,3 +255,4 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Aylık ödüller: her ay sonunda kendi liginde Ayın Oyuncusu, Ayın Genci ve Ayın Menajeri; ana sayfada ödül kartı.
   Kazanan bizden ise oyuncunun morali, menajerin itibarı ve yönetimin güveni artar.
 - Menajer özellikleri: oyun tarzına göre kendiliğinden kazanılan kalıcı özellikler (Genç Dostu, Hücum/Savunma Ustası, Derbi Kralı, Geri Dönüş Ustası, Kupa Adamı); her birinin maçta ya da gelişimde küçük etkisi var, ilerleme Kulüp → Yetenek sekmesinde.
+- 2,5D maç görünümü (TV kamerası): yan tribünden perspektifli saha, topu yumuşakça izleyen kamera, gölgeli ve koşarken bacakları hareket eden oyuncular, file ve direkli kaleler, tribünde seyirciler ve reklam panoları; gol tekrarı da bu açıdan. Maç ekranının sağ üstündeki düğmeyle klasik 2D görünüme geçilebilir (seçim hatırlanır).
