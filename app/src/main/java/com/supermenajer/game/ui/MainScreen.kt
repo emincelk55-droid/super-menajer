@@ -136,6 +136,8 @@ fun MainScreen() {
     if (GameRepo.settingsOpen) SettingsDialog()
     if (GameRepo.editorOpen) EditorDialog(g)
     if (GameRepo.newspaperOpen) NewspaperDialog(g)
+    if (GameRepo.awardsOpen) AwardsNightDialog(g)
+    TrophyCeremonyIfNeeded(g)
 }
 
 /** Ayarlar: kaydet, ana menü, oyundan çık. */
@@ -459,6 +461,11 @@ internal fun SeasonEndCard(g: Game) {
         if (!rec?.euroWinner.isNullOrEmpty()) Text("🌍 Avrupa Kupası: ${rec?.euroWinner}", fontSize = 15.sp)
         if (!rec?.firstChampion.isNullOrEmpty()) Text("Alt lig şampiyonu: ${rec?.firstChampion}", color = TextDim, fontSize = 14.sp)
         Text("Gol kralı: ${rec?.topScorer ?: "-"}", color = TextDim, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+        Box(
+            Modifier.pressClick(0.96f) { GameRepo.awardsOpen = true }.clip(RoundedCornerShape(10.dp))
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFFF7E08A), Gold))).padding(horizontal = 14.dp, vertical = 8.dp),
+        ) { Text("🏆 Ödül Gecesi", color = Color(0xFF2A1E00), fontWeight = FontWeight.Black, fontSize = 14.sp) }
         Spacer(Modifier.height(12.dp))
         Text("${t.name} ${Comp.name(t.division)}'i $pos. sırada bitirdi.", fontSize = 16.sp)
         val lg = Leagues.of(t.division)

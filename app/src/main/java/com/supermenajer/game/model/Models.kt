@@ -480,6 +480,8 @@ class Game(
     var achievements: MutableSet<String> = mutableSetOf(),
     var managerRep: Int = 40,
     var trophies: MutableList<String> = mutableListOf(),
+    /** Töreni gösterilmiş kupa sayısı (-1: eski kayıt, ilk açılışta mevcut kupalar sayılır). */
+    var ceremonySeen: Int = -1,
     var recBigWin: String = "",
     var recBigWinDiff: Int = 0,
     var recLoss: String = "",

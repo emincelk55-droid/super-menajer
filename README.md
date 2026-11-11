@@ -226,3 +226,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Derbi atmosferi: aynı şehrin kulüpleri (İstanbul, Madrid, Milano, Londra...) ve aynı ligin iki devi derbi sayılır.
   Derbi haftası ana sayfada ateşli kart ve geri sayım, gazetede derbi manşeti; maç başında tribün koreografisi
   (takım renklerinde dalgalanan pankart, meşaleler), derbi adı skor bandında, tribün daha gür.
+- Kupa töreni: kariyerde yeni bir kupa kazanılınca tam ekran tören (sahne ışıkları, yükselen altın kupa, sürekli
+  konfeti, "KUPAYI KALDIR"); her kupa bir kez kutlanır. Sezon sonu kartında 🏆 Ödül Gecesi: yılın oyuncusu, gol kralı,
+  asist kralı, yılın genci, yılın kalecisi ve yılın menajeri sırayla açılır; bizim oyuncumuz kazanırsa altın çerçeve.

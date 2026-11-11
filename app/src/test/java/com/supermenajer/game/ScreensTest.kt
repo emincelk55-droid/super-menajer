@@ -176,6 +176,8 @@ class ScreensTest {
         val world = Generator.newWorld().also { Season.computeExpectations(it) }
         val eng = world.divisionTeams(10).sortedBy { it.expected }[1]
         GameRepo.newCareer(world, "Emin Hoca", eng.id)
+        // Kupa töreni ayrı testte; akıştaki ekranları kapatmasın
+        GameRepo.game!!.ceremonySeen = 999
         val g = GameRepo.game!!
         GameRepo.tab = 4
         GameRepo.selectedPlayer = g.players.first { it.teamId == g.divisionTeams(14)[3].id && it.overall > 60 }
@@ -375,6 +377,16 @@ class ScreensTest {
         GameRepo.newspaperOpen = false
         while (!g.seasonOver && !g.fired) advance(1)
         GameRepo.tab = 0; shot("15_seasonend")
+        GameRepo.awardsOpen = true
+        shot("15b_awards")
+        GameRepo.awardsOpen = false
+        run {
+            val g0 = GameRepo.game!!
+            g0.trophies += "🏆 ${g0.season} ${g0.leagueName(g0.userTeam)} şampiyonu"
+            g0.ceremonySeen = g0.trophies.size - 1
+            shot("15c_trophy")
+            g0.ceremonySeen = 999
+        }
         GameRepo.startNewSeason()
         GameRepo.tab = 3; GameRepo.leagueTab = 5; shot("16_history")
         GameRepo.leagueTab = 6; shot("16b_calendar")

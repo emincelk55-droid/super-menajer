@@ -41,18 +41,18 @@ const val GOAL_FX_MS = 2800
  * sönük bir yazı ve halka görünür. Dokunmaları engellemez.
  */
 @Composable
-fun BoxScope.GoalCelebration(c1: Color, c2: Color, confetti: Boolean, seed: Int) {
+fun BoxScope.GoalCelebration(c1: Color, c2: Color, confetti: Boolean, seed: Int, showText: Boolean = true) {
     val still = fxStill()
     val p = remember(seed) { Animatable(if (still) 0.35f else 0f) }
     LaunchedEffect(seed) {
         if (!still) p.animateTo(1f, tween(GOAL_FX_MS, easing = LinearEasing))
     }
-    GoalCelebrationFrame(p.value, c1, c2, confetti, seed)
+    GoalCelebrationFrame(p.value, c1, c2, confetti, seed, showText)
 }
 
 /** Kutlamanın tek karesi; [progress] 0..1. Ekran görüntüsü testleri de bunu kullanır. */
 @Composable
-fun BoxScope.GoalCelebrationFrame(progress: Float, c1: Color, c2: Color, confetti: Boolean, seed: Int) {
+fun BoxScope.GoalCelebrationFrame(progress: Float, c1: Color, c2: Color, confetti: Boolean, seed: Int, showText: Boolean = true) {
     val parts = remember(seed) { confettiParticles(seed, listOf(c1, c2, Gold, Color.White, Teal)) }
     val t = progress * GOAL_FX_MS / 1000f
     Canvas(Modifier.matchParentSize()) {
@@ -96,7 +96,7 @@ fun BoxScope.GoalCelebrationFrame(progress: Float, c1: Color, c2: Color, confett
             }
         }
     }
-    GoalText(progress, c1, c2, confetti)
+    if (showText) GoalText(progress, c1, c2, confetti)
 }
 
 @Composable

@@ -81,6 +81,9 @@ object GameRepo {
     var inboxSel by mutableStateOf<com.supermenajer.game.model.News?>(null)
     var settingsOpen by mutableStateOf(false)
 
+    /** Sezon sonu ödül gecesi açık mı. */
+    var awardsOpen by mutableStateOf(false)
+
     /** Haftanın gazetesi açık mı. */
     var newspaperOpen by mutableStateOf(false)
     var tacticsPanel by mutableIntStateOf(0)
