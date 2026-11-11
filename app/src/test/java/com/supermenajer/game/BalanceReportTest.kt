@@ -59,6 +59,9 @@ class BalanceReportTest {
                     " 26-29=${"%.0f".format(band(26..29))} 30-32=${"%.0f".format(band(30..32))} 33+=${"%.0f".format(band(33..45))}" +
                     " | 85+=${act.count { it.overall >= 85 }} 80+=${act.count { it.overall >= 80 }} 75+=${act.count { it.overall >= 75 }} oyuncu=${act.size}"
             )
+            // Gol kralları: lig maçı başına gol (gerçekte en iyi golcü ~0.6-0.9 gol/maç, ligde 20-36 gol)
+            val kings = tops.mapNotNull { d -> g.players.filter { it.teamId >= 0 && g.teamOrNull(it.teamId)?.division == d }.maxByOrNull { it.goals } }
+            println("REP   gol kralları ${kings.joinToString { "${it.goals}g/${it.apps}m" }}")
             Season.newSeason(g, rnd)
             val idsAfter = g.players.map { it.id }.toSet()
             val gks = act.filter { it.pos == com.supermenajer.game.model.Pos.GK && it.overall >= 70 }

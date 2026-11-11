@@ -322,7 +322,8 @@ class MatchSim(
         return list.last()
     }
 
-    private fun shotW(p: Pos) = when (p) { Pos.FW -> 6.0; Pos.MF -> 2.5; Pos.DF -> 0.6; Pos.GK -> 0.0 }
+    // Şutçu payı: forvet önde ama gol yükü tek oyuncuda toplanmasın (gerçekte gol kralı takım gollerinin ~%30'u)
+    private fun shotW(p: Pos) = when (p) { Pos.FW -> 4.4; Pos.MF -> 2.7; Pos.DF -> 0.75; Pos.GK -> 0.0 }
     private fun astW(p: Pos) = when (p) { Pos.FW -> 1.5; Pos.MF -> 3.0; Pos.DF -> 1.0; Pos.GK -> 0.05 }
 
     private fun shot(atk: Side, def: Side, sA: Str, sD: Str, forcedQ: Double? = null, header: Boolean = false) {
@@ -339,7 +340,7 @@ class MatchSim(
         }
         val shooter = designated?.let { d -> atk.onPitch.firstOrNull { it.p.id == d.id } } ?: pickW(outfield) {
             val r = roleOf(atk, it)
-            shotW(it.slot.pos) * (if (header) r.header else r.shot) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(1.5)
+            shotW(it.slot.pos) * (if (header) r.header else r.shot) * ((if (header) it.p.physical else it.p.shooting) / 70.0).pow(1.15)
         } ?: return
         val assister = if (!penalty && (header || rnd.nextDouble() < 0.72)) {
             val corner = if (header) R.cornerTaker(game, atk.team, onPitchPlayers)?.let { c -> atk.onPitch.firstOrNull { it.p.id == c.id && it !== shooter } } else null
