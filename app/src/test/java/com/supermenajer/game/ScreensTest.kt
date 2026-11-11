@@ -301,6 +301,20 @@ class ScreensTest {
             repeat(60) { an.update(1f / 30f) }
         }
         shot("12_match")
+        run {
+            val sim = GameRepo.match!!
+            paparazzi.snapshot("12c_match_tactics") {
+                AppTheme {
+                    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(com.supermenajer.game.ui.Bg)) {
+                        com.supermenajer.game.ui.AdviceBanner(
+                            com.supermenajer.game.engine.MatchAdvice.Tip("attack", "Gerideyiz hocam. Hücuma geçmenin zamanı.", "Hücum"),
+                            Modifier.padding(8.dp), {}, {},
+                        )
+                        com.supermenajer.game.ui.MatchTacticsDialog(sim, sim.userSide!!) {}
+                    }
+                }
+            }
+        }
         // Düdük çaldı: oyuncular tokalaşıp tünele yürür
         run {
             val an = GameRepo.pitchFor(GameRepo.match!!)

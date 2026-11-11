@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import com.supermenajer.game.model.Formations
+
 import com.supermenajer.game.game.Positions
 
 import com.supermenajer.game.audio.Sound
@@ -114,6 +116,11 @@ fun MatchScreen() {
     var ticker by remember { mutableStateOf(sim.events.lastOrNull()?.let { Ticker(it.minute, it.text, it.side, 0) }) }
     var tab by remember { mutableIntStateOf(0) }
     var showSubs by remember { mutableStateOf(false) }
+    var showTactics by remember { mutableStateOf(false) }
+    // Yardımcı antrenör önerisi: en fazla 10 dakikada bir, reddedilen öneri tekrar gelmez
+    var tip by remember { mutableStateOf<com.supermenajer.game.engine.MatchAdvice.Tip?>(null) }
+    val tipSkip = remember { HashSet<String>() }
+    var lastTipMin by remember { mutableIntStateOf(-99) }
     var subSide by remember { mutableIntStateOf(0) }
     var goalFlash by remember { mutableStateOf<MatchEvent?>(null) }
     var halfResult by remember { mutableStateOf<Talks.Result?>(null) }
@@ -223,6 +230,18 @@ fun MatchScreen() {
                         goalFlash?.let { GoalCard(sim, it, if (it.side == 0) homeC else awayC) }
                     }
                     TickerBox(ticker, homeC, awayC, Modifier.align(Alignment.BottomCenter))
+                    tip?.let { t ->
+                        AdviceBanner(
+                            t, Modifier.align(Alignment.TopStart).padding(8.dp),
+                            onApply = {
+                                tipSkip += t.key
+                                tip = null
+                                if (t.subs) { running = false; subSide = 0; showSubs = true }
+                                else sim.userSide?.let { us -> t.apply(sim, us); GameRepo.bump(); tick++ }
+                            },
+                            onDismiss = { tipSkip += t.key; tip = null },
+                        )
+                    }
                     // Devre arası ve maç sonu: sahanın ortasında SM tarzı kart
                     if (sim.minute == 45 && !running && !sim.finished) {
                         OverlayCard("DEVRE ARASI · SOYUNMA ODASI", "$scoreH - $scoreA", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
@@ -270,6 +289,7 @@ fun MatchScreen() {
                 onShout = { if (sim.canShout) { sim.shout(it); revealed = sim.events.size; tick++ } },
                 onSubs = { running = false; subSide = 0; showSubs = true },
                 onSkip = { running = false; sim.runToEnd(); revealed = sim.events.size; tick++ },
+                onTactics = { running = false; showTactics = true },
             )
             // İki kişilik maç: 2. oyuncunun kontrolleri
             if (sim.twoPlayer) {
@@ -287,6 +307,16 @@ fun MatchScreen() {
                     ) { Text("🔁 Değişiklik (${sim.away.subsLeft})", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
                 }
             }
+        }
+    }
+    if (showTactics) sim.userSide?.let { us ->
+        MatchTacticsDialog(sim, us, onClose = { showTactics = false; anim.sync(); GameRepo.bump(); tick++ })
+    }
+    // Yeni dakikada yardımcı antrenör durumu değerlendirir
+    LaunchedEffect(sim.minute) {
+        val us = sim.userSide
+        if (us != null && !sim.twoPlayer && !sim.finished && tip == null && sim.minute - lastTipMin >= 10) {
+            com.supermenajer.game.engine.MatchAdvice.suggest(sim, us, tipSkip)?.let { tip = it; lastTipMin = sim.minute }
         }
     }
     if (showSubs) {
@@ -874,6 +904,7 @@ private fun Segmented(options: List<String>, selected: Int, modifier: Modifier =
 private fun MatchControls(
     sim: MatchSim, running: Boolean, speed: Int,
     onPlay: () -> Unit, onSpeed: (Int) -> Unit, onMentality: (Int) -> Unit, onShout: (Int) -> Unit, onSubs: () -> Unit, onSkip: () -> Unit,
+    onTactics: () -> Unit = {},
 ) {
     Row(
         Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 6.dp),
@@ -903,6 +934,11 @@ private fun MatchControls(
                     }
                 }
             }
+            Box(
+                Modifier.height(40.dp).pressClick(0.95f, onClick = onTactics).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
+                    .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("📋 Taktik", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
             Box(
                 Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
                     .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable(onClick = onSubs).padding(horizontal = 12.dp),
@@ -978,5 +1014,69 @@ private fun MotmCard(sim: MatchSim, motm: PIM) {
             Modifier.size(54.dp).clip(CircleShape).background(Color(0xFF0B1028)).border(3.dp, ratingColor(motm.rating), CircleShape),
             contentAlignment = Alignment.Center,
         ) { Text("%.1f".format(motm.rating), fontWeight = FontWeight.Black, fontSize = 18.sp, color = ratingColor(motm.rating)) }
+    }
+}
+
+/** Yardımcı antrenörün maç içi önerisi: tek dokunuşla uygula ya da kapat. */
+@Composable
+internal fun AdviceBanner(tip: com.supermenajer.game.engine.MatchAdvice.Tip, modifier: Modifier, onApply: () -> Unit, onDismiss: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier.appear(offsetDp = -12f).widthIn(max = 420.dp).shadow(8.dp, shape).clip(shape)
+            .background(Brush.horizontalGradient(listOf(Color(0xF2182050), Color(0xF20B1028))))
+            .border(1.dp, Gold.copy(alpha = 0.7f), shape).padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("🧑‍💼", fontSize = 18.sp)
+        Spacer(Modifier.width(6.dp))
+        Column(Modifier.weight(1f, fill = false)) {
+            Text("YARDIMCI ANTRENÖR", color = Gold, fontWeight = FontWeight.Black, fontSize = 9.sp, letterSpacing = 1.sp)
+            Text(tip.text, fontSize = 12.sp, lineHeight = 15.sp)
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier.pressClick(0.94f, onClick = onApply).clip(RoundedCornerShape(8.dp)).background(Teal).padding(horizontal = 10.dp, vertical = 6.dp),
+        ) { Text(tip.button, color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 11.sp) }
+        Text("✕", color = TextDim, fontSize = 14.sp, modifier = Modifier.clip(CircleShape).clickable(onClick = onDismiss).padding(6.dp))
+    }
+}
+
+/** Maç içi taktik: diziliş ve takım talimatları (maç durur, kapatınca kaldığı yerden sürer). */
+@Composable
+internal fun MatchTacticsDialog(sim: MatchSim, us: com.supermenajer.game.engine.Side, onClose: () -> Unit) {
+    var v by remember { mutableIntStateOf(0) }
+    v
+    val t = us.team
+    WideDialog(onDismissRequest = onClose, maxWidth = 640.dp) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brush.verticalGradient(listOf(CardTop, CardBottom)))
+                .border(1.dp, CardLine, RoundedCornerShape(16.dp)).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("📋 Maç İçi Taktik · ${sim.minute}'", fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text("✕", fontSize = 18.sp, color = TextDim, modifier = Modifier.clip(CircleShape).clickable(onClick = onClose).padding(6.dp))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Diziliş", color = TextDim, fontSize = 13.sp, modifier = Modifier.width(110.dp))
+                val forms = Formations.map.keys.toList()
+                SmDropdown(t.formation, forms, Modifier.weight(1f)) { i -> if (sim.changeFormation(us, forms[i])) v++ }
+            }
+            @Composable
+            fun row(label: String, opts: List<String>, sel: Int, set: (Int) -> Unit) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, color = TextDim, fontSize = 13.sp, modifier = Modifier.width(110.dp))
+                    Segmented(opts, sel, Modifier.weight(1f)) { set(it); v++ }
+                }
+            }
+            row("Mentalite", listOf("Defans", "Denge", "Hücum"), t.mentality) { t.mentality = it }
+            row("Pres", listOf("Düşük", "Orta", "Yüksek"), t.pressing) { t.pressing = it }
+            row("Tempo", listOf("Yavaş", "Normal", "Hızlı"), t.tempo) { t.tempo = it }
+            row("Genişlik", listOf("Dar", "Normal", "Geniş"), t.width) { t.width = it }
+            row("Pas", listOf("Kısa", "Karışık", "Uzun"), t.passing) { t.passing = it }
+            row("Savunma hattı", listOf("Geride", "Normal", "Önde"), t.defLine) { t.defLine = it }
+            Text("Değişiklikler hemen maça yansır. Yüksek pres ve hızlı tempo oyuncuları daha çabuk yorar.", color = TextDim, fontSize = 11.sp)
+            SmActionButton("MAÇA DÖN  ▶", Modifier.fillMaxWidth(), onClose)
+        }
     }
 }

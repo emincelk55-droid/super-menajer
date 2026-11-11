@@ -348,7 +348,7 @@ fun SmDropdown(value: String, options: List<String>, modifier: Modifier = Modifi
                 .border(1.dp, Teal.copy(alpha = 0.7f), RoundedCornerShape(10.dp)).clickable { open = true }.padding(start = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(value, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextMain, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Box(Modifier.width(1.dp).height(24.dp).background(Teal.copy(alpha = 0.4f)))
             androidx.compose.material3.Icon(
                 androidx.compose.material.icons.Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = TextMain,

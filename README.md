@@ -218,3 +218,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Kurgusal isimler (yeni kariyerde varsayılan, ilk adımda kapatılabilir): gerçek veriden gelen kulüp, kısa kod, stadyum,
   teknik direktör ve oyuncu adları ülkeye uygun uydurma adlarla değişir (gerçek bir kulüp ya da futbolcuyla aynı ad
   çıkmaz); güçler, renkler, şehirler ve kadro yapısı aynı kalır. Mevcut kayıtlar etkilenmez.
+- Maç içi taktik (📋 Taktik): maç durur; diziliş (oyuncular yeni mevkilere en uygun şekilde yerleşir) ve mentalite,
+  pres, tempo, genişlik, pas, savunma hattı değişir. Yardımcı antrenör maç içinde durumu okuyup öneri verir (gerideyken
+  hücum, öndeyken savunma, yorgun/sarı kartlı oyuncu, rakip eksikken pres...), tek dokunuşla uygulanır.

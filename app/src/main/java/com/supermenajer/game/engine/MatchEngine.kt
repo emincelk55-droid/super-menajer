@@ -471,6 +471,29 @@ class MatchSim(
         if (rep == null || !substitute(s, v, rep)) s.onPitch.remove(v)
     }
 
+    /**
+     * Maç içinde diziliş değişikliği: sahadaki oyuncular yeni dizilişin mevkilerine en uygun şekilde
+     * yerleşir (kaleci kalede kalır; eksik oyuncuyla oynanıyorsa bir mevki boş kalır).
+     */
+    fun changeFormation(s: Side, f: String): Boolean {
+        val slots = Formations.map[f] ?: return false
+        if (f == s.team.formation || finished) return false
+        val free = slots.toMutableList()
+        // Önce en iyi oyuncular yerleşsin: mevkisine en uygun olan, en uygun yere
+        val order = s.onPitch.sortedByDescending { m -> if (m.slot.pos == Pos.GK) 1e9 else com.supermenajer.game.game.Positions.rating(m.p, m.slot).toDouble() }
+        for (m in order) {
+            val gk = m.slot.pos == Pos.GK
+            val best = free.filter { (it.pos == Pos.GK) == gk }.maxByOrNull { com.supermenajer.game.game.Positions.rating(m.p, it) } ?: continue
+            m.slot = best
+            free.remove(best)
+        }
+        s.team.formation = f
+        s.team.lineup.clear()
+        s.team.lineup.addAll(slots.map { sl -> s.onPitch.firstOrNull { it.slot === sl }?.p?.id ?: -1 })
+        ev(Ev.INFO, s.index, "📋 ${s.team.name} dizilişi değiştirdi: $f")
+        return true
+    }
+
     /** Oyuncu değişikliği. Kullanıcı arayüzünden de çağrılır. */
     fun substitute(s: Side, out: PIM, inP: Player): Boolean {
         if (s.subsLeft <= 0 || finished) return false
