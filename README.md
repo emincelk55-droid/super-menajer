@@ -223,3 +223,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   hücum, öndeyken savunma, yorgun/sarı kartlı oyuncu, rakip eksikken pres...), tek dokunuşla uygulanır.
 - Kadro → 🌱 Gelişim: 21 yaş altı oyuncular ve kiralıktakiler; sezon sezon güç grafiği, potansiyel bandı (antrenör
   kalitesine göre daralır), bu sezonki artış ve yardımcının önerisi (A takıma hazır / kiralık önerilir / geri çağır).
+- Derbi atmosferi: aynı şehrin kulüpleri (İstanbul, Madrid, Milano, Londra...) ve aynı ligin iki devi derbi sayılır.
+  Derbi haftası ana sayfada ateşli kart ve geri sayım, gazetede derbi manşeti; maç başında tribün koreografisi
+  (takım renklerinde dalgalanan pankart, meşaleler), derbi adı skor bandında, tribün daha gür.

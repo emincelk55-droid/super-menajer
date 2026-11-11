@@ -26,10 +26,30 @@ object Talks {
 
     class Result(val message: String, val reactions: List<String>)
 
-    fun isDerby(g: Game, f: Fixture): Boolean {
-        val h = g.teamOrNull(f.home) ?: return false
-        val a = g.teamOrNull(f.away) ?: return false
-        return h.city == a.city && Leagues.of(h.division)?.country == "Türkiye" && Leagues.of(a.division)?.country == "Türkiye"
+    /**
+     * Derbi: aynı şehrin iki kulübü (İstanbul, Madrid, Milano, Londra...) ya da aynı ligin iki devi (ikisinin de
+     * itibarı 86+, "klasik"). Milli maçlar derbi sayılmaz.
+     */
+    fun isDerby(g: Game, f: Fixture): Boolean = derbyName(g, f) != null
+
+    /** Önümüzdeki 7 gün içindeki derbimiz (yoksa null) ve kalan gün. */
+    fun upcomingDerby(g: Game): Pair<Fixture, Long>? {
+        val f = g.nextUserFixture() ?: return null
+        if (!isDerby(g, f)) return null
+        val days = com.supermenajer.game.game.GameCalendar.dateOf(g, f.week) - g.date
+        return if (days in 0..7) f to days else null
+    }
+
+    /** Derbinin adı ("İstanbul Derbisi", "Klasik"); derbi değilse null. */
+    fun derbyName(g: Game, f: Fixture): String? {
+        if (f.comp == Comp.NATIONAL) return null
+        val h = g.teamOrNull(f.home) ?: return null
+        val a = g.teamOrNull(f.away) ?: return null
+        if (h.city.isNotBlank() && h.city.equals(a.city, ignoreCase = true) && Leagues.of(h.division)?.country == Leagues.of(a.division)?.country) {
+            return "${h.city} Derbisi"
+        }
+        if (h.division == a.division && h.reputation >= 86 && a.reputation >= 86) return "Dev Maç · Klasik"
+        return null
     }
 
     fun bigMatch(g: Game, f: Fixture) = f.comp == Comp.NATIONAL || isDerby(g, f) || Comp.isCup(f.comp) || f.comp == Comp.EURO

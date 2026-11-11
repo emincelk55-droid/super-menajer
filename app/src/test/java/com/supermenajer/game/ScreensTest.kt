@@ -21,6 +21,8 @@ import androidx.compose.foundation.background
 import com.supermenajer.game.ui.GoalCelebrationFrame
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import com.supermenajer.game.ui.TifoOverlay
+import com.supermenajer.game.ui.drawFmPitch
 import java.nio.file.Files
 
 class ScreensTest {
@@ -128,6 +130,36 @@ class ScreensTest {
         while (anim.replayView == null && n++ < 30 * 20) anim.update(1f / 30f)
         while ((anim.replayView?.progress ?: 1f) < 0.7f && n++ < 30 * 40) anim.update(1f / 30f)
         paparazzi.snapshot("25_goal_replay") { pitch() }
+    }
+
+    /** Derbi: aynı şehrin kulüpleri ve iki devin maçı derbi sayılır; derbi haftası kartı ve tribün koreografisi. */
+    @Test
+    fun derbyAtmosphere() {
+        val w = Generator.newWorld(kotlin.random.Random(6)).also { Season.computeExpectations(it) }
+        val tr = w.divisionTeams(0)
+        val ist = tr.filter { it.city.equals(tr.groupBy { t -> t.city.lowercase() }.maxBy { it.value.size }.key, ignoreCase = true) }
+        val a = ist[0]
+        val b = ist[1]
+        val f = com.supermenajer.game.model.Fixture(5, a.id, b.id)
+        org.junit.Assert.assertEquals("${a.city} Derbisi", com.supermenajer.game.game.Talks.derbyName(w, f))
+        val small = tr.filter { it.city != a.city }.minBy { it.reputation }
+        org.junit.Assert.assertNull(com.supermenajer.game.game.Talks.derbyName(w, com.supermenajer.game.model.Fixture(5, a.id, small.id)))
+        w.userTeamId = a.id
+        paparazzi.snapshot("26_derby_week") {
+            AppTheme {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(com.supermenajer.game.ui.Bg).padding(24.dp)) {
+                    com.supermenajer.game.ui.DerbyWeekCard(w, f, 3)
+                }
+            }
+        }
+        paparazzi.snapshot("27_derby_tifo") {
+            AppTheme {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF256F3B))) {
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { drawFmPitch() }
+                    TifoOverlay(a, "${a.city} Derbisi", androidx.compose.ui.graphics.Color(a.color1), androidx.compose.ui.graphics.Color(a.color2))
+                }
+            }
+        }
     }
 
     @Test

@@ -94,7 +94,8 @@ class MatchSim(
     init {
         setup(home)
         setup(away)
-        ev(Ev.KICKOFF, -1, Comms.kickoff(home.team, away.team, rnd))
+        ev(Ev.KICKOFF, -1, com.supermenajer.game.game.Talks.derbyName(game, fixture)?.let { "🔥 $it başlıyor! Tribünlerde koreografi, meşaleler yanıyor, stat yerinden oynuyor!" }
+            ?: Comms.kickoff(home.team, away.team, rnd))
         if (nat != null) {
             fixture.attendance = (home.team.stadium * rnd.nextDouble(0.85, 1.0)).toInt()
             ev(Ev.INFO, -1, "🏟️ ${Facilities.crowdText(this)} · Milli marşlar okundu, tribünler bayraklarla dolu!")

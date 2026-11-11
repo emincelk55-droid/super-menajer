@@ -42,6 +42,7 @@ private val PaperRed = Color(0xFFC0241B)
 
 private fun tagColor(tag: String) = when (tag) {
     "SÖYLENTİ" -> Color(0xFF7A3FB8)
+    "DERBİ" -> Color(0xFFE0531A)
     "TRANSFER" -> Color(0xFF1F6FB8)
     "GOL KRALLIĞI" -> Color(0xFF2E7D32)
     "KULÜP" -> Color(0xFF8D5A00)

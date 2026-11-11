@@ -21,7 +21,17 @@ object Newspaper {
         val rnd = Random(g.season * 1000 + g.week)
         val us = g.userTeam
         val stories = mutableListOf<Story>()
-        val main = lastMatchStory(g, rnd) ?: previewStory(g, rnd)
+        // Derbi haftası manşete çıkar; son maç yan habere iner
+        val derby = Talks.upcomingDerby(g)
+        val derbyStory = derby?.let { (f, days) ->
+            val opp = g.team(if (f.home == us.id) f.away else f.home)
+            Story(
+                "DERBİ", listOf("DERBİ ATEŞİ!", "ŞEHİR İKİYE BÖLÜNDÜ", "BÜYÜK HESAPLAŞMA").random(rnd),
+                "${Talks.derbyName(g, f)}: ${us.name} ile ${opp.name} ${if (days == 0L) "bugün" else "$days gün sonra"} karşı karşıya. Biletler tükendi, tribünlerde dev koreografi hazırlanıyor.",
+            )
+        }
+        derbyStory?.let { lastMatchStory(g, rnd)?.let { m -> stories += m } }
+        val main = derbyStory ?: lastMatchStory(g, rnd) ?: previewStory(g, rnd)
             ?: Story("KULÜP", "${us.name.uppercase()} YENİ SEZONA HAZIRLANIYOR", "Teknik direktör ${g.managerName} kampta takımı şekillendiriyor.")
 
         // Lig: zirve ve küme hattı

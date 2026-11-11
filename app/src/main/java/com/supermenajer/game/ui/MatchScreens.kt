@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.animation.core.animateFloat
+
 import com.supermenajer.game.model.Formations
 
 import com.supermenajer.game.game.Positions
@@ -130,11 +132,17 @@ fun MatchScreen() {
     val anim = remember(sim) { GameRepo.pitchFor(sim) }
     anim.replaysOn = Fx.replays
     val whistled = remember { HashSet<Int>() }
+    // Derbide tribün daha gür; maç başında koreografi
+    val derby = remember(sim) { Talks.derbyName(sim.game, sim.fixture) }
+    val crowdBase = if (derby != null) 1.35f else 1f
+    var tifo by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { Sound.crowdLevel(crowdBase) }
     LaunchedEffect(running, speed) {
         val pace = paces[speed]
         // Başlama düdüğü: maçın ve ikinci yarının başında bir kez
         if (running && !sim.finished && (sim.minute == 0 || sim.minute == 45) && whistled.add(sim.minute)) {
             Sound.play(Sound.Fx.KICKOFF)
+            if (derby != null && sim.minute == 0) tifo = true
             // İkinci yarı: takımlar soyunma odasından sahaya çıkar
             if (sim.minute == 45) anim.secondHalf()
         }
@@ -162,7 +170,7 @@ fun MatchScreen() {
                     delay(250)
                 }
                 revealed = before + k + 1
-                Sound.crowdLevel(1f)
+                Sound.crowdLevel(crowdBase)
                 val mine = sim.userSide == null || sim.twoPlayer || e.side == sim.userSide?.index
                 when (e.type) {
                     Ev.GOAL -> Sound.play(Sound.Fx.GOAL, if (mine) 1f else 0.5f)
@@ -230,6 +238,10 @@ fun MatchScreen() {
                         goalFlash?.let { GoalCard(sim, it, if (it.side == 0) homeC else awayC) }
                     }
                     TickerBox(ticker, homeC, awayC, Modifier.align(Alignment.BottomCenter))
+                    if (tifo && derby != null) {
+                        LaunchedEffect(Unit) { delay(4200); tifo = false }
+                        TifoOverlay(sim.home.team, derby, homeC, Color(sim.home.team.color2))
+                    }
                     tip?.let { t ->
                         AdviceBanner(
                             t, Modifier.align(Alignment.TopStart).padding(8.dp),
@@ -411,7 +423,7 @@ private fun ScoreBoard(sim: MatchSim, hg: Int = sim.home.goals, ag: Int = sim.aw
     Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 6.dp)) {
         val f = sim.fixture
         Text(
-            (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") + if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
+            (Talks.derbyName(sim.game, f)?.let { "🔥 ${it.uppercase()} · " } ?: "") + if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
             color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
         )
@@ -778,7 +790,7 @@ private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEven
                 // Orta: skor kutuları ve dakika
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 10.dp)) {
                     Text(
-                        sim.title ?: (if (Talks.isDerby(sim.game, f)) "🔥 DERBİ · " else "") +
+                        sim.title ?: (Talks.derbyName(sim.game, f)?.let { "🔥 ${it.uppercase()} · " } ?: "") +
                             if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}" else "${Comp.name(f.comp)} · ${sim.game.leagueWeekAt(f.week)}. hafta",
                         color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     )
@@ -1078,5 +1090,48 @@ internal fun MatchTacticsDialog(sim: MatchSim, us: com.supermenajer.game.engine.
             Text("Değişiklikler hemen maça yansır. Yüksek pres ve hızlı tempo oyuncuları daha çabuk yorar.", color = TextDim, fontSize = 11.sp)
             SmActionButton("MAÇA DÖN  ▶", Modifier.fillMaxWidth(), onClose)
         }
+    }
+}
+
+/** Derbi koreografisi: ev sahibi tribünü takım renklerinde dalgalanan dev pankart ve meşaleler. */
+@Composable
+internal fun androidx.compose.foundation.layout.BoxScope.TifoOverlay(home: com.supermenajer.game.model.Team, derby: String, c1: Color, c2: Color) {
+    val still = fxStill()
+    val t = if (still) 0.5f else androidx.compose.animation.core.rememberInfiniteTransition(label = "tifo").animateFloat(
+        0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.LinearEasing)), label = "tifoT",
+    ).value
+    val enter = remember { androidx.compose.animation.core.Animatable(if (still) 1f else 0f) }
+    LaunchedEffect(Unit) { enter.animateTo(1f, androidx.compose.animation.core.tween(500)) }
+    androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+        val w = size.width
+        val h = size.height
+        // Dalgalanan çizgili pankart (alt yarı)
+        val bandH = h * 0.42f * enter.value
+        val stripes = 12
+        for (i in 0 until stripes) {
+            val x0 = w * i / stripes
+            val wave = kotlin.math.sin((t * 6.283f) + i * 0.7f) * h * 0.02f
+            drawRect(if (i % 2 == 0) c1 else c2, androidx.compose.ui.geometry.Offset(x0, h - bandH + wave), androidx.compose.ui.geometry.Size(w / stripes + 1f, bandH))
+        }
+        drawRect(Color.Black.copy(alpha = 0.25f), androidx.compose.ui.geometry.Offset(0f, h - bandH), androidx.compose.ui.geometry.Size(w, bandH))
+        // Meşaleler: titreyen kırmızı ışıklar ve duman
+        val r = kotlin.random.Random(home.id)
+        repeat(14) { k ->
+            val x = w * r.nextFloat()
+            val y = h - bandH * (0.2f + r.nextFloat() * 0.7f)
+            val flick = 0.6f + 0.4f * kotlin.math.sin(t * 25f + k)
+            drawCircle(
+                androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color(0xFFFF5A1F).copy(alpha = 0.9f * flick), Color(0xFFFF2A00).copy(alpha = 0.35f * flick), Color.Transparent), androidx.compose.ui.geometry.Offset(x, y), h * 0.07f),
+                h * 0.07f, androidx.compose.ui.geometry.Offset(x, y),
+            )
+            if (k % 3 == 0) drawCircle(Color.White.copy(alpha = 0.035f), h * 0.1f, androidx.compose.ui.geometry.Offset(x + (t - 0.5f) * w * 0.03f, y - h * 0.12f))
+        }
+    }
+    Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp).graphicsLayer { alpha = enter.value }, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("🔥 ${derby.uppercase()}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 2.sp)
+        Text(
+            if (derby.endsWith("Derbisi")) "BU ŞEHİR BİZİM!" else "BU GECE BİZİM!", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp, letterSpacing = 3.sp,
+            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, androidx.compose.ui.geometry.Offset(0f, 4f), 10f)),
+        )
     }
 }

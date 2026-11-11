@@ -323,6 +323,7 @@ fun MenuDrawer(g: Game, onClose: () -> Unit) {
 @Composable
 fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
+        if (!g.fired) com.supermenajer.game.game.Talks.upcomingDerby(g)?.let { (f, days) -> add { DerbyWeekCard(g, f, days) } }
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
         g.press?.let { q -> add { PressCard(g, q) } }
         if (!g.fired && g.natPending.isNotEmpty()) add { NationalMatchCard(g) }
@@ -904,5 +905,36 @@ private fun FeedCard(g: Game, modifier: Modifier) {
                 Text(c[1], fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+}
+
+/** Derbi haftası: ateşli kart, geri sayım, taraftarın beklentisi ve hazırlık önerisi. */
+@Composable
+fun DerbyWeekCard(g: Game, f: Fixture, days: Long) {
+    val opp = g.team(if (f.home == g.userTeamId) f.away else f.home)
+    val name = com.supermenajer.game.game.Talks.derbyName(g, f) ?: "Derbi"
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier.fillMaxWidth().shadow(10.dp, shape, ambientColor = Color(0xFFFF5A1F), spotColor = Color(0xFFFF5A1F)).clip(shape)
+            .background(Brush.linearGradient(listOf(Color(0xFF3A0D0D), Color(0xFF1A1030), Color(0xFF4A1A06))))
+            .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFF8A3D), Color(0xFFFF3B1F))), shape).shine(5200).padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🔥 DERBİ HAFTASI", color = Color(0xFFFF8A3D), fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+            Text(if (days == 0L) "BUGÜN!" else "$days gün kaldı", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TeamBadge(g.userTeam, 44.dp)
+            Text("  vs  ", color = TextDim, fontWeight = FontWeight.Bold)
+            TeamBadge(opp, 44.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(name, fontWeight = FontWeight.Black, fontSize = 18.sp, color = TextMain)
+                Text("${opp.name} · ${if (f.home == g.userTeamId) "iç saha, tribünler hazır" else "deplasman cehennemi"}", color = TextDim, fontSize = 12.sp)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("Taraftar sadece galibiyet istiyor: derbi zaferi taraftar ve yönetim güvenini büyük ölçüde artırır, yenilgi ağır olur. Maç hazırlığında rakibe özel talimat ve galibiyet primi düşün.", fontSize = 12.sp, lineHeight = 16.sp, color = TextMain.copy(alpha = 0.9f))
     }
 }
