@@ -250,3 +250,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   "Detaylı görünüm" ile finans, form, görevler ve sosyal medya kartları açılır.
 - Taktik 2D sahada görünür: savunma hattı ve mentalite takımı ileri/geri iter (geride ~33 m, önde ~53 m ortalama),
   genişlik kanatları açar/daraltır, pres yoğunluğu topa basan oyuncu sayısını (1-3) ve hızını belirler.
+- Uzun dönem dengesi: yapay zekâ kulüpleri altyapıdan genç alırken ve 30+ oyuncularla sözleşme uzatırken kadronun yaş
+  yapısına bakar (20 sezonda ortalama yaş 24-26,5 arası; bütçeler kontrollü, lig medyanı 20 sezonda +%24).

@@ -32,7 +32,7 @@ class BalanceReportTest {
         g.userTeamId = g.divisionTeams(0)[4].id
         Season.start(g, rnd)
         val champs = mutableMapOf<Int, MutableList<String>>()
-        repeat(15) {
+        repeat(20) {
             var guard = 0
             while (!g.seasonOver && guard++ < 2000) playDay(g, rnd)
             val league = g.fixtures.filter { it.hg >= 0 && it.comp == g.team(it.home).division }
@@ -61,6 +61,8 @@ class BalanceReportTest {
             )
             // Gol kralları: lig maçı başına gol (gerçekte en iyi golcü ~0.6-0.9 gol/maç, ligde 20-36 gol)
             val kings = tops.mapNotNull { d -> g.players.filter { it.teamId >= 0 && g.teamOrNull(it.teamId)?.division == d }.maxByOrNull { it.goals } }
+            val budgets = tops.map { d -> g.divisionTeams(d).map { it.budget } }.flatten().sorted()
+            println("REP   bütçe medyan=${budgets[budgets.size / 2] / 1_000_000}M en yüksek=${budgets.last() / 1_000_000}M maaş medyan=${tops.flatMap { d -> g.divisionTeams(d).map { com.supermenajer.game.game.Economy.squadWages(g, it.id) } }.sorted().let { it[it.size / 2] } / 1000}K/hafta · ort. değer ${act.map { it.value }.average().toLong() / 1000}K")
             println("REP   gol kralları ${kings.joinToString { "${it.goals}g/${it.apps}m" }}")
             Season.newSeason(g, rnd)
             val idsAfter = g.players.map { it.id }.toSet()

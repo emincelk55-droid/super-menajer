@@ -161,7 +161,8 @@ object Economy {
                 val keep = when {
                     p.age >= 34 -> p.overall >= str - 4 && rnd.nextDouble() < 0.6
                     // 30-33 yaş: yalnız hâlâ kadroya katkı verenler uzatılır (dünya yaşlanmasın)
-                    p.age >= 30 -> p.overall >= str - 7 && rnd.nextDouble() < 0.75
+                    // Deneyimli oyuncu azsa daha kolay uzatılır (kadronun yaş dengesi)
+                    p.age >= 30 -> p.overall >= str - 7 && rnd.nextDouble() < g.squad(t.id).count { it.age >= 29 }.let { v -> if (v < 6) 0.92 else if (v >= 9) 0.45 else 0.72 }
                     p.age <= 21 -> p.potential >= str - 6 || rnd.nextDouble() < 0.5
                     else -> p.overall >= str - 12 && rnd.nextDouble() < 0.88
                 }

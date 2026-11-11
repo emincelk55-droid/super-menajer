@@ -921,7 +921,7 @@ object Season {
                 val pos = need() ?: break
                 val str = Lineups.strength(g, t)
                 val free = if (t.id == g.userTeamId) null else g.squad(-1)
-                    .filter { it.pos == pos && it.overall in (str - 15).toInt()..(str + 2).toInt() && it.age <= 34 }
+                    .filter { it.pos == pos && it.overall in (str - 18).toInt()..(str + 2).toInt() && it.age <= 34 }
                     .maxByOrNull { it.overall - (it.age - 26).coerceAtLeast(0) }
                 if (free != null) {
                     g.movePlayer(free, t.id)
@@ -934,10 +934,18 @@ object Season {
                 }
                 sq = g.squad(t.id)
             }
-            // Yapay zekâ kulüpleri kadroyu ~26 kişide tutacak kadar genç alır; geniş kadroda ara sıra bir genç
-            // (dünya yenilensin, yeni yıldızlar doğsun ama yaş dengesi bozulmasın)
+            // Yapay zekâ kulüpleri altyapıdan genç alır ama kadrodaki genç sayısına bakar: gençler azsa 1-2,
+            // yeterliyse ara sıra, çoksa hiç (dünya kuşak kuşak dalgalanmasın, yaş ortalaması ~26 kalsın)
             if (t.id != g.userTeamId && sq.size < 30) {
-                repeat(if (sq.size < 26) (26 - sq.size).coerceAtMost(3) else if (rnd.nextDouble() < 0.35) 1 else 0) {
+                val young = sq.count { it.age <= 21 }
+                val vets = sq.count { it.age >= 30 }
+                val promote = when {
+                    young < 3 || (young < 5 && vets >= 9) -> 2
+                    young < 5 -> 1
+                    young < 7 && rnd.nextDouble() < 0.3 -> 1
+                    else -> 0
+                }.coerceAtMost((28 - sq.size).coerceAtLeast(0))
+                repeat(promote) {
                     val pos = Generator.squadPlan.maxBy { (pos, n) -> n - g.squad(t.id).count { it.pos == pos } }.key
                     g.addPlayer(Generator.youth(g, t, pos, rnd))
                 }
