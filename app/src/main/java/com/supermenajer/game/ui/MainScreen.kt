@@ -89,6 +89,10 @@ fun MainScreen() {
     }
     var menu by remember { mutableStateOf(false) }
     BackHandler(enabled = menu) { menu = false }
+    // İlk kez açılan sekme için rehber ipucu
+    androidx.compose.runtime.LaunchedEffect(GameRepo.tab, g.introDone) {
+        if (g.introDone) Tips.show(listOf("home", "squad", "tactics", "league", "transfer", "inbox", "club", "").getOrElse(GameRepo.tab) { "" })
+    }
     Box(Modifier.fillMaxSize()) {
         // Ana sayfada arkada canlı stadyum
         androidx.compose.animation.AnimatedVisibility(
@@ -161,6 +165,7 @@ private fun SettingsDialog() {
                         Text(if (saved) "✓ Kaydedildi" else "💾 Oyunu kaydet")
                     }
                     OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.editorOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🛠 Veri editörü") }
+                    OutlinedButton(onClick = { Tips.reset(); GameRepo.settingsOpen = false }, modifier = Modifier.fillMaxWidth()) { Text("💡 İpuçlarını yeniden göster") }
                     OutlinedButton(onClick = { confirm = 1 }, modifier = Modifier.fillMaxWidth()) { Text("🏠 Ana menüye dön") }
                     OutlinedButton(onClick = { confirm = 2 }, modifier = Modifier.fillMaxWidth()) { Text("🚪 Oyundan çık", color = Red) }
                     Spacer(Modifier.height(6.dp))

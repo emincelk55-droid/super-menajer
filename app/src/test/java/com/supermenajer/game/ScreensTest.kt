@@ -246,6 +246,9 @@ class ScreensTest {
         shot("04c_settings_bigtext")
         GameRepo.settingsOpen = false
         com.supermenajer.game.ui.Fx.changeTextSize(0)
+        com.supermenajer.game.ui.Tips.forceShow("home")
+        shot("04d_tip")
+        com.supermenajer.game.ui.Tips.forceShow(null)
         GameRepo.reportOpen = false
         g.press = null
         GameRepo.tab = 3; GameRepo.leagueTab = 0; GameRepo.leagueSel = 10; shot("05_league_eng")

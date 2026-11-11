@@ -40,6 +40,18 @@ object Fx {
         private set
     val textScale: Float get() = when (textSize) { 1 -> 1.12f; 2 -> 1.24f; else -> 1f }
 
+    /** Ana sayfa sade görünüm: yalnız maç, kulüp durumu, kararlar ve gazete (yeni oyuncu boğulmasın). */
+    var homeSimple by androidx.compose.runtime.mutableStateOf(true)
+        private set
+
+    fun changeHomeSimple(v: Boolean) {
+        homeSimple = v
+        prefs?.edit()?.putBoolean("homeSimple", v)?.apply()
+    }
+
+    /** Tercih dosyası (ipuçları gibi küçük ayarlar için); testlerde null. */
+    fun prefsOrNull(): android.content.SharedPreferences? = prefs
+
     fun changeTextSize(v: Int) {
         textSize = v.coerceIn(0, 2)
         prefs?.edit()?.putInt("textSize", textSize)?.apply()
@@ -54,6 +66,7 @@ object Fx {
             lowPower = it.getBoolean("lowPower", false)
             replays = it.getBoolean("replays", true)
             textSize = it.getInt("textSize", 0)
+            homeSimple = it.getBoolean("homeSimple", true)
         }
     }
 

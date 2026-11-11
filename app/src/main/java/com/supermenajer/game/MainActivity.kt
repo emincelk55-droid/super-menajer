@@ -68,5 +68,6 @@ fun AppRoot() {
         }
         GameRepo.busy?.let { com.supermenajer.game.ui.BusyOverlay(it) }
         com.supermenajer.game.ui.SystemNotices()
+        com.supermenajer.game.ui.TipBubble()
     }
 }

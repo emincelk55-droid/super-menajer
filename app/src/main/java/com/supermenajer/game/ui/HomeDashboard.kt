@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -364,25 +365,35 @@ fun HomeDashboard(g: Game) {
         }
         item { NewspaperTeaser(g, Modifier.fillMaxWidth()) }
         item {
-            Row(Modifier.fillMaxWidth().height(184.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InboxCard(g, Modifier.weight(1f).fillMaxHeight())
-                ManagerCard(g, Modifier.weight(1f).fillMaxHeight())
-                CompetitionCard(g, Modifier.weight(1f).fillMaxHeight())
-                SpotlightCard(g, Modifier.weight(1.05f).fillMaxHeight())
+            // Sade ⇄ detaylı ana sayfa
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                SmallChip(if (Fx.homeSimple) "▾ Detaylı görünüm (finans, form, görevler, sosyal medya...)" else "▴ Sade görünüm", false, Modifier.widthIn(max = 520.dp).fillMaxWidth()) {
+                    Fx.changeHomeSimple(!Fx.homeSimple)
+                }
             }
         }
-        item {
-            Row(Modifier.fillMaxWidth().height(170.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                TransfersCard(g, Modifier.weight(1f).fillMaxHeight())
-                FacilitiesMini(g, Modifier.weight(1f).fillMaxHeight())
-                UpcomingCard(g, Modifier.weight(1f).fillMaxHeight())
-                FormCard(g, Modifier.weight(1f).fillMaxHeight())
+        if (!Fx.homeSimple) {
+            item {
+                Row(Modifier.fillMaxWidth().height(184.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    InboxCard(g, Modifier.weight(1f).fillMaxHeight())
+                    ManagerCard(g, Modifier.weight(1f).fillMaxHeight())
+                    CompetitionCard(g, Modifier.weight(1f).fillMaxHeight())
+                    SpotlightCard(g, Modifier.weight(1.05f).fillMaxHeight())
+                }
             }
-        }
-        item {
-            Row(Modifier.fillMaxWidth().height(200.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MissionsCard(g, Modifier.weight(1f).fillMaxHeight())
-                FeedCard(g, Modifier.weight(1f).fillMaxHeight())
+            item {
+                Row(Modifier.fillMaxWidth().height(170.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TransfersCard(g, Modifier.weight(1f).fillMaxHeight())
+                    FacilitiesMini(g, Modifier.weight(1f).fillMaxHeight())
+                    UpcomingCard(g, Modifier.weight(1f).fillMaxHeight())
+                    FormCard(g, Modifier.weight(1f).fillMaxHeight())
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth().height(200.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MissionsCard(g, Modifier.weight(1f).fillMaxHeight())
+                    FeedCard(g, Modifier.weight(1f).fillMaxHeight())
+                }
             }
         }
     }

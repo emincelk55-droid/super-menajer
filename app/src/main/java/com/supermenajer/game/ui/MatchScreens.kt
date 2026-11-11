@@ -132,6 +132,7 @@ fun MatchScreen() {
     val anim = remember(sim) { GameRepo.pitchFor(sim) }
     anim.replaysOn = Fx.replays
     val whistled = remember { HashSet<Int>() }
+    LaunchedEffect(Unit) { if (sim.userSide != null) Tips.show("match") }
     // Derbide tribün daha gür; maç başında koreografi
     val derby = remember(sim) { Talks.derbyName(sim.game, sim.fixture) }
     val crowdBase = if (derby != null) 1.35f else 1f

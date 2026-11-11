@@ -245,3 +245,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   metin kayıtlar da açılır.
 - Ayarlar → Yazı boyutu (Normal / Büyük / Çok büyük): tüm metinler büyür, ana sayfa kartları da birlikte uzar. En küçük
   yazılar 9'dan 10 puntoya çıktı.
+- İlk oynayış rehberi: her ana ekran ilk kez açıldığında kısa ipucu balonu (bir kez; "İpuçlarını kapat" ya da
+  Ayarlar → "İpuçlarını yeniden göster"). Ana sayfa varsayılan olarak sade: maç, kulüp durumu, kararlar ve gazete;
+  "Detaylı görünüm" ile finans, form, görevler ve sosyal medya kartları açılır.
