@@ -78,6 +78,8 @@ class Player(
     var squadRole: Int = -1,
     /** Kiralıktaysa asıl kulübü, değilse -1. */
     var loanFrom: Int = -1,
+    /** Her sezon sonundaki genel güç (en fazla 10 sezon): gelişim grafiği için. */
+    var ovrHistory: MutableList<Int> = mutableListOf(),
     /** Mutsuz ve transfer talep etti. */
     var wantsAway: Boolean = false,
     /** Son birebir konuşmanın zamanı (sezon*1000 + hafta). */

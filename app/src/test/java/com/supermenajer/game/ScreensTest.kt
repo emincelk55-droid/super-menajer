@@ -170,6 +170,16 @@ class ScreensTest {
         shot("03a_staff")
         GameRepo.tab = GameRepo.TAB_SQUAD
         shot("03a_squad")
+        // Gelişim sekmesi: gençlere örnek geçmiş sezonlar
+        run {
+            val g0 = GameRepo.game!!
+            g0.squad(g0.userTeamId).filter { it.age <= 21 }.forEachIndexed { i, p ->
+                p.ovrHistory = mutableListOf(p.overall - 9 + i % 3, p.overall - 6, p.overall - 2 - i % 2)
+            }
+            GameRepo.squadMode = 3
+            shot("03a2_youth")
+            GameRepo.squadMode = 0
+        }
         GameRepo.selectedPlayer = g.squad(g.userTeamId).filter { it.age <= 21 }.minBy { it.overall }.also {
             GameRepo.setFocus(it, 3); GameRepo.setLearn(it, com.supermenajer.game.game.Development.learnable(it).first().ordinal); it.learnProgress = 35
         }

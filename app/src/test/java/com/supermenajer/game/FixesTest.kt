@@ -146,6 +146,9 @@ class FixesTest {
         assertNull(g.player(vet.id))
         assertTrue(g.retiring.isEmpty())
         assertTrue(scorer.career.single().contains("|10|4|"))
+        // Gelişim yolu: sezon sonu gücü kaydedilir
+        assertEquals(1, scorer.ovrHistory.size)
+        assertTrue(com.supermenajer.game.game.Youth.rows(g).all { it.history.isNotEmpty() && it.potLow <= it.potHigh })
 
         // Rakip menajer: laf sokma → basın sorusu; cevap rakibe hırs, karne tutulur
         val opp = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }

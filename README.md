@@ -221,3 +221,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Maç içi taktik (📋 Taktik): maç durur; diziliş (oyuncular yeni mevkilere en uygun şekilde yerleşir) ve mentalite,
   pres, tempo, genişlik, pas, savunma hattı değişir. Yardımcı antrenör maç içinde durumu okuyup öneri verir (gerideyken
   hücum, öndeyken savunma, yorgun/sarı kartlı oyuncu, rakip eksikken pres...), tek dokunuşla uygulanır.
+- Kadro → 🌱 Gelişim: 21 yaş altı oyuncular ve kiralıktakiler; sezon sezon güç grafiği, potansiyel bandı (antrenör
+  kalitesine göre daralır), bu sezonki artış ve yardımcının önerisi (A takıma hazır / kiralık önerilir / geri çağır).

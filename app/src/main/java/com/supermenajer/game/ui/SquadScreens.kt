@@ -67,10 +67,11 @@ import kotlin.math.roundToLong
 fun SquadTab(g: Game) {
     Column(Modifier.fillMaxSize()) {
         val a2 = g.squad(g.userTeamId).count { it.reserve }
-        FmTabs(listOf("Oyuncular", "Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", "A2 Takımı ($a2)"), GameRepo.squadMode) { GameRepo.squadMode = it }
+        FmTabs(listOf("Oyuncular", "Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", "A2 Takımı ($a2)", "🌱 Gelişim"), GameRepo.squadMode) { GameRepo.squadMode = it }
         when (GameRepo.squadMode) {
             1 -> DynamicsView(g)
             2 -> ReservesView(g)
+            3 -> YouthView(g)
             else -> PlayersList(g)
         }
     }
@@ -866,5 +867,81 @@ private fun ReservesView(g: Game) {
                 }
             }
         }
+    }
+}
+
+/** Gençler ve kiralıktakiler: güç grafiği, potansiyel tahmini ve yardımcının önerisi. */
+@Composable
+fun YouthView(g: Game) {
+    val rows = com.supermenajer.game.game.Youth.rows(g)
+    if (rows.isEmpty()) {
+        Text("Kadroda 21 yaş altı ya da kiralıkta oyuncu yok. Altyapı seçmeleri ve genç transferleriyle başla.", color = TextDim, modifier = Modifier.padding(16.dp))
+        return
+    }
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        androidx.compose.foundation.lazy.grid.GridCells.Adaptive(400.dp), Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+            Text("Potansiyel aralığı antrenörünün kalitesine göre daralır. Kiralıktaki oyuncuların performansı da burada.", color = TextDim, fontSize = 12.sp)
+        }
+        items(rows.size) { i -> YouthCard(g, rows[i]) }
+    }
+}
+
+@Composable
+private fun YouthCard(g: Game, r: com.supermenajer.game.game.Youth.Row) {
+    val p = r.p
+    val t = g.teamOrNull(p.loanFrom.takeIf { it >= 0 } ?: p.teamId) ?: g.userTeam
+    DashCard(null, Modifier.fillMaxWidth(), onClick = { GameRepo.selectedPlayer = p }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PlayerFace(p, 52.dp, Color(t.color1), Color(t.color2))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(p.name, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "${p.age} yaş · ${com.supermenajer.game.game.Positions.det(p).code}" + (r.loanClub?.let { " · 🔁 Kiralık: $it" } ?: ""),
+                    color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                Text("Potansiyel ${r.potLow}–${r.potHigh}", color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                OvrBadge(p.overall, 40.dp)
+                if (r.growth != 0) Text((if (r.growth > 0) "+" else "") + r.growth, color = if (r.growth > 0) Green else Red, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        GrowthChart(r.history, r.potLow, r.potHigh, Modifier.fillMaxWidth().height(54.dp))
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(when (r.level) { 0 -> Green; 1 -> Gold; else -> Red }))
+            Spacer(Modifier.width(6.dp))
+            Text(r.advice, fontSize = 12.sp, lineHeight = 15.sp)
+        }
+    }
+}
+
+/** Sezon sonu güçlerinin çizgisi ve potansiyel bandı. */
+@Composable
+private fun GrowthChart(hist: List<Int>, potLow: Int, potHigh: Int, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val lo = (hist.minOrNull() ?: 50).coerceAtMost(potLow) - 3
+        val hi = potHigh + 2
+        fun y(v: Int) = size.height * (1f - (v - lo).toFloat() / (hi - lo).coerceAtLeast(1))
+        // Potansiyel bandı
+        drawRect(Gold.copy(alpha = 0.28f), androidx.compose.ui.geometry.Offset(0f, y(potHigh)), androidx.compose.ui.geometry.Size(size.width, y(potLow) - y(potHigh)))
+        val n = hist.size
+        if (n == 1) {
+            drawCircle(Teal, 5f, androidx.compose.ui.geometry.Offset(size.width - 6f, y(hist[0])))
+            return@Canvas
+        }
+        val step = (size.width - 12f) / (n - 1)
+        val path = androidx.compose.ui.graphics.Path()
+        hist.forEachIndexed { i, v ->
+            val x = 6f + i * step
+            if (i == 0) path.moveTo(x, y(v)) else path.lineTo(x, y(v))
+        }
+        drawPath(path, Teal, style = androidx.compose.ui.graphics.drawscope.Stroke(4f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        hist.forEachIndexed { i, v -> drawCircle(if (i == n - 1) Gold else Teal, if (i == n - 1) 6f else 4f, androidx.compose.ui.geometry.Offset(6f + i * step, y(v))) }
     }
 }
