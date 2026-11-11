@@ -59,7 +59,7 @@ import com.supermenajer.game.game.GameRepo
 import com.supermenajer.game.game.Screen
 import kotlin.math.sin
 
-const val APP_VERSION = "v2.12"
+const val APP_VERSION = "v2.13"
 
 private val tips = listOf(
     "İpucu: DEVAM düğmesi günleri tek tek geçirir, önemli bir olayda durur.",

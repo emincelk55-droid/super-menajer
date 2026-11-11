@@ -206,7 +206,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Gerçek sesler: tribün uğultusu ve "ooo" 58 bin kişilik bir maçtan, gol kükremesi Avusturya-İsveç maçından, hakem
   düdüğü gerçek kayıttan; menü müziği Kevin MacLeod "Carefree". Kaynaklar ve lisanslar: `docs/SES_KAYNAKLARI.md`.
 
-### Geliştirmede (henüz APK yok)
+### v2.13
 - 2D maç: devre arası ve maç sonu düdüğünde oyuncular tokalaşıp tünelden soyunma odasına yürür ve sahne durur (önceden
   maç bittikten sonra da oynamaya devam ediyorlardı); ikinci yarıda takımlar tünelden sahaya çıkar.
 - 2D maç: goller ağır çekim tekrar edilir (sinema bandı, "TEKRAR", sahaya dokununca geçilir; Ayarlar'dan kapatılabilir);
