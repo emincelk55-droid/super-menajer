@@ -346,7 +346,7 @@ fun HomeDashboard(g: Game) {
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Row(Modifier.fillMaxWidth().height(186.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().height(186.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 HeroMatchCard(g, Modifier.weight(2.15f).fillMaxHeight())
                 ClubStatusMini(g, Modifier.weight(1f).fillMaxHeight())
             }
@@ -364,7 +364,7 @@ fun HomeDashboard(g: Game) {
         }
         item { NewspaperTeaser(g, Modifier.fillMaxWidth()) }
         item {
-            Row(Modifier.fillMaxWidth().height(184.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().height(184.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InboxCard(g, Modifier.weight(1f).fillMaxHeight())
                 ManagerCard(g, Modifier.weight(1f).fillMaxHeight())
                 CompetitionCard(g, Modifier.weight(1f).fillMaxHeight())
@@ -372,7 +372,7 @@ fun HomeDashboard(g: Game) {
             }
         }
         item {
-            Row(Modifier.fillMaxWidth().height(170.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().height(170.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TransfersCard(g, Modifier.weight(1f).fillMaxHeight())
                 FacilitiesMini(g, Modifier.weight(1f).fillMaxHeight())
                 UpcomingCard(g, Modifier.weight(1f).fillMaxHeight())
@@ -380,7 +380,7 @@ fun HomeDashboard(g: Game) {
             }
         }
         item {
-            Row(Modifier.fillMaxWidth().height(200.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().height(200.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MissionsCard(g, Modifier.weight(1f).fillMaxHeight())
                 FeedCard(g, Modifier.weight(1f).fillMaxHeight())
             }
@@ -695,7 +695,7 @@ private fun SpotlightCard(g: Game, modifier: Modifier) {
 @Composable
 private fun SpotStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = TextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         Text(value, fontWeight = FontWeight.Black, fontSize = 14.sp, color = Teal)
     }
 }

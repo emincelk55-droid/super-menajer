@@ -88,7 +88,7 @@ private fun XgBars(ms: List<Analysis.Match>) {
         }
     }
     Row(Modifier.fillMaxWidth()) {
-        for (m in ms) Text(m.opp, color = if (m.gf > m.ga) Green else if (m.gf == m.ga) Gold else Red, fontSize = 9.sp,
+        for (m in ms) Text(m.opp, color = if (m.gf > m.ga) Green else if (m.gf == m.ga) Gold else Red, fontSize = 10.sp,
             modifier = Modifier.weight(1f), textAlign = TextAlign.Center, maxLines = 1)
     }
     Text("Üstte bizim, altta rakibin gol beklentisi; noktalar atılan goller.", color = TextDim, fontSize = 10.sp)

@@ -64,8 +64,14 @@ fun AppTheme(content: @Composable () -> Unit) {
             surfaceVariant = Surface2, onSurfaceVariant = TextDim,
             error = Red, outline = Line,
         ),
-        content = content,
-    )
+    ) {
+        // Yazı boyutu ayarı: tüm metinler (sp) seçilen oranda büyür
+        val d = androidx.compose.ui.platform.LocalDensity.current
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale * Fx.textScale),
+            content = content,
+        )
+    }
 }
 
 fun ovrColor(o: Int): Color = when {

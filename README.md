@@ -241,3 +241,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   yeme, topa sahip olma...).
 - Yeni logo: altın çerçeveli zümrüt-lacivert kalkan, üç yıldızlı altın şerit, defne dalı içinde top ve parlama;
   uygulama ikonu, oyun içi logo ve mağaza görselleri tek tanımdan (`tools/gen_logo.py`). Marka yazısı altın/zümrüt degrade.
+- Kayıt dosyası gzip ile sıkıştırılıyor (2,3 MB → ~340 KB; telefonda daha hızlı yazma/yükleme, daha az pil); eski düz
+  metin kayıtlar da açılır.
+- Ayarlar → Yazı boyutu (Normal / Büyük / Çok büyük): tüm metinler büyür, ana sayfa kartları da birlikte uzar. En küçük
+  yazılar 9'dan 10 puntoya çıktı.

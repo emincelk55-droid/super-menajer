@@ -865,6 +865,12 @@ fun SoundSettings() {
             androidx.compose.material3.Switch(S.musicOn, { S.changeMusic(it) })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🔠 Yazı boyutu", fontSize = 14.sp, modifier = Modifier.weight(1f))
+            listOf("Normal", "Büyük", "Çok büyük").forEachIndexed { i, l ->
+                SmallChip(l, Fx.textSize == i, Modifier.width(92.dp).padding(start = 6.dp)) { Fx.changeTextSize(i) }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text("🎬 Gol tekrarı", fontSize = 14.sp, modifier = Modifier.weight(1f))
             Text("golden sonra ağır çekim", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
             androidx.compose.material3.Switch(Fx.replays, { Fx.changeReplays(it) })

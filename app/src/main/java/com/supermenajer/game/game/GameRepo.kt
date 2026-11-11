@@ -295,6 +295,21 @@ object GameRepo {
     private var lastSave = 0L
     private var trailingSave = false
 
+    /**
+     * Kayıt dosyası gzip ile sıkıştırılmış JSON (~10 kat küçük, telefonda daha hızlı yazılır ve yüklenir).
+     * Eski sürümlerin düz metin kayıtları da okunur (ilk iki bayt gzip imzasına bakılır).
+     */
+    internal fun writeSave(f: File, text: String) {
+        java.util.zip.GZIPOutputStream(f.outputStream().buffered(), 64 * 1024).bufferedWriter(Charsets.UTF_8).use { it.write(text) }
+    }
+
+    internal fun readSave(f: File): String {
+        val bytes = f.readBytes()
+        val gz = bytes.size > 2 && bytes[0] == 0x1f.toByte() && bytes[1] == 0x8b.toByte()
+        return if (gz) java.util.zip.GZIPInputStream(bytes.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
+        else bytes.toString(Charsets.UTF_8)
+    }
+
     /** Kaydı yazar. force=false iken sık değişikliklerde en fazla 4 saniyede bir yazar. */
     fun save(force: Boolean = false) {
         if (versus) return
@@ -318,7 +333,7 @@ object GameRepo {
         writer.execute {
             runCatching {
                 val tmp = File(dir, "kariyer.tmp")
-                tmp.writeText(text)
+                writeSave(tmp, text)
                 rotateBackups(n, target)
                 if (!tmp.renameTo(target)) {
                     target.delete()
@@ -342,7 +357,7 @@ object GameRepo {
         advancing = false
         advanceJob?.cancel()
         fun read(f: File): Game? = runCatching {
-            json.decodeFromString(Game.serializer(), f.readText()).also { Season.migrate(it) }
+            json.decodeFromString(Game.serializer(), readSave(f)).also { Season.migrate(it) }
         }.getOrNull()
         // Yuva ancak dosya sorunsuz okunursa değişir: bozuk kayıt başka kariyerle ezilmesin
         var g = read(slotFile(n))

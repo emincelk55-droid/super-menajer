@@ -288,7 +288,7 @@ private fun TeamStep(
                         TeamBadge(t, 40.dp)
                         Spacer(Modifier.height(4.dp))
                         Text(t.name, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2, textAlign = TextAlign.Center, lineHeight = 12.sp)
-                        Text("★".repeat(repStars(t.reputation)), color = Gold, fontSize = 9.sp)
+                        Text("★".repeat(repStars(t.reputation)), color = Gold, fontSize = 10.sp)
                     }
                 }
             }

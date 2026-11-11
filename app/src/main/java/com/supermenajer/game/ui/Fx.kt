@@ -35,6 +35,16 @@ object Fx {
         private set
     private var prefs: android.content.SharedPreferences? = null
 
+    /** Yazı boyutu: 0 normal, 1 büyük, 2 çok büyük. */
+    var textSize by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+    val textScale: Float get() = when (textSize) { 1 -> 1.12f; 2 -> 1.24f; else -> 1f }
+
+    fun changeTextSize(v: Int) {
+        textSize = v.coerceIn(0, 2)
+        prefs?.edit()?.putInt("textSize", textSize)?.apply()
+    }
+
     /** Gol tekrarı (ağır çekim) açık mı. */
     var replays by androidx.compose.runtime.mutableStateOf(true)
         private set
@@ -43,6 +53,7 @@ object Fx {
         prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also {
             lowPower = it.getBoolean("lowPower", false)
             replays = it.getBoolean("replays", true)
+            textSize = it.getInt("textSize", 0)
         }
     }
 

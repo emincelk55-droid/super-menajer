@@ -240,6 +240,12 @@ class ScreensTest {
         g.offers += IncomingOffer(g.squad(g.userTeamId).maxBy { it.overall }.id, g.divisionTeams(12)[0].id, 20_000_000, g.week)
         g.press = PressQuestion("Rakip karşısında galibiyetin anahtarı neydi?", listOf("Oyuncularımın mücadelesi.", "Taktiğimiz tuttu, plan işledi.", "Henüz iyi oynamıyoruz."), 1)
         GameRepo.tab = 0; shot("04_home")
+        com.supermenajer.game.ui.Fx.changeTextSize(1)
+        shot("04b_home_bigtext")
+        GameRepo.settingsOpen = true
+        shot("04c_settings_bigtext")
+        GameRepo.settingsOpen = false
+        com.supermenajer.game.ui.Fx.changeTextSize(0)
         GameRepo.reportOpen = false
         g.press = null
         GameRepo.tab = 3; GameRepo.leagueTab = 0; GameRepo.leagueSel = 10; shot("05_league_eng")

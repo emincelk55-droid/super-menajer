@@ -809,11 +809,11 @@ private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEven
                     val tot = (sim.home.poss + sim.away.poss).coerceAtLeast(1)
                     val hp = if (sim.home.poss + sim.away.poss == 0) 0.5f else sim.home.poss.toFloat() / tot
                     Row(Modifier.width(150.dp).padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${(hp * 100).roundToInt()}", fontSize = 9.sp, color = TextDim, modifier = Modifier.width(18.dp))
+                        Text("${(hp * 100).roundToInt()}", fontSize = 10.sp, color = TextDim, modifier = Modifier.width(18.dp))
                         Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(awayC)) {
                             Box(Modifier.fillMaxHeight().fillMaxWidth(hp).background(homeC))
                         }
-                        Text("${100 - (hp * 100).roundToInt()}", fontSize = 9.sp, color = TextDim, modifier = Modifier.width(18.dp), textAlign = TextAlign.End)
+                        Text("${100 - (hp * 100).roundToInt()}", fontSize = 10.sp, color = TextDim, modifier = Modifier.width(18.dp), textAlign = TextAlign.End)
                     }
                 }
             }
@@ -1042,7 +1042,7 @@ internal fun AdviceBanner(tip: com.supermenajer.game.engine.MatchAdvice.Tip, mod
         Text("🧑‍💼", fontSize = 18.sp)
         Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f, fill = false)) {
-            Text("YARDIMCI ANTRENÖR", color = Gold, fontWeight = FontWeight.Black, fontSize = 9.sp, letterSpacing = 1.sp)
+            Text("YARDIMCI ANTRENÖR", color = Gold, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp)
             Text(tip.text, fontSize = 12.sp, lineHeight = 15.sp)
         }
         Spacer(Modifier.width(8.dp))

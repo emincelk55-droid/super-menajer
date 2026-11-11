@@ -28,7 +28,7 @@ class SaveBackupTest {
         assertTrue(main.exists() && bak.exists())
 
         // Elektrik kesintisinde yarım yazılmış dosya
-        main.writeText(main.readText().take(500))
+        main.writeBytes(main.readBytes().copyOf(500))
         GameRepo.closeCareer()
         assertTrue(GameRepo.load(1))
         assertNotNull(GameRepo.restoredNote)
@@ -46,6 +46,20 @@ class SaveBackupTest {
         main.writeText("{bozuk")
         dir.listFiles()!!.filter { it.name.startsWith("kariyer1.bak") }.forEach { it.writeText("{bozuk") }
         assertFalse(GameRepo.load(1))
+
+        // Sıkıştırılmış kayıt: düz metinden çok küçük; eski düz metin kayıtlar da açılır
+        val w2 = Generator.newWorld(Random(10)).also { Season.computeExpectations(it) }
+        GameRepo.newCareer(w2, "Eski", w2.divisionTeams(0)[2].id)
+        GameRepo.save(force = true); GameRepo.flush()
+        val gz = main.length()
+        val plain = GameRepo.readSave(main)
+        println("KAYIT sıkıştırılmış ${gz / 1024} KB, düz ${plain.length / 1024} KB")
+        assertTrue(gz * 5 < plain.length)
+        main.writeText(plain)
+        GameRepo.closeCareer()
+        assertTrue(GameRepo.load(1))
+        assertEquals("Eski", GameRepo.game!!.managerName)
+        GameRepo.flush()
 
         GameRepo.deleteSlot(1)
         assertFalse(bak.exists() || main.exists())
