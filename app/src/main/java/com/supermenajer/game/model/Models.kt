@@ -71,6 +71,10 @@ class Player(
     var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */
     var listed: Boolean = false,
+    /** Verilen forma sözü: son hafta (0: söz yok), gereken maç sayısı ve sözün verildiği andaki maç sayısı. */
+    var promiseUntil: Int = 0,
+    var promiseNeed: Int = 0,
+    var promiseBaseApps: Int = 0,
     /** Sonraki satıştan pay: hangi kulübe yüzde kaç. */
     var sellOnClub: Int = -1,
     var sellOnPct: Int = 0,

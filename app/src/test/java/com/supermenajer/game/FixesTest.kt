@@ -168,6 +168,27 @@ class FixesTest {
         assertTrue(com.supermenajer.game.game.Vision.list(g).first { it.id == "finance" }.status == 2)
         g.userTeam.budget = 10_000_000
 
+        // Oyuncu talebi: forma sözü verilir; süre dolunca tutulmadıysa moral düşer, tutulduysa artar
+        run {
+            val E = com.supermenajer.game.game.Events
+            val w0 = g.week
+            val sub = g.squad(teamId).first { !it.reserve && it.injuredWeeks == 0 }
+            g.pendingEvent = GameEvent(E.PLAYTIME, sub.id, "forma", "forma", listOf("a", "b", "c"))
+            E.resolve(g, 0)
+            assertTrue(sub.promiseUntil > g.week && sub.promiseNeed == 3)
+            val m0 = sub.morale
+            g.week = sub.promiseUntil
+            E.checkPromises(g)
+            assertTrue(sub.morale < m0 && sub.promiseUntil == 0)
+            E.promise(g, sub, need = 1, window = 1)
+            sub.apps += 1
+            g.week += 1
+            val m1 = sub.morale
+            E.checkPromises(g)
+            assertTrue(sub.morale > m1)
+            g.week = w0
+        }
+
         // Gazete: manşet ve haberler dolu, aynı hafta aynı sayı
         val ed1 = com.supermenajer.game.game.Newspaper.edition(g)
         val ed2 = com.supermenajer.game.game.Newspaper.edition(g)

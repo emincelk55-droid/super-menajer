@@ -16,12 +16,40 @@ object Events {
     const val RETIRE = 3
     const val RUMOUR = 4
     const val YOUNGSTAR = 5
+    const val PLAYTIME = 6
+    const val RAISE = 7
+    const val WANTS_OUT = 8
+
+    /** Forma sözü: önümüzdeki [window] haftada en az [need] maç. */
+    fun promise(g: Game, p: com.supermenajer.game.model.Player, need: Int = 3, window: Int = 6) {
+        p.promiseUntil = g.week + window
+        p.promiseNeed = need
+        p.promiseBaseApps = p.apps
+    }
+
+    /** Süresi dolan sözleri değerlendirir: tutulduysa moral artar, tutulmadıysa oyuncu kırılır, takım da görür. */
+    fun checkPromises(g: Game) {
+        for (p in g.squad(g.userTeamId)) {
+            if (p.promiseUntil <= 0 || g.week < p.promiseUntil) continue
+            val played = p.apps - p.promiseBaseApps
+            if (played >= p.promiseNeed) {
+                p.morale = (p.morale + 10).coerceAtMost(100.0)
+                g.addNews("🤝 Söz tutuldu", "${p.name} sözünü tuttuğun için mutlu: son haftalarda $played maç oynadı.")
+            } else {
+                p.morale = (p.morale - 25).coerceAtLeast(5.0)
+                g.cohesion = (g.cohesion - 3).coerceAtLeast(15.0)
+                g.addNews("💔 Söz tutulmadı", "${p.name} verilen forma sözünün tutulmadığını düşünüyor (${played}/${p.promiseNeed} maç). Soyunma odası da bunu konuşuyor.")
+            }
+            p.promiseUntil = 0
+        }
+    }
 
     private fun r25k(v: Double) = (v / 25_000).roundToLong().coerceAtLeast(1) * 25_000
 
     /** Lig haftasında, bekleyen olay yoksa ~%9 ihtimalle yeni olay. */
     fun weekly(g: Game, rnd: Random) {
-        if (g.fired || g.pendingEvent != null || rnd.nextDouble() > 0.09) return
+        checkPromises(g)
+        if (g.fired || g.pendingEvent != null || rnd.nextDouble() > 0.11) return
         val us = g.userTeam
         val sq = g.squad(us.id)
         val home = g.flagOf(us)
@@ -46,6 +74,19 @@ object Events {
         }
         sq.filter { it.age <= 20 && it.id !in us.lineup && it.potential >= it.overall + 8 }.randomOrNull(rnd)?.let { p ->
             options += { GameEvent(YOUNGSTAR, p.id, "🌟 Genç yetenek parlıyor", "${p.name} (${p.age}) antrenmanlarda herkesi büyülüyor. Ona şans verecek misin?", listOf("İlk 11 sözü ver", "Sabırlı ol, zamanı gelecek")) }
+        }
+        // Oyuncu talepleri: forma, zam, ayrılık
+        val str = Lineups.strength(g, us)
+        if (g.week >= 8) sq.filter { it.overall >= str - 4 && it.age in 21..31 && it.apps <= g.week / 4 && it.promiseUntil == 0 && it.injuredWeeks == 0 && !it.reserve }.randomOrNull(rnd)?.let { p ->
+            options += { GameEvent(PLAYTIME, p.id, "🗣️ ${p.name} forma istiyor", "${p.name} odana geldi: \"Hocam, bu sezon sadece ${p.apps} maç oynadım. Daha fazla şans istiyorum.\"", listOf("Söz ver: 6 maçta en az 3 kez oynayacak", "Formayı antrenmanda hak etmeli", "Kiralık ya da satış listesine koy")) }
+        }
+        sq.filter { it.apps >= 8 && it.avgRating >= 7.05 && it.overall >= str && it.salary in 1 until (it.demandWage * 0.8).toLong() }.randomOrNull(rnd)?.let { p ->
+            val raise = (p.demandWage - p.salary).coerceAtLeast(1_000)
+            options += { GameEvent(RAISE, p.id, "💰 ${p.name} zam istiyor", "Harika bir sezon geçiren ${p.name} (ort. not %.2f) maaşının piyasa değerinin altında olduğunu söylüyor. Menajeri haftalık ${money(raise)} zam talep ediyor.".format(p.avgRating), listOf("Zammı ver (+${money(raise)}/hafta, sözleşme +1 yıl)", "Sezon sonunda konuşalım", "Mevcut sözleşmesine uymalı"), raise) }
+        }
+        sq.filter { it.overall >= str + 2 && (Traits.of(it) == Traits.AMBITIOUS || it.morale < 50) && !it.listed }.randomOrNull(rnd)?.let { p ->
+            val club = g.teams.filter { it.reputation > us.reputation + 6 }.randomOrNull(rnd)?.name ?: return@let
+            options += { GameEvent(WANTS_OUT, p.id, "✈️ ${p.name} gitmek istiyor", "$club'ün ilgisini duyan ${p.name} kariyerinde bir üst basamağa çıkmak istediğini söyledi. Kararı sana bıraktı.", listOf("Satış listesine koy", "Maaşını %20 artır ve projeye ikna et", "Kesinlikle gitmiyor")) }
         }
         g.pendingEvent = options.randomOrNull(rnd)?.invoke() ?: return
         g.addNews(g.pendingEvent!!.title, g.pendingEvent!!.text + " (Ana sayfadan karar ver.)")
@@ -97,7 +138,35 @@ object Events {
                 1 -> "Söylentiler bir süre sonra durulur."
                 else -> { Fans.change(g, -3.0, "Yıldız satış sinyali"); p?.let { it.listed = true; it.morale = (it.morale + if (Traits.of(it) == Traits.AMBITIOUS) 5 else -4).coerceIn(5.0, 100.0) }; "${p?.name} satış listesine kondu; teklifler gelebilir." }
             }
+            PLAYTIME -> when (choice) {
+                0 -> { p?.let { promise(g, it); it.morale = (it.morale + 8).coerceAtMost(100.0) }; "${p?.name} sözünü aldı: önümüzdeki 6 maçın en az 3'ünde oynatmalısın. Söz tutulmazsa kırılır!" }
+                1 -> { val pro = p != null && Traits.of(p) == Traits.PRO; p?.let { it.morale = (it.morale + if (pro) 2 else -8).coerceIn(5.0, 100.0) }; if (pro) "${p?.name} başını eğip çalışmaya döndü." else "${p?.name} cevabından memnun kalmadı." }
+                else -> { p?.let { it.listed = true; it.morale = (it.morale + 4).coerceAtMost(100.0) }; "${p?.name} satış/kiralık listesine kondu; teklifler gelebilir." }
+            }
+            RAISE -> when (choice) {
+                0 -> {
+                    val wageOk = Economy.squadWages(g, us.id) + e.amount <= us.wageBudget
+                    if (p != null && wageOk) {
+                        p.salary += e.amount; p.contractYears += 1; p.morale = (p.morale + 12).coerceAtMost(100.0)
+                        "${p.name} yeni maaşıyla imzayı attı. Mutlu ve motive!"
+                    } else "Maaş bütçesi bu zammı kaldırmıyor. Önce maaş bütçesinde yer aç (Kulüp → Finans)."
+                }
+                1 -> { p?.let { it.morale = (it.morale - 5).coerceAtLeast(5.0) }; "${p?.name} bekleyecek ama sabırsız." }
+                else -> { p?.let { it.morale = (it.morale - 12).coerceAtLeast(5.0); if (Traits.of(it) == Traits.AMBITIOUS) it.listed = true }; "${p?.name} kırıldı. Hırslı oyuncular bu durumda kulüpten ayrılmak isteyebilir." }
+            }
+            WANTS_OUT -> when (choice) {
+                0 -> { p?.let { it.listed = true; it.morale = (it.morale + 6).coerceAtMost(100.0) }; Fans.change(g, -3.0, "Yıldız satış listesinde"); "${p?.name} satış listesinde. Büyük teklifler gelebilir." }
+                1 -> {
+                    val extra = ((p?.wage ?: 0) * 0.2).toLong()
+                    if (p != null && Economy.squadWages(g, us.id) + extra <= us.wageBudget) {
+                        p.salary = p.wage + extra; p.morale = (p.morale + 10).coerceAtMost(100.0); p.contractYears = maxOf(p.contractYears, 3)
+                        "${p.name} ikna oldu: yeni maaş ve 3 yıllık sözleşmeyle kalıyor."
+                    } else "Maaş bütçesi yetmedi; ${p?.name} hâlâ gitmek istiyor."
+                }
+                else -> { p?.let { it.morale = (it.morale - 15).coerceAtLeast(5.0) }; g.cohesion = (g.cohesion - 2).coerceAtLeast(15.0); Fans.change(g, 3.0, "Yıldız satılmadı"); "${p?.name} kalıyor ama mutsuz. Taraftar ise kararını alkışladı." }
+            }
             else -> if (choice == 0 && p != null) {
+                promise(g, p, need = 4, window = 6)
                 p.squadRole = 1
                 p.morale = (p.morale + 10).coerceAtMost(100.0)
                 if (rnd.nextDouble() < 0.5) p.potential = (p.potential + 2).coerceAtMost(95)

@@ -425,6 +425,13 @@ fun PlayerDialog(g: Game, p: Player) {
                         color = Gold, fontSize = 12.sp, maxLines = 1,
                     )
                     Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name} · ${g.leagueName(it)}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 12.sp, maxLines = 1)
+                    if (own && p.promiseUntil > 0) {
+                        val played = p.apps - p.promiseBaseApps
+                        Text(
+                            "🤝 Forma sözü: $played/${p.promiseNeed} maç · ${(p.promiseUntil - g.week).coerceAtLeast(0)} hafta kaldı",
+                            color = if (played >= p.promiseNeed) Green else Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                        )
+                    }
                 }
                 Row(Modifier.weight(1.2f), horizontalArrangement = Arrangement.SpaceEvenly) {
                     HeaderStat(money(p.value), "Değer")

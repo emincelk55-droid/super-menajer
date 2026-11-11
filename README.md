@@ -233,3 +233,6 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 ### Geliştirmede (henüz APK yok)
 - Denge: goller tek yıldız forvette fazla toplanmıyor (gol kralı tüm kupalarda ~25-50 gol, gerçek ligler gibi);
   denge raporuna gol kralları eklendi.
+- Oyuncu talepleri: forma şansı isteyen yedek (6 maçta 3 kez oynatma sözü verebilirsin; tutulmazsa moral çöker,
+  soyunma odası görür), zam isteyen yıldız (maaş bütçesine bağlı), büyük kulübe gitmek isteyen oyuncu. Verilen sözün
+  durumu oyuncu profilinde görünür.

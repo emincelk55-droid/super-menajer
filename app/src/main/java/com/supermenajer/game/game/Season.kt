@@ -872,6 +872,7 @@ object Season {
 
         val retired = mutableListOf<Player>()
         for (p in g.players.toList()) {
+            p.promiseUntil = 0
             p.ovrHistory += p.overall
             if (p.ovrHistory.size > 10) p.ovrHistory.removeAt(0)
             p.age++
