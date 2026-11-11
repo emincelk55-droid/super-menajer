@@ -802,7 +802,7 @@ object Season {
             awards = awards,
         )
         if (awards.isNotEmpty()) g.addNews("🏅 Sezonun ödülleri", awards)
-        g.euroQualified = Leagues.topLeagues.flatMap { lg -> g.table(lg.id).take(4).map { it.id } }.toMutableList()
+        g.euroQualified = Leagues.topLeagues.filter { it.euroSlots > 0 && g.divisionTeams(it.id).isNotEmpty() }.flatMap { lg -> g.table(lg.id).take(lg.euroSlots).map { it.id } }.toMutableList()
         if (us.id in g.euroQualified) g.addNews("AVRUPA'DAYIZ!", "${us.name} gelecek sezon Avrupa Kupası'nda mücadele edecek!")
         val topLeague = g.table(Leagues.top(country).id)
         val summary = buildString {
@@ -872,6 +872,8 @@ object Season {
             if (us in up) g.addNews("YÜKSELDİK!", "${us.name} artık ${top.name}'nde! Tarihi bir başarı hocam!")
         }
         returnLoans(g)
+        // Eski kayıtlar: sonradan eklenen ligler yeni sezonla kurulur
+        if (WorldGen.addMissingLeagues(g, rnd)) g.addNews("🌍 Yeni ligler", "Belçika, İskoçya, Brezilya ve Arjantin ligleri bu sezondan itibaren oyunda! Gözlemcilerin yeni yeteneklere bakabilir.")
         Economy.processContracts(g, rnd)
 
         val retired = mutableListOf<Player>()

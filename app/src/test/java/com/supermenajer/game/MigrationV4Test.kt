@@ -57,7 +57,7 @@ class MigrationV4Test {
         Season.newSeason(loaded, rnd)
         assertTrue(!loaded.worldUpgradePending)
         assertEquals(0, loaded.teams.count { it.division == Leagues.LEGACY_EURO })
-        assertEquals(234, loaded.teams.size)
+        assertEquals(306, loaded.teams.size)
         assertEquals(32, loaded.euroTeams.size)
         assertTrue(loaded.players.none { p -> p.teamId >= 0 && loaded.teamOrNull(p.teamId) == null })
         while (!loaded.seasonOver) playDay(loaded, rnd)

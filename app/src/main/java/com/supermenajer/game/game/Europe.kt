@@ -26,14 +26,21 @@ object Europe {
 
     private fun day(g: Game, round: Int): Int = g.calendar.indexOfFirst { it.type == 2 && it.number == round } + 1
 
-    /** Katılımcılar: her büyük ligin ilk 4'ü (geçen sezon sıralaması; ilk sezonda en güçlüler). */
+    /** Katılımcılar: her ligin kontenjanı kadar (büyük ligler 4, diğerleri 1-3) (geçen sezon sıralaması; ilk sezonda en güçlüler). */
     private fun entrants(g: Game): List<Team> {
         val list = mutableListOf<Team>()
         for (lg in Leagues.topLeagues) {
             val teams = g.divisionTeams(lg.id)
             if (teams.isEmpty()) continue
             val q = g.euroQualified.mapNotNull { g.teamOrNull(it) }.filter { it.division == lg.id }
-            list += if (q.size >= 4) q.take(4) else teams.sortedBy { it.expected }.take(4)
+            val n = lg.euroSlots
+            if (n <= 0) continue
+            list += if (q.size >= n) q.take(n) else teams.sortedBy { it.expected }.take(n)
+        }
+        // Bir lig eksikse (eski kayıt) boş kontenjanlar büyük liglerin sıradaki takımlarına
+        if (list.size < 32) {
+            list += Leagues.topLeagues.filter { it.euroSlots > 0 }.flatMap { g.divisionTeams(it.id) }
+                .filter { it !in list }.sortedByDescending { it.reputation }.take(32 - list.size)
         }
         // Eski dünya (yalnızca Türkiye + ülkesiz Avrupa kulüpleri) için yedek.
         if (list.size < 32) {

@@ -261,6 +261,7 @@ class ScreensTest {
         g.press = null
         GameRepo.tab = 3; GameRepo.leagueTab = 0; GameRepo.leagueSel = 10; shot("05_league_eng")
         GameRepo.leagueSel = 0; shot("06_league_tr")
+        GameRepo.leagueSel = 23; shot("06b_league_br"); GameRepo.leagueSel = 0
         GameRepo.leagueTab = 1; shot("07_cup")
         GameRepo.leagueTab = 2; shot("08_euro")
         GameRepo.leagueTab = 3; shot("09_fixtures")

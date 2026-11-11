@@ -99,6 +99,46 @@ object WorldGen {
             listOf("Grachten FC", "Polder Utd"),
             82 downTo 48, null,
         ),
+        CountryDef(
+            "Belçika", "BE",
+            listOf(
+                "Brugdal", "Leuvenhof", "Meerhout", "Scheldewijk", "Ardenval", "Kempenberg", "Waaslo", "Dijlestad",
+                "Hageland", "Maasbeek", "Zennegem", "Vlaskot", "Beverlo", "Ourthe-Ville", "Sambremont", "Lesseval",
+            ),
+            listOf("KV {T}", "KRC {T}", "Sporting {T}", "Royal {T}", "SK {T}", "FC {T}", "Standard {T}", "KAS {T}"),
+            listOf("Royal Scheldt", "Club Vlaanderen"),
+            80 downTo 48, null,
+        ),
+        CountryDef(
+            "İskoçya", "GB",
+            listOf(
+                "Glenmorrow", "Kilbrae", "Dunlaggan", "Strathallan", "Inverkeld", "Ardnacraig", "Ballochmyle", "Carrickmuir",
+                "Lochfyne", "Montrae", "Kirkhaven", "Torrisdale", "Auchenbrae", "Craigmore", "Balnagown", "Eilean",
+            ),
+            listOf("{T} FC", "{T} Thistle", "{T} Athletic", "{T} Rovers", "{T} United", "Heart of {T}", "{T} Academicals", "Queen of {T}"),
+            listOf("Clydeside FC", "Lowland Rangers"),
+            78 downTo 46, null,
+        ),
+        CountryDef(
+            "Brezilya", "BR",
+            listOf(
+                "Serra Dourada", "Rio Claro", "Porto Celeste", "Vila Esperança", "Campo Belo", "Águas Lindas", "Boa Vista", "Itaporã",
+                "Morro Alto", "Nova Aurora", "Pedra Branca", "Santa Clara", "São Bento", "Terra Roxa", "Ventania", "Maracajá",
+            ),
+            listOf("EC {T}", "SE {T}", "{T} FC", "Atlético {T}", "Grêmio {T}", "Esporte {T}", "América {T}", "Ferroviário {T}"),
+            listOf("Atlético Serrano", "Paulistano FC", "Esporte Clube Litoral"),
+            82 downTo 52, null,
+        ),
+        CountryDef(
+            "Arjantin", "AR",
+            listOf(
+                "Pampa Alta", "Río Plateado", "Villa Andina", "Cerro Azul", "Las Lomas", "San Telmo Sur", "Puerto Viejo", "Tierra Roja",
+                "Valle Hermoso", "Los Álamos", "Mar del Sol", "Santa Rosa", "Barrio Norte", "Laguna Seca", "Monte Grande", "El Palomar",
+            ),
+            listOf("CA {T}", "Club {T}", "Deportivo {T}", "Racing de {T}", "Atlético {T}", "Unión {T}", "Gimnasia de {T}", "Estudiantes de {T}"),
+            listOf("Club Atlético Pampero", "Andes Juniors"),
+            80 downTo 50, null,
+        ),
     )
 
     private val palette = listOf(
@@ -113,46 +153,70 @@ object WorldGen {
     }
 
     private fun shortOf(name: String, used: MutableSet<String>): String {
-        val words = name.split(" ").filter { w -> w.length > 2 && w.uppercase() != w && w !in setOf("Real", "Atlético", "Deportivo", "Racing", "Sporting", "Virtus", "Pro", "Olympique", "Stade", "Fortuna", "Union", "Sparta", "Quick", "Académico", "União", "Calcio", "United", "City", "Rovers", "Athletic", "Town", "Albion", "Wanderers", "County", "Ahead") }
+        val words = name.split(" ").filter { w -> w.length > 2 && w.uppercase() != w && w !in setOf("Real", "Atlético", "Deportivo", "Racing", "Sporting", "Virtus", "Pro", "Olympique", "Stade", "Fortuna", "Union", "Sparta", "Quick", "Académico", "União", "Calcio", "United", "City", "Rovers", "Athletic", "Town", "Albion", "Wanderers", "County", "Ahead", "Royal", "Standard", "Heart", "Queen", "Thistle", "Academicals", "Club", "Esporte", "Grêmio", "América", "Ferroviário", "Unión", "Gimnasia", "Estudiantes", "Clube", "Juniors") }
         val base = (words.firstOrNull() ?: name).filter { it.isLetter() }.uppercase()
         var s = base.take(3)
         var i = 3
         while (s in used && i < base.length) { s = base.take(2) + base[i]; i++ }
+        // Kelime yetmezse adın tüm harfleri, o da yetmezse alfabe
+        val all = name.filter { it.isLetter() }.uppercase()
+        var j = 1
+        while (s in used && j < all.length) { s = base.take(1) + all[j] + all.last(); if (s in used) s = base.take(2) + all[j]; j++ }
+        var k = 0
+        while (s in used) { s = base.take(2) + ('A' + k % 26); k++; if (k > 26) s = base.take(1) + ('A' + k / 26 % 26) + ('A' + k % 26) }
         used += s
         return s
     }
 
     /** Türkiye dışındaki tüm ligleri ekler. */
     fun addForeignLeagues(g: Game, rnd: Random) {
-        var nextId = (g.teams.maxOfOrNull { it.id } ?: -1) + 1
         val used = g.teams.map { it.short }.toMutableSet()
+        for (c in countries) if (g.divisionTeams(Leagues.top(c.country).id).isEmpty()) addCountry(g, c, rnd, used)
+    }
+
+    /** Eski kayıtta olmayan ligleri (sonradan eklenenler) kurar; bir şey eklendiyse true. */
+    fun addMissingLeagues(g: Game, rnd: Random): Boolean {
+        val used = g.teams.map { it.short }.toMutableSet()
+        var added = false
         for (c in countries) {
-            val towns = c.towns.shuffled(rnd).toMutableList()
-            val patterns = c.patterns
-            val tiers = listOfNotNull(Leagues.top(c.country) to c.topRep, Leagues.second(c.country)?.let { it to c.secondRep!! })
-            var starIdx = 0
-            for ((league, range) in tiers) {
-                if (RealWorld.has(league.id)) {
-                    RealWorld.addLeague(g, league.id, rnd, used)
-                    starIdx = c.stars.size
-                    continue
+            if (g.divisionTeams(Leagues.top(c.country).id).isNotEmpty()) continue
+            addCountry(g, c, rnd, used)
+            added = true
+        }
+        if (added) g.reindex()
+        return added
+    }
+
+    private fun addCountry(g: Game, c: CountryDef, rnd: Random, used: MutableSet<String>) {
+        used += g.teams.map { it.short }
+        var nextId = (g.teams.maxOfOrNull { it.id } ?: -1) + 1
+        val towns = c.towns.shuffled(rnd).toMutableList()
+        val patterns = c.patterns
+        val tiers = listOfNotNull(Leagues.top(c.country) to c.topRep, Leagues.second(c.country)?.let { it to c.secondRep!! })
+        var starIdx = 0
+        for ((league, range) in tiers) {
+            if (RealWorld.has(league.id)) {
+                RealWorld.addLeague(g, league.id, rnd, used)
+                used += g.teams.map { it.short }
+                starIdx = c.stars.size
+                nextId = (g.teams.maxOfOrNull { it.id } ?: -1) + 1
+                continue
+            }
+            for ((i, rep) in reps(range, 18).withIndex()) {
+                val name = if (league.tier == 1 && starIdx < c.stars.size && i == starIdx) {
+                    c.stars[starIdx++]
+                } else {
+                    patterns[rnd.nextInt(patterns.size)].replace("{T}", towns.removeAt(0))
                 }
-                for ((i, rep) in reps(range, 18).withIndex()) {
-                    val name = if (league.tier == 1 && starIdx < c.stars.size && i == starIdx) {
-                        c.stars[starIdx++]
-                    } else {
-                        patterns[rnd.nextInt(patterns.size)].replace("{T}", towns.removeAt(0))
-                    }
-                    val c1 = palette[rnd.nextInt(palette.size)]
-                    var c2 = palette[rnd.nextInt(palette.size)]
-                    if (c2 == c1) c2 = if (c1 == 0xFFFFFFFF) 0xFF111111 else 0xFFFFFFFF
-                    val t = Team(
-                        nextId++, name, shortOf(name, used), c.country, c1, c2, rep,
-                        Generator.budgetFor(rep) * (if (league.tier == 1) 2 else 1), division = league.id,
-                    )
-                    g.addTeam(t)
-                    Generator.fillSquad(g, t, rnd, c.nation)
-                }
+                val c1 = palette[rnd.nextInt(palette.size)]
+                var c2 = palette[rnd.nextInt(palette.size)]
+                if (c2 == c1) c2 = if (c1 == 0xFFFFFFFF) 0xFF111111 else 0xFFFFFFFF
+                val t = Team(
+                    nextId++, name, shortOf(name, used), c.country, c1, c2, rep,
+                    Generator.budgetFor(rep) * (if (league.tier == 1) 2 else 1), division = league.id,
+                )
+                g.addTeam(t)
+                Generator.fillSquad(g, t, rnd, c.nation)
             }
         }
     }

@@ -46,7 +46,7 @@ class SimTest {
     fun simulateSeasons() {
         val rnd = Random(7)
         val g = Generator.newWorld(rnd)
-        assertEquals(234, g.teams.size)
+        assertEquals(306, g.teams.size)
         g.userTeamId = 30
         g.managerName = "Test"
         Season.start(g, rnd)
@@ -97,7 +97,7 @@ class SimTest {
         assertTrue(g.euroTeams.isEmpty())
         while (!g.seasonOver) playDay(g, rnd)
         Season.newSeason(g, rnd)
-        assertEquals(234, g.teams.size)
+        assertEquals(306, g.teams.size)
         assertTrue(!g.worldUpgradePending)
         assertEquals(32, g.euroTeams.size)
         while (!g.seasonOver) playDay(g, rnd)
