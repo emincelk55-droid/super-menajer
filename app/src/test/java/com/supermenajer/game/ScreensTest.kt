@@ -384,6 +384,15 @@ class ScreensTest {
         GameRepo.newspaperOpen = true
         shot("14b_newspaper")
         GameRepo.newspaperOpen = false
+        run {
+            val g0 = GameRepo.game!!
+            var k = 0
+            while (com.supermenajer.game.game.MonthlyAwards.latest(g0).isEmpty() && !g0.seasonOver && k++ < 60) advance(1)
+            g0.monthAwardsNew = true
+            GameRepo.tab = 0
+            shot("14c_month_awards")
+            g0.monthAwardsNew = false
+        }
         while (!g.seasonOver && !g.fired) advance(1)
         GameRepo.tab = 0; shot("15_seasonend")
         GameRepo.awardsOpen = true

@@ -492,6 +492,14 @@ class Game(
     /** Bu sezon attığımız ve yediğimiz goller, 15'er dakikalık dilimlerde (6 dilim, uzatmalar sonuncuda). */
     var goalsByPeriod: MutableList<Int> = MutableList(12) { 0 },
 
+    /** Aylık ödüller: ay başındaki oyuncu istatistikleri ("maç|gol|asist|not toplamı"), son değerlendirilen ay (yıl*12+ay). */
+    var monthSnap: MutableMap<Int, String> = mutableMapOf(),
+    var awardMonth: Int = -1,
+    /** Verilen aylık ödüller: "sezon|ay adı|tür|oyuncu ya da takım id|açıklama" (en fazla 60). */
+    var monthAwards: MutableList<String> = mutableListOf(),
+    /** Ana sayfada gösterilecek yeni aylık ödül var mı. */
+    var monthAwardsNew: Boolean = false,
+
     /** Töreni gösterilmiş kupa sayısı (-1: eski kayıt, ilk açılışta mevcut kupalar sayılır). */
     var ceremonySeen: Int = -1,
     var recBigWin: String = "",

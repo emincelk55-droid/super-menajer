@@ -425,6 +425,7 @@ object Season {
 
     fun endDay(g: Game, rnd: Random = Random.Default) {
         g.reindex()
+        MonthlyAwards.check(g)
         val d = g.today ?: return
         val dayFixtures = g.weekFixtures(g.week)
         for (f in dayFixtures) {
@@ -688,6 +689,7 @@ object Season {
     /** Maç olmayan gün: transfer döneminde kulüpler hareketli olur. */
     fun freeDay(g: Game, rnd: Random = Random.Default) {
         if (g.fired) return
+        MonthlyAwards.check(g)
         if (Career.isDeadlineDay(g)) {
             g.addNews("📺 Transfer döneminin son günü!", "Kulüpler son dakika transferleri için kolları sıvadı. Gece yarısı pencere kapanıyor!")
             repeat(3) { aiTransfers(g, rnd) }
@@ -952,6 +954,7 @@ object Season {
             }
         }
         Analysis.newSeason(g)
+        MonthlyAwards.newSeason(g)
         Facilities.youthIntake(g, rnd)
         if (g.worldUpgradePending) WorldGen.upgradeWorld(g, rnd)
         Generator.topUpFreeAgents(g, rnd)

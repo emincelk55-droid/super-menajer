@@ -252,3 +252,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   genişlik kanatları açar/daraltır, pres yoğunluğu topa basan oyuncu sayısını (1-3) ve hızını belirler.
 - Uzun dönem dengesi: yapay zekâ kulüpleri altyapıdan genç alırken ve 30+ oyuncularla sözleşme uzatırken kadronun yaş
   yapısına bakar (20 sezonda ortalama yaş 24-26,5 arası; bütçeler kontrollü, lig medyanı 20 sezonda +%24).
+- Aylık ödüller: her ay sonunda kendi liginde Ayın Oyuncusu, Ayın Genci ve Ayın Menajeri; ana sayfada ödül kartı.
+  Kazanan bizden ise oyuncunun morali, menajerin itibarı ve yönetimin güveni artar.

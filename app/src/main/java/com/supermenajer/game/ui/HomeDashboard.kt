@@ -325,6 +325,7 @@ fun MenuDrawer(g: Game, onClose: () -> Unit) {
 fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
         if (!g.fired) com.supermenajer.game.game.Talks.upcomingDerby(g)?.let { (f, days) -> add { DerbyWeekCard(g, f, days) } }
+        if (g.monthAwardsNew && com.supermenajer.game.game.MonthlyAwards.latest(g).isNotEmpty()) add { MonthlyAwardsCard(g) }
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
         g.press?.let { q -> add { PressCard(g, q) } }
         if (!g.fired && g.natPending.isNotEmpty()) add { NationalMatchCard(g) }
@@ -947,5 +948,44 @@ fun DerbyWeekCard(g: Game, f: Fixture, days: Long) {
         }
         Spacer(Modifier.height(6.dp))
         Text("Taraftar sadece galibiyet istiyor: derbi zaferi taraftar ve yönetim güvenini büyük ölçüde artırır, yenilgi ağır olur. Maç hazırlığında rakibe özel talimat ve galibiyet primi düşün.", fontSize = 12.sp, lineHeight = 16.sp, color = TextMain.copy(alpha = 0.9f))
+    }
+}
+
+/** Ayın ödülleri: oyuncu, genç ve menajer; bizden kazanan varsa altın vurgu. */
+@Composable
+fun MonthlyAwardsCard(g: Game) {
+    val awards = com.supermenajer.game.game.MonthlyAwards.latest(g)
+    val month = awards.firstOrNull()?.month ?: ""
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(Brush.linearGradient(listOf(Color(0xFF2A2350), Color(0xFF14183A), Color(0xFF3A2C10))))
+            .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFFF1A8), Gold)), shape).padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🏅 ${month.uppercase()} AYININ ÖDÜLLERİ", color = Gold, fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
+            Text("✕", color = TextDim, fontSize = 16.sp, modifier = Modifier.clip(CircleShape).clickable { g.monthAwardsNew = false; GameRepo.bump() }.padding(4.dp))
+        }
+        Spacer(Modifier.height(6.dp))
+        for (a in awards) {
+            val p = g.player(a.id).takeIf { a.kind != com.supermenajer.game.game.MonthlyAwards.MANAGER }
+            val ours = if (p == null) a.id == g.userTeamId else p.teamId == g.userTeamId
+            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (p != null) {
+                    val t = g.teamOrNull(p.teamId)
+                    PlayerFace(p, 38.dp, t?.let { Color(it.color1) } ?: Color.Gray, t?.let { Color(it.color2) } ?: Color.White)
+                } else g.teamOrNull(a.id)?.let { TeamBadge(it, 38.dp) }
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        when (a.kind) { com.supermenajer.game.game.MonthlyAwards.PLAYER -> "AYIN OYUNCUSU"; com.supermenajer.game.game.MonthlyAwards.YOUNG -> "AYIN GENCİ"; else -> "AYIN MENAJERİ" },
+                        color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+                    )
+                    Text((p?.name ?: "") + (p?.let { " · " + (g.teamOrNull(it.teamId)?.short ?: "") } ?: ""), fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = if (ours) Gold else TextMain)
+                    Text(a.text, color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (ours) Text("🎉", fontSize = 18.sp)
+            }
+        }
     }
 }
