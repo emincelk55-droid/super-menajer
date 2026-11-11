@@ -322,6 +322,8 @@ class ScreensTest {
         GameRepo.upgradePerk("tactic"); GameRepo.upgradePerk("nego")
         g.traitsEarned += "wall"; g.traitsEarned += "derby"; g.traitStats["clean"] = 15; g.traitStats["derbyWin"] = 3; g.traitStats["u21"] = 34; g.traitStats["goalfest"] = 5; g.traitStats["cupWin"] = 2
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 6; shot("18_perks")
+        GameRepo.editIdentity { it.crestShape = 1; it.crestPattern = 4; it.crestIcon = 3; it.kitPattern = 1; it.color2 = 0xFFFFFFFF }
+        GameRepo.clubMode = 10; shot("18b_identity")
         val rival = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }
         g.vacancies += com.supermenajer.game.model.Vacancy(rival.id, g.date + 14)
         g.managers[rival.id] = "Geçici: " + (g.managers[rival.id] ?: "")

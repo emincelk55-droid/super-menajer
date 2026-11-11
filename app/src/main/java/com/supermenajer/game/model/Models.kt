@@ -140,8 +140,8 @@ class Team(
     var name: String,
     var short: String,
     val city: String,
-    val color1: Long,
-    val color2: Long,
+    var color1: Long,
+    var color2: Long,
     var reputation: Int,
     var budget: Long,
     var formation: String = "4-4-2",
@@ -203,6 +203,11 @@ class Team(
     var attTotal: Long = 0,
     var attGames: Int = 0,
     var lastAttendance: Int = 0,
+    /** Arma ve forma editörü: -1 otomatik. Şekil 0-3, arma deseni 0-5, simge 0-7, forma deseni 0-4. */
+    var crestShape: Int = -1,
+    var crestPattern: Int = -1,
+    var crestIcon: Int = 0,
+    var kitPattern: Int = -1,
 ) {
     val played: Int get() = won + drawn + lost
     val points: Int get() = won * 3 + drawn

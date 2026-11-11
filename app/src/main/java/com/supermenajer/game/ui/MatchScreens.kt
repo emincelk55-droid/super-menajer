@@ -221,7 +221,15 @@ fun MatchScreen() {
                 ) {
                     val gkH = keeperColor(homeC, awayC, Color(0xFF26C6DA))
                     val gkA = keeperColor(homeC, awayC, Color(0xFFFF7043))
-                    if (Fx.tvView) MatchPitchTV(anim, homeC, awayC, gkH, gkA, running, paces[speed].scale, Modifier.fillMaxSize())
+                    if (Fx.tvView) {
+                        val ht = sim.home.team
+                        val at = sim.away.team
+                        val awayAlt = if (awayC == Color(at.color1)) Color(at.color2) else Color(at.color1)
+                        MatchPitchTV(
+                            anim, homeC, awayC, gkH, gkA, running, paces[speed].scale, Modifier.fillMaxSize(),
+                            Color(ht.color2), awayAlt, kitPatternOf(ht), if (awayC == Color(at.color1)) kitPatternOf(at) else 0,
+                        )
+                    }
                     else MatchPitch(
                         anim, homeC, awayC, gkH, gkA, running, paces[speed].scale,
                         Modifier.fillMaxHeight().aspectRatio(PITCH_RATIO, matchHeightConstraintsFirst = true),

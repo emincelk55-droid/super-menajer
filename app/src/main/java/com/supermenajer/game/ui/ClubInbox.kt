@@ -45,7 +45,7 @@ import com.supermenajer.game.model.News
 @Composable
 fun ClubTab(g: Game) {
     // Telefonda tüm bölümler tek satırda görünsün diye kısa adlı sekmeler
-    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar", "Efsaneler", "Vizyon")
+    val modes = listOf("Ekip", "Tesisler", "Sponsor", "Finans", "Taraftar", "Kariyer", "Yetenek", "Hocalar", "Efsaneler", "Vizyon", "Kimlik")
     Column(Modifier.fillMaxSize()) {
         val dots = buildSet {
             if (g.sponsorOffers.isNotEmpty()) add(2)
@@ -63,6 +63,7 @@ fun ClubTab(g: Game) {
             6 -> PerksView(g)
             8 -> LegendsView(g)
             9 -> VisionView(g)
+            10 -> IdentityView(g)
             else -> ManagerMarketView(g)
         }
     }

@@ -900,6 +900,29 @@ object GameRepo {
     fun resolveEvent(choice: Int): String { val g = game ?: return ""; val m = Events.resolve(g, choice); changed(); return m }
     fun applyJob(teamId: Int): String { val g = game ?: return ""; val m = ManagerMarket.apply(g, teamId); changed(); return m }
     fun upgradePerk(id: String): String { val g = game ?: return ""; val m = Perks.upgrade(g, id); changed(); return m }
+    /** Arma/forma editörü: kullanıcının kulübünde değişiklik. */
+    fun editIdentity(edit: (com.supermenajer.game.model.Team) -> Unit) {
+        val g = game ?: return
+        edit(g.userTeam)
+        changed()
+    }
+
+    /** Kulüp adını ve kısa adını değiştirir; kısa ad 3 harf ve benzersiz olmalı. */
+    fun renameClub(name: String, short: String): String {
+        val g = game ?: return ""
+        val n = name.trim()
+        val s = short.trim().uppercase()
+        if (n.length < 3) return "Kulüp adı en az 3 harf olmalı."
+        if (s.length != 3 || !s.all { it.isLetter() }) return "Kısa ad 3 harf olmalı."
+        if (g.teams.any { it.id != g.userTeamId && (it.short == s || it.name.equals(n, ignoreCase = true)) }) return "Bu ad ya da kısa ad başka bir kulübün."
+        val t = g.userTeam
+        val old = t.name
+        t.name = n; t.short = s
+        if (old != n) g.addNews("Kulübün yeni adı: $n", "$old artık $n ($s) adıyla anılacak. Taraftarlar yeni kimliği konuşuyor.")
+        changed()
+        return "Kaydedildi: $n ($s)"
+    }
+
     fun boardRequest(kind: Int): String { val g = game ?: return ""; val m = Career.request(g, kind); changed(); return m }
 
     fun setPressing(v: Int) {

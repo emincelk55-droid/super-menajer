@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
@@ -98,6 +99,7 @@ private class TvMan(
 fun MatchPitchTV(
     anim: Pitch2D, homeC: Color, awayC: Color, homeGk: Color, awayGk: Color,
     running: Boolean, timeScale: Float, modifier: Modifier = Modifier,
+    homeAlt: Color = Color.White, awayAlt: Color = Color.White, homeKit: Int = 0, awayKit: Int = 0,
 ) {
     var frame by remember { mutableLongStateOf(0L) }
     val run by rememberUpdatedState(running)
@@ -166,7 +168,8 @@ fun MatchPitchTV(
         for (m in men.sortedBy { it.y }) {
             if (!ballDrawn[0] && ballY < m.y) drawBall()
             val fill = if (m.gk) (if (m.side == 0) homeGk else awayGk) else if (m.side == 0) homeC else awayC
-            drawMan(c, m, fill, t, measurer, numCache)
+            val kit = if (m.gk) 0 else if (m.side == 0) homeKit else awayKit
+            drawMan(c, m, fill, if (m.side == 0) homeAlt else awayAlt, kit, t, measurer, numCache)
         }
         if (!ballDrawn[0]) drawBall()
         for (left in listOf(true, false)) drawGoal(c, left, back = false)
@@ -324,7 +327,7 @@ private fun DrawScope.drawStands(c: TvCam, seats: List<Seat>, t: Long) {
 
 private val Skins = listOf(Color(0xFFF1C9A5), Color(0xFFD9A37A), Color(0xFFA8714A), Color(0xFF6E4429), Color(0xFFE8B98F))
 
-private fun DrawScope.drawMan(c: TvCam, m: TvMan, fill: Color, t: Long, measurer: TextMeasurer, numCache: HashMap<String, TextLayoutResult>) {
+private fun DrawScope.drawMan(c: TvCam, m: TvMan, fill: Color, alt: Color, kit: Int, t: Long, measurer: TextMeasurer, numCache: HashMap<String, TextLayoutResult>) {
     val foot = c.p(m.x, m.y)
     val k = c.meter(m.y)
     val h = 1.85f * k
@@ -345,6 +348,10 @@ private fun DrawScope.drawMan(c: TvCam, m: TvMan, fill: Color, t: Long, measurer
     drawRoundRect(shorts.copy(alpha = a), Offset(foot.x - bw * 0.48f, foot.y - h * 0.56f), Size(bw * 0.96f, h * 0.16f), CornerRadius(bw * 0.15f))
     val shirtTop = foot.y - h * 0.86f
     drawRoundRect(fill.copy(alpha = a), Offset(foot.x - bw / 2, shirtTop), Size(bw, h * 0.34f), CornerRadius(bw * 0.3f))
+    if (kit > 0 && a > 0.3f) {
+        val clip = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(foot.x - bw / 2, shirtTop, foot.x + bw / 2, shirtTop + h * 0.34f, CornerRadius(bw * 0.3f))) }
+        clipPath(clip) { drawKitPattern(alt.copy(alpha = a), kit, foot.x - bw / 2, shirtTop, bw, h * 0.34f) }
+    }
     // Kollar
     for (s in listOf(-1f, 1f)) {
         drawLine(fill.copy(alpha = a), Offset(foot.x + s * bw * 0.45f, shirtTop + h * 0.05f), Offset(foot.x + s * bw * 0.62f - s * sw * h * 0.05f, shirtTop + h * 0.27f), bw * 0.22f, StrokeCap.Round)

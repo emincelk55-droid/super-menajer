@@ -173,38 +173,82 @@ fun TeamBadge(team: Team, size: Dp = 36.dp) {
             return
         }
     }
-    val c1 = Color(team.color1)
-    val c2 = Color(team.color2)
-    // Arma: kalkan şekli, takım kimliğine göre çizgili / yarım / bantlı desen
-    val pattern = (team.id * 31 + team.name.length) % 4
+    CrestView(
+        Color(team.color1), Color(team.color2), crestShapeOf(team), crestPatternOf(team), team.crestIcon, team.short, size,
+    )
+}
+
+fun crestShapeOf(t: Team): Int = if (t.crestShape >= 0) t.crestShape else 0
+fun crestPatternOf(t: Team): Int = if (t.crestPattern >= 0) t.crestPattern else (t.id * 31 + t.name.length) % 4
+fun kitPatternOf(t: Team): Int = if (t.kitPattern >= 0) t.kitPattern else 0
+
+/** Arma simgeleri (0: yalnız kısa ad). */
+val CrestIcons = listOf("", "⭐", "🦁", "🦅", "👑", "⚓", "🐺", "🔥")
+
+/** Arma şeklinin yolu: 0 kalkan, 1 yuvarlak, 2 modern (yuvarlak köşeli), 3 sivri kalkan. */
+fun crestPath(shape: Int, w: Float, h: Float): androidx.compose.ui.graphics.Path = androidx.compose.ui.graphics.Path().apply {
+    when (shape) {
+        1 -> addOval(androidx.compose.ui.geometry.Rect(w * 0.05f, h * 0.05f, w * 0.95f, h * 0.95f))
+        2 -> addRoundRect(androidx.compose.ui.geometry.RoundRect(w * 0.08f, h * 0.08f, w * 0.92f, h * 0.92f, androidx.compose.ui.geometry.CornerRadius(w * 0.22f)))
+        3 -> {
+            moveTo(w * 0.1f, h * 0.04f); lineTo(w * 0.5f, h * 0.12f); lineTo(w * 0.9f, h * 0.04f)
+            lineTo(w * 0.9f, h * 0.55f); lineTo(w * 0.5f, h * 0.97f); lineTo(w * 0.1f, h * 0.55f); close()
+        }
+        else -> {
+            moveTo(w * 0.08f, h * 0.06f)
+            lineTo(w * 0.92f, h * 0.06f)
+            lineTo(w * 0.92f, h * 0.5f)
+            quadraticBezierTo(w * 0.9f, h * 0.85f, w * 0.5f, h * 0.98f)
+            quadraticBezierTo(w * 0.1f, h * 0.85f, w * 0.08f, h * 0.5f)
+            close()
+        }
+    }
+}
+
+/** Desen: 0 dikey çizgi, 1 yarım, 2 orta bant, 3 üst bant, 4 çapraz kuşak, 5 düz. */
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCrestPattern(c2: Color, pattern: Int, left: Float, top: Float, w: Float, h: Float, alpha: Float = 0.55f) {
+    val c = c2.copy(alpha = alpha)
+    when (pattern) {
+        0 -> for (i in 0 until 5) if (i % 2 == 1) drawRect(c, androidx.compose.ui.geometry.Offset(left + w * i / 5f, top), androidx.compose.ui.geometry.Size(w / 5f, h))
+        1 -> drawRect(c, androidx.compose.ui.geometry.Offset(left + w / 2f, top), androidx.compose.ui.geometry.Size(w / 2f, h))
+        2 -> drawRect(c, androidx.compose.ui.geometry.Offset(left, top + h * 0.38f), androidx.compose.ui.geometry.Size(w, h * 0.22f))
+        3 -> drawRect(c, androidx.compose.ui.geometry.Offset(left, top), androidx.compose.ui.geometry.Size(w, h * 0.26f))
+        4 -> drawPath(androidx.compose.ui.graphics.Path().apply {
+            moveTo(left, top + h * 0.15f); lineTo(left + w * 0.2f, top); lineTo(left + w, top + h * 0.85f); lineTo(left + w * 0.8f, top + h); close()
+        }, c)
+        else -> {}
+    }
+}
+
+/** Arma çizimi (kulüp rozeti ve editör önizlemesi). */
+@Composable
+fun CrestView(c1: Color, c2: Color, shape: Int, pattern: Int, icon: Int, short: String, size: Dp) {
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.size(size)) {
             val w = this.size.width
             val h = this.size.height
-            val shield = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.08f, h * 0.06f)
-                lineTo(w * 0.92f, h * 0.06f)
-                lineTo(w * 0.92f, h * 0.5f)
-                quadraticBezierTo(w * 0.9f, h * 0.85f, w * 0.5f, h * 0.98f)
-                quadraticBezierTo(w * 0.1f, h * 0.85f, w * 0.08f, h * 0.5f)
-                close()
-            }
-            clipPath(shield) {
+            val path = crestPath(shape, w, h)
+            clipPath(path) {
                 drawRect(c1)
-                when (pattern) {
-                    0 -> for (i in 0 until 5) if (i % 2 == 1) drawRect(c2.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(w * i / 5f, 0f), androidx.compose.ui.geometry.Size(w / 5f, h))
-                    1 -> drawRect(c2.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(w / 2f, 0f), androidx.compose.ui.geometry.Size(w / 2f, h))
-                    2 -> drawRect(c2.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(0f, h * 0.38f), androidx.compose.ui.geometry.Size(w, h * 0.22f))
-                    else -> drawRect(c2.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Size(w, h * 0.26f))
-                }
+                drawCrestPattern(c2, pattern, 0f, 0f, w, h)
+                // Hafif parlaklık
+                drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.18f), Color.Transparent), 0f, h * 0.5f))
             }
-            drawPath(shield, c2, style = androidx.compose.ui.graphics.drawscope.Stroke(w * 0.06f))
+            drawPath(path, c2, style = androidx.compose.ui.graphics.drawscope.Stroke(w * 0.06f))
         }
-        Text(
-            team.short, color = Color.White, fontSize = (size.value * 0.25f).sp, fontWeight = FontWeight.Black,
-            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, androidx.compose.ui.geometry.Offset(1f, 1f), 3f)),
-            modifier = Modifier.padding(bottom = (size.value * 0.06f).dp),
-        )
+        val shadow = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, androidx.compose.ui.geometry.Offset(1f, 1f), 3f))
+        val ic = CrestIcons.getOrElse(icon) { "" }
+        if (ic.isEmpty()) {
+            Text(
+                short, color = Color.White, fontSize = (size.value * 0.25f).sp, fontWeight = FontWeight.Black, style = shadow,
+                modifier = Modifier.padding(bottom = (size.value * 0.06f).dp),
+            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = (size.value * 0.04f).dp)) {
+                Text(ic, fontSize = (size.value * (if (size.value >= 44f) 0.3f else 0.4f)).sp, lineHeight = (size.value * 0.36f).sp)
+                if (size.value >= 44f) Text(short, color = Color.White, fontSize = (size.value * 0.17f).sp, fontWeight = FontWeight.Black, style = shadow, lineHeight = (size.value * 0.2f).sp)
+            }
+        }
     }
 }
 
