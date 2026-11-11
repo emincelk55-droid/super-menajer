@@ -248,3 +248,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - İlk oynayış rehberi: her ana ekran ilk kez açıldığında kısa ipucu balonu (bir kez; "İpuçlarını kapat" ya da
   Ayarlar → "İpuçlarını yeniden göster"). Ana sayfa varsayılan olarak sade: maç, kulüp durumu, kararlar ve gazete;
   "Detaylı görünüm" ile finans, form, görevler ve sosyal medya kartları açılır.
+- Taktik 2D sahada görünür: savunma hattı ve mentalite takımı ileri/geri iter (geride ~33 m, önde ~53 m ortalama),
+  genişlik kanatları açar/daraltır, pres yoğunluğu topa basan oyuncu sayısını (1-3) ve hızını belirler.

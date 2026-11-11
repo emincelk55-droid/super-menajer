@@ -144,4 +144,37 @@ class Pitch2DTest {
         }
         assertTrue("baraj $best", best >= 3)
     }
+
+    /** Taktik sahada görünür: önde savunma hattı takımı ileri iter, geniş oyun kanatları açar. */
+    @Test
+    fun tacticsVisibleOnPitch() {
+        GameRepo.init(Files.createTempDirectory("sm16t").toFile())
+        val world = Generator.newWorld(Random(16)).also { Season.computeExpectations(it) }
+        GameRepo.newCareer(world, "Test", world.divisionTeams(0)[2].id)
+        val g = GameRepo.game!!
+        val f = g.fixtures.first { it.home == g.userTeamId || it.away == g.userTeamId }
+        fun measure(line: Int, width: Int): Pair<Float, Float> {
+            val sim = MatchSim(g, f, g.userTeamId, true, Random(3))
+            sim.home.team.defLine = line; sim.home.team.width = width
+            val anim = Pitch2D(sim, seed = 11L)
+            var depth = 0f; var spread = 0f; var n = 0
+            repeat(30 * 40) {
+                anim.update(1f / 30f)
+                if (it % 10 == 0) {
+                    val hs = anim.agents.filter { a -> a.side == 0 && !a.gk }
+                    depth += hs.map { a -> a.x }.average().toFloat()
+                    spread += hs.map { a -> kotlin.math.abs(a.y - Pitch2D.W / 2) }.average().toFloat()
+                    n++
+                }
+            }
+            return depth / n to spread / n
+        }
+        val deep = measure(0, 1)
+        val high = measure(2, 1)
+        val narrow = measure(1, 0)
+        val wide = measure(1, 2)
+        println("TAKTİK derinlik geride=${deep.first} önde=${high.first} · genişlik dar=${narrow.second} geniş=${wide.second}")
+        assertTrue("önde hat takımı ileri itmeli", high.first > deep.first + 4f)
+        assertTrue("geniş oyun yayılmalı", wide.second > narrow.second + 1f)
+    }
 }

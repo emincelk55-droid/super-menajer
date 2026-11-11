@@ -629,7 +629,10 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         val chasers = if (loose) (0..1).mapNotNull { sd -> agents.filter { it.side == sd && !it.gk }.minByOrNull { dist(it.x, it.y, bx, by) } } else emptyList()
         // Savunmada topa en yakın iki oyuncu: biri basar, biri arkayı kapatır
         val defSide = 1 - attackSide
-        val pressers = agents.filter { it.side == defSide && !it.gk }.sortedBy { dist(it.x, it.y, bx, by) }.take(2)
+        val defTeam = sim.sides[defSide].team
+        // Pres yoğunluğu: düşükte tek oyuncu, yüksekte üç oyuncu topa basar
+        val pressers = agents.filter { it.side == defSide && !it.gk }.sortedBy { dist(it.x, it.y, bx, by) }
+            .take(when (defTeam.pressing) { 0 -> 1; 2 -> 3; else -> 2 })
         for (a in agents) {
             if (a === o && mode != Mode.SETPIECE) {
                 // Top sürme: ileri ve hafif merkeze
@@ -657,19 +660,27 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
                 continue
             }
             if (!inPoss && a in pressers && mode == Mode.NORMAL || (!inPoss && mode == Mode.ATTACK && a === pressers.firstOrNull())) {
-                if (a === pressers[0]) { a.tx = bx; a.ty = by }
-                else {
+                val k = pressers.indexOf(a)
+                if (k == 0) { a.tx = bx; a.ty = by }
+                else if (k == 2) {
+                    // Üçüncü baskıcı pas yolunu kapatır
+                    a.tx = bx + (fromD(a.side, 0f) - bx) * 0.05f; a.ty = by + (if (by < W / 2) 6f else -6f)
+                } else {
                     val gx = fromD(a.side, 0f)
                     a.tx = bx + (gx - bx) * 0.12f; a.ty = by + (W / 2 - by) * 0.2f
                 }
-                a.boost = 1.05f
+                a.boost = if (defTeam.pressing == 2) 1.18f else 1.05f
                 continue
             }
             val atkPush = if (mode == Mode.ATTACK && inPoss) 10f else 0f
             val pr = if (mode == Mode.ATTACK && inPoss) max(prog, 0.72f) else prog
-            val shift = if (inPoss) -6f + pr * 52f + atkPush else -10f + pr * 44f
+            val tm = sim.sides[a.side].team
+            // Taktik sahada: savunma hattı ve mentalite takımı ileri/geri iter, genişlik yayılımı belirler
+            val lineShift = when (tm.defLine) { 0 -> -6f; 2 -> 6f; else -> 0f } + when (tm.mentality) { 0 -> -4f; 2 -> 4f; else -> 0f }
+            val shift = (if (inPoss) -6f + pr * 52f + atkPush else -10f + pr * 44f) + lineShift
             val dd = (a.baseD * (if (inPoss) 1f else 0.85f) + shift).coerceIn(3f, L - 4f)
-            val lat = if (inPoss) a.baseY + (by - W / 2) * 0.28f
+            val spread = when (tm.width) { 0 -> 0.8f; 2 -> 1.18f; else -> 1f }
+            val lat = if (inPoss) W / 2 + (a.baseY - W / 2) * spread + (by - W / 2) * 0.28f
             else W / 2 + (a.baseY - W / 2) * 0.72f + (by - W / 2) * 0.38f
             val wob = sin(time * 0.6f + a.id * 1.7f) * 1.4f
             a.tx = fromD(a.side, dd + wob)
