@@ -242,6 +242,8 @@ class MatchSim(
             val f = com.supermenajer.game.game.Dynamics.matchFactor(game) * com.supermenajer.game.game.Perks.tactics(game) *
                 com.supermenajer.game.game.Difficulty.matchFactor(game)
             a *= f; m *= f; d *= f
+            val (ta, td) = com.supermenajer.game.game.ManagerTraits.matchFactors(game, this, s)
+            a *= ta; d *= td
         }
         if (s === home) { a *= 1.06; m *= 1.06; d *= 1.06 }
         return Str(a.coerceAtLeast(5.0), m.coerceAtLeast(5.0), d.coerceAtLeast(5.0))

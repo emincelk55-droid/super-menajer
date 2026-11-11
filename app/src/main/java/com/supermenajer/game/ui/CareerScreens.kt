@@ -2,6 +2,7 @@ package com.supermenajer.game.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -141,6 +143,33 @@ fun PerksView(g: Game) {
             GridCells.Adaptive(250.dp), Modifier.weight(1.4f).fillMaxHeight(),
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text("🎖️ MENAJER ÖZELLİKLERİ · oyun tarzına göre kendiliğinden kazanılır", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+            items(com.supermenajer.game.game.ManagerTraits.all.size) { i ->
+                val t = com.supermenajer.game.game.ManagerTraits.all[i]
+                val earned = com.supermenajer.game.game.ManagerTraits.has(g, t.id)
+                val pr = com.supermenajer.game.game.ManagerTraits.progress(g, t).coerceAtMost(t.need)
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(if (earned) Gold.copy(alpha = 0.14f) else Surface1)
+                        .border(1.5.dp, if (earned) Gold else Color.Transparent, RoundedCornerShape(12.dp)).padding(10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(t.icon, fontSize = 22.sp, modifier = Modifier.alpha(if (earned) 1f else 0.45f))
+                        Spacer(Modifier.width(8.dp))
+                        Text(t.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = if (earned) Gold else Color.White, modifier = Modifier.weight(1f))
+                        Text(if (earned) "✓ Kazanıldı" else "$pr/${t.need}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (earned) Gold else TextDim)
+                    }
+                    Text(t.how, color = TextDim, fontSize = 11.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                    Spacer(Modifier.height(4.dp))
+                    Bar(pr.toFloat() / t.need, if (earned) Gold else Teal, Modifier.fillMaxWidth(), 5.dp)
+                    Text("Etkisi: ${t.effect}", color = if (earned) Green else TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text("⭐ YETENEK AĞACI · seviye atladıkça kazanılan puanla geliştir", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 6.dp))
+            }
             items(Perks.all.size) { i ->
                 val p = Perks.all[i]
                 val lv = Perks.lvl(g, p.id)

@@ -500,6 +500,10 @@ class Game(
     /** Ana sayfada gösterilecek yeni aylık ödül var mı. */
     var monthAwardsNew: Boolean = false,
 
+    /** Menajer özellikleri: kazanılanlar ve ilerleme sayaçları (bkz. ManagerTraits). */
+    var traitsEarned: MutableSet<String> = mutableSetOf(),
+    var traitStats: MutableMap<String, Int> = mutableMapOf(),
+
     /** Töreni gösterilmiş kupa sayısı (-1: eski kayıt, ilk açılışta mevcut kupalar sayılır). */
     var ceremonySeen: Int = -1,
     var recBigWin: String = "",

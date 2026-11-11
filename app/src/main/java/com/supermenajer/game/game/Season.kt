@@ -355,6 +355,7 @@ object Season {
         Medical.afterMatch(g, us.used.filter { it.injured }.map { it.p })
         Rivals.record(g, sim.other(us).team, us.goals, sim.other(us).goals)
         Analysis.record(g, sim, us)
+        ManagerTraits.afterMatch(g, sim, us)
         g.oppInstr = -1
         run {
             val them0 = sim.other(us)

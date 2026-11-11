@@ -59,7 +59,7 @@ object Perks {
     // ---- Etkiler ----
     fun askingFactor(g: Game) = 1.0 - 0.05 * lvl(g, "nego")
     fun agentBonus(g: Game) = 0.03 * lvl(g, "nego")
-    fun youthDev(g: Game) = 1.0 + 0.1 * lvl(g, "youth")
+    fun youthDev(g: Game) = (1.0 + 0.1 * lvl(g, "youth")) * ManagerTraits.youthDev(g)
     fun tactics(g: Game) = 1.0 + 0.01 * lvl(g, "tactic")
     fun motivation(g: Game) = 1.0 + 0.15 * lvl(g, "motiv")
     fun income(g: Game) = 1.0 + 0.05 * lvl(g, "econ")

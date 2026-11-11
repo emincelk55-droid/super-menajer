@@ -311,6 +311,7 @@ class ScreensTest {
         GameRepo.tab = GameRepo.TAB_SQUAD; GameRepo.squadMode = 1; shot("17_dynamics"); GameRepo.squadMode = 0
         com.supermenajer.game.game.Perks.addXp(g, 420)
         GameRepo.upgradePerk("tactic"); GameRepo.upgradePerk("nego")
+        g.traitsEarned += "wall"; g.traitsEarned += "derby"; g.traitStats["clean"] = 15; g.traitStats["derbyWin"] = 3; g.traitStats["u21"] = 34; g.traitStats["goalfest"] = 5; g.traitStats["cupWin"] = 2
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 6; shot("18_perks")
         val rival = g.divisionTeams(g.userTeam.division).first { it.id != g.userTeamId }
         g.vacancies += com.supermenajer.game.model.Vacancy(rival.id, g.date + 14)

@@ -254,3 +254,4 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   yapısına bakar (20 sezonda ortalama yaş 24-26,5 arası; bütçeler kontrollü, lig medyanı 20 sezonda +%24).
 - Aylık ödüller: her ay sonunda kendi liginde Ayın Oyuncusu, Ayın Genci ve Ayın Menajeri; ana sayfada ödül kartı.
   Kazanan bizden ise oyuncunun morali, menajerin itibarı ve yönetimin güveni artar.
+- Menajer özellikleri: oyun tarzına göre kendiliğinden kazanılan kalıcı özellikler (Genç Dostu, Hücum/Savunma Ustası, Derbi Kralı, Geri Dönüş Ustası, Kupa Adamı); her birinin maçta ya da gelişimde küçük etkisi var, ilerleme Kulüp → Yetenek sekmesinde.
