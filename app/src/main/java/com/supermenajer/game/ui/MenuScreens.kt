@@ -1,5 +1,7 @@
 package com.supermenajer.game.ui
 
+import androidx.compose.ui.graphics.drawscope.withTransform
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -118,47 +120,65 @@ private fun DrawScope.drawStadium(glow: Float) {
     }
 }
 
-/** Kalkan biçimli oyun logosu. */
+/** Oyun logosu: uygulama ikonuyla aynı katmanlar (bkz. LogoArt, tools/gen_logo.py). */
 @Composable
 fun GameCrest(size: Dp) {
+    val paths = androidx.compose.runtime.remember {
+        LogoArt.layers.map { l ->
+            val d = when (l) {
+                is LogoLayer.Fill -> l.d
+                is LogoLayer.Gradient -> l.d
+                is LogoLayer.Stroke -> l.d
+                is LogoLayer.Clip -> l.d
+                LogoLayer.EndClip -> ""
+            }
+            if (d.isEmpty()) null else androidx.compose.ui.graphics.vector.PathParser().parsePathString(d).toPath()
+        }
+    }
     Canvas(Modifier.size(size)) {
-        val w = this.size.width
-        val h = this.size.height
-        val shield = Path().apply {
-            moveTo(w * 0.5f, 0f)
-            lineTo(w, h * 0.14f)
-            lineTo(w * 0.94f, h * 0.62f)
-            quadraticTo(w * 0.8f, h * 0.88f, w * 0.5f, h)
-            quadraticTo(w * 0.2f, h * 0.88f, w * 0.06f, h * 0.62f)
-            lineTo(0f, h * 0.14f)
-            close()
+        val b = LogoArt.bounds
+        val s = minOf(this.size.width / b[2], this.size.height / b[3])
+        val ox = (this.size.width - b[2] * s) / 2 - b[0] * s
+        val oy = (this.size.height - b[3] * s) / 2 - b[1] * s
+        withTransform({ translate(ox, oy); scale(s, s, Offset.Zero) }) {
+            var clipDepth = 0
+            LogoArt.layers.forEachIndexed { i, l ->
+                val path = paths[i]
+                when (l) {
+                    is LogoLayer.Fill -> drawPath(path!!, Color(l.color))
+                    is LogoLayer.Gradient -> drawPath(path!!, Brush.linearGradient(*l.stops.map { it.first to Color(it.second) }.toTypedArray(), start = Offset(l.x1, l.y1), end = Offset(l.x2, l.y2)))
+                    is LogoLayer.Stroke -> drawPath(path!!, Color(l.color), style = Stroke(0.9f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    is LogoLayer.Clip -> { drawContext.canvas.save(); drawContext.canvas.clipPath(path!!); clipDepth++ }
+                    LogoLayer.EndClip -> if (clipDepth > 0) { drawContext.canvas.restore(); clipDepth-- }
+                }
+            }
         }
-        drawPath(shield, Brush.verticalGradient(listOf(Color(0xFF1DF0B0), Color(0xFF0B8F78), Color(0xFF14204A))))
-        drawPath(shield, Color.White.copy(alpha = 0.85f), style = Stroke(w * 0.035f))
-        // Top
-        val c = Offset(w * 0.5f, h * 0.5f)
-        val r = w * 0.22f
-        drawCircle(Color.White, r, c)
-        drawCircle(Color(0xFF14204A), r, c, style = Stroke(w * 0.02f))
-        val pent = Path()
-        for (i in 0 until 5) {
-            val a = Math.toRadians(-90.0 + i * 72.0)
-            val x = c.x + (r * 0.42f * kotlin.math.cos(a)).toFloat()
-            val y = c.y + (r * 0.42f * sin(a)).toFloat()
-            if (i == 0) pent.moveTo(x, y) else pent.lineTo(x, y)
-        }
-        pent.close()
-        drawPath(pent, Color(0xFF14204A))
-        // Yıldızlar
-        for (i in -1..1) drawCircle(Color(0xFFF5C542), w * 0.03f, Offset(w * (0.5f + i * 0.13f), h * 0.17f))
     }
 }
 
 @Composable
 private fun Wordmark(big: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("SÜPER", fontSize = if (big) 40.sp else 26.sp, fontWeight = FontWeight.Black, color = TextMain, letterSpacing = 8.sp, lineHeight = if (big) 42.sp else 28.sp)
-        Text("MENAJER", fontSize = if (big) 40.sp else 26.sp, fontWeight = FontWeight.Black, color = Green, letterSpacing = 8.sp, lineHeight = if (big) 42.sp else 28.sp)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) { BrandWordmark(if (big) 40.sp else 26.sp) }
+}
+
+/** Marka yazısı: SÜPER altın, MENAJER zümrüt degrade, hafif parıltılı. Ana menü ve mağaza görselinde aynı. */
+@Composable
+fun BrandWordmark(size: androidx.compose.ui.unit.TextUnit, align: Alignment.Horizontal = Alignment.CenterHorizontally) {
+    Column(horizontalAlignment = align) {
+        Text(
+            "SÜPER", fontWeight = FontWeight.Black, letterSpacing = 8.sp, lineHeight = size * 1.05f, fontSize = size,
+            style = androidx.compose.ui.text.TextStyle(
+                brush = Brush.verticalGradient(listOf(Color(0xFFFFF6CC), Color(0xFFE2B33C), Color(0xFFB8891A))),
+                shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFE2B33C).copy(alpha = 0.45f), Offset(0f, 0f), 18f),
+            ),
+        )
+        Text(
+            "MENAJER", fontWeight = FontWeight.Black, letterSpacing = 8.sp, lineHeight = size * 1.05f, fontSize = size,
+            style = androidx.compose.ui.text.TextStyle(
+                brush = Brush.verticalGradient(listOf(Color(0xFF7CFFD8), Green, Color(0xFF0B9F78))),
+                shadow = androidx.compose.ui.graphics.Shadow(Green.copy(alpha = 0.5f), Offset(0f, 0f), 20f),
+            ),
+        )
     }
 }
 

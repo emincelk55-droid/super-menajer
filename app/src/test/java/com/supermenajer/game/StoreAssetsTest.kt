@@ -101,8 +101,7 @@ class StoreAssetsTest {
                         GameCrest(110.dp)
                         Spacer(Modifier.width(18.dp))
                         Column {
-                            Text("SÜPER", fontSize = 36.sp, fontWeight = FontWeight.Black, color = TextMain, letterSpacing = 6.sp, lineHeight = 36.sp)
-                            Text("MENAJER", fontSize = 36.sp, fontWeight = FontWeight.Black, color = Green, letterSpacing = 6.sp, lineHeight = 38.sp)
+                            com.supermenajer.game.ui.BrandWordmark(36.sp, androidx.compose.ui.Alignment.Start)
                             Spacer(Modifier.size(6.dp))
                             Text("Kulübünü kur, taktiğini çiz, efsaneni yaz.", fontSize = 13.sp, color = TextMain.copy(alpha = 0.85f))
                         }

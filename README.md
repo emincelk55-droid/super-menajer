@@ -239,3 +239,5 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Lig → 📈 Analiz: sezon özeti (G-B-M, gol, xG, topa sahip olma, gol yemeden), maç maç gol beklentisi grafiği,
   puan çizgisi (oyuna göre beklenen puanla), gollerin dakika dilimleri ve otomatik yorumlar (bitiricilik, geç gol
   yeme, topa sahip olma...).
+- Yeni logo: altın çerçeveli zümrüt-lacivert kalkan, üç yıldızlı altın şerit, defne dalı içinde top ve parlama;
+  uygulama ikonu, oyun içi logo ve mağaza görselleri tek tanımdan (`tools/gen_logo.py`). Marka yazısı altın/zümrüt degrade.
