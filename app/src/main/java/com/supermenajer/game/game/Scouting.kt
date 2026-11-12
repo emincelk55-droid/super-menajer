@@ -29,9 +29,10 @@ object Scouting {
         val u = uncertainty(g, p)
         if (u == 0) return v..v
         val off = (p.id * 7 + v) % (2 * u + 1)
-        // Pencere 1-99 dışına taşarsa kaydırılır (genişlik sabit kalır)
-        val lo = (v - off).coerceIn(1, 99 - 2 * u)
-        return lo..(lo + 2 * u)
+        // Pencere 1-99 dışına taşarsa kırpılır; yıldızların hepsi aynı "87-99" görünmesin diye kaydırılmaz
+        val lo = (v - off).coerceAtLeast(1)
+        val hi = (lo + 2 * u).coerceAtMost(99)
+        return lo..hi
     }
 
     fun ovrText(g: Game, p: Player): String = range(g, p, p.overall).let { if (it.first == it.last) "${it.first}" else "${it.first}-${it.last}" }

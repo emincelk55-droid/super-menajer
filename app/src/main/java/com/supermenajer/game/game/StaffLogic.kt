@@ -92,7 +92,7 @@ object StaffLogic {
     /** Gözlemci: bilinmeyen oyuncu belirsizliği. */
     fun scoutUncertainty(g: Game, ownLeague: Boolean): Int {
         val q = q(g, SCOUT)
-        return if (ownLeague) (5 - q / 5).coerceAtLeast(1) else (10 - q / 3).coerceAtLeast(3)
+        return if (ownLeague) (4 - q / 6).coerceAtLeast(1) else (7 - q / 4).coerceAtLeast(2)
     }
 
     /** Gözlemci: haftalık öneri sayısı. */

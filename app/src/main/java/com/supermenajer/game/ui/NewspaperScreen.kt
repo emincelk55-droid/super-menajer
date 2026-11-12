@@ -64,7 +64,10 @@ fun NewspaperTeaser(g: Game, modifier: Modifier = Modifier) {
         Column(Modifier.weight(1f)) {
             Text("${ed.masthead} · ${ed.date}", color = PaperRed, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.sp)
             Text(ed.main.headline, color = Ink, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(ed.side.firstOrNull { it.tag == "SÖYLENTİ" }?.let { "Söylenti: ${it.headline}" } ?: ed.main.body, color = InkDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Alt satır manşetin kendi haberi (manşetle alakasız söylenti görünmesin); söylentiler sayı olarak
+            Text(ed.main.body, color = InkDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val rumors = ed.side.count { it.tag == "SÖYLENTİ" }
+            if (rumors > 0) Text("+ $rumors transfer söylentisi", color = PaperRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
         Text("Oku ›", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }

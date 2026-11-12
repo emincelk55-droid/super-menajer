@@ -29,7 +29,9 @@ class FeaturesTest {
         val target = g.players.first { it.teamId >= 0 && it.teamId != us.id && g.countryOf(g.team(it.teamId)) == "İspanya" }
         assertTrue(!Scouting.known(g, target))
         val r = Scouting.range(g, target, target.overall)
-        assertTrue(target.overall in r && r.last - r.first == 2 * com.supermenajer.game.game.StaffLogic.scoutUncertainty(g, false))
+        assertTrue(target.overall in r && r.last - r.first <= 2 * com.supermenajer.game.game.StaffLogic.scoutUncertainty(g, false))
+        val stars = g.players.filter { it.overall >= 84 && it.teamId >= 0 && g.team(it.teamId).division != g.userTeam.division }.map { com.supermenajer.game.game.Scouting.ovrText(g, it) }
+        assertTrue("yıldızların aralıkları çeşitli: ${stars.take(8)}", stars.toSet().size >= minOf(4, stars.size))
         assertEquals("?", Scouting.potText(g, target))
         val budget = us.budget
         GameRepo.scout(target)

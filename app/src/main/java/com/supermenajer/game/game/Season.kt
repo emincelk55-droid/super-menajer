@@ -122,6 +122,32 @@ object Season {
         t.timeWasting = rnd.nextDouble() < 0.3
     }
 
+    /**
+     * Yapay zekâ kadrosu en çok 3 kaleci ve 28 oyuncu: fazlalar (en zayıf / en yaşlı) serbest kalır.
+     * Kadrolar zamanla şişip maaşları ve listeleri doldurmasın.
+     */
+    fun trimSquad(g: Game, t: Team) {
+        fun worst(list: List<Player>) = list.minByOrNull { it.overall - (it.age - 29).coerceAtLeast(0) * 2 + (if (it.age <= 21) it.potential / 10 else 0) }
+        fun release(p: Player) {
+            t.lineup.replaceAll { if (it == p.id) -1 else it }
+            g.movePlayer(p, -1)
+            p.contractYears = 0
+        }
+        var guard = 0
+        while (guard++ < 10) {
+            val gks = g.squad(t.id).filter { it.pos == Pos.GK }
+            if (gks.size <= 3) break
+            release(worst(gks) ?: break)
+        }
+        guard = 0
+        while (guard++ < 15) {
+            val sq = g.squad(t.id)
+            if (sq.size <= 28) break
+            val over = Generator.squadPlan.keys.maxBy { pos -> sq.count { it.pos == pos } - Generator.squadPlan.getValue(pos) }
+            release(worst(sq.filter { it.pos == over }) ?: break)
+        }
+    }
+
     /** Ülke kupası: 2 ligli ülkelerde 32 takım (son 32), tek ligli ülkelerde 16 takım (son 16). */
     private fun startCup(g: Game, country: String, rnd: Random) {
         val top = Leagues.top(country)
@@ -951,10 +977,14 @@ object Season {
                     else -> 0
                 }.coerceAtMost((28 - sq.size).coerceAtLeast(0))
                 repeat(promote) {
-                    val pos = Generator.squadPlan.maxBy { (pos, n) -> n - g.squad(t.id).count { it.pos == pos } }.key
+                    // Kaleci yalnız eksikse; yoksa oranca en eksik saha mevkii (eskiden fazla kaleci birikiyordu)
+                    val cur = g.squad(t.id)
+                    val pos = Generator.squadPlan.entries.filter { it.key != Pos.GK || cur.count { p -> p.pos == Pos.GK } < 3 }
+                        .maxBy { (pos, n) -> n - cur.count { it.pos == pos }.toDouble() / n }.key
                     g.addPlayer(Generator.youth(g, t, pos, rnd))
                 }
             }
+            if (t.id != g.userTeamId) trimSquad(g, t)
         }
         Analysis.newSeason(g)
         MonthlyAwards.newSeason(g)

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -240,11 +241,25 @@ fun QuickRow(g: Game) {
         TaskChip("🎯", "Hedefler") { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3 }
         TaskChip("🔭", "Gözlemci") { GameRepo.tab = GameRepo.TAB_TRANSFER }
         val ticker = g.news.take(6).joinToString("     |     ") { it.title + ": " + it.body.take(70) }
-        Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(10.dp)).clickable { GameRepo.tab = GameRepo.TAB_INBOX }, contentAlignment = Alignment.CenterStart) {
+        // Haber bandı: çerçeveli kutu, solda etiket, kenarlarda yumuşak geçiş (yazı butonlara yapışık kesilmesin)
+        val tickerBg = Color(0xFF0B1028)
+        Row(
+            Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(10.dp)).background(tickerBg)
+                .border(1.dp, CardLine, RoundedCornerShape(10.dp)).clickable { GameRepo.tab = GameRepo.TAB_INBOX },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                ticker.ifEmpty { "Hoş geldin hocam!" }, color = Teal, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1,
-                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                "HABER", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp,
+                modifier = Modifier.fillMaxHeight().background(Teal).padding(horizontal = 8.dp).wrapContentHeight(Alignment.CenterVertically),
             )
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+                Text(
+                    ticker.ifEmpty { "Hoş geldin hocam!" }, color = Teal, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 4.dp).basicMarquee(iterations = Int.MAX_VALUE),
+                )
+                Box(Modifier.align(Alignment.CenterStart).width(18.dp).fillMaxHeight().background(Brush.horizontalGradient(listOf(tickerBg, Color.Transparent))))
+                Box(Modifier.align(Alignment.CenterEnd).width(18.dp).fillMaxHeight().background(Brush.horizontalGradient(listOf(Color.Transparent, tickerBg))))
+            }
         }
         RoundIconButton("📅", 38.dp) { GameRepo.tab = GameRepo.TAB_LEAGUE; GameRepo.leagueTab = 6 }
         RoundIconButton("⚙", 38.dp) { GameRepo.settingsOpen = true }

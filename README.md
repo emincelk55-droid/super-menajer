@@ -230,6 +230,14 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   konfeti, "KUPAYI KALDIR"); her kupa bir kez kutlanır. Sezon sonu kartında 🏆 Ödül Gecesi: yılın oyuncusu, gol kralı,
   asist kralı, yılın genci, yılın kalecisi ve yılın menajeri sırayla açılır; bizim oyuncumuz kazanırsa altın çerçeve.
 
+### Geliştirmede (henüz APK yok)
+- Taktik sahası: kartlar artık üst üste binmiyor (yalnız aynı hizadaki kartlar aralanır, gerekirse küçülür).
+- TV kamerası: kornerde ve topun kenara gittiği anlarda top ve oyuncular kadrajda; gol tekrarı kaleye doğru çerçevelenir.
+- Gözlemci tahmini: aralıklar daraldı (kendi ligi ±1-4, diğerleri ±2-7); yıldız oyuncuların hepsi "87-99" görünmüyor.
+- Gazete kartı: alt satır manşetin kendi haberi; söylentiler ayrıca sayılır.
+- Kadrolar: yapay zekâ takımları en çok 28 oyuncu ve 3 kaleci (fazlalar serbest oyuncu olur); gençlerden fazla kaleci birikmesi giderildi.
+- Ana sayfa haber bandı çerçeveli ve kenarları yumuşak.
+
 ### v2.14
 - Denge: goller tek yıldız forvette fazla toplanmıyor (gol kralı tüm kupalarda ~25-50 gol, gerçek ligler gibi);
   denge raporuna gol kralları eklendi.
