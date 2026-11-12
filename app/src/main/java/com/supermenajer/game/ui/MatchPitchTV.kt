@@ -45,7 +45,7 @@ import kotlin.random.Random
  * Perspektif kamera. Dünya: x sahanın boyu (0..L), y eni (0 uzak taç, W yakın taç), z yükseklik (m).
  * Kamera yakın tribünde, yüksekte; yalnız x ekseninde topu yumuşakça izler.
  */
-private class TvCam(val camX: Float, w: Float, h: Float, focusY: Float) {
+private class TvCam(val camX: Float, w: Float, h: Float, focusY: Float, ballY: Float = focusY) {
     private val yCam = W + 34f
     private val hCam = 23f
     private val cosT: Float
@@ -66,7 +66,10 @@ private class TvCam(val camX: Float, w: Float, h: Float, focusY: Float) {
         val want = h * 0.55f + f * vn(focusY)
         val lo = h + f * vn(W + 6f)
         val hi = h * 0.2f + f * vn(-3f)
-        cy = if (lo <= hi) want.coerceIn(lo, hi) else (lo + hi) / 2
+        var y = if (lo <= hi) want.coerceIn(lo, hi) else (lo + hi) / 2
+        // Top her zaman kadrajda (üstte skor bandına, altta yazı şeridine girmeden)
+        y = y.coerceIn(h * 0.14f + f * vn(ballY), h * 0.78f + f * vn(ballY))
+        cy = y
     }
 
     /** Dünya noktasını ekrana izdüşürür; [scaleOut] o derinlikte 1 metrenin piksel karşılığı. */
@@ -78,6 +81,9 @@ private class TvCam(val camX: Float, w: Float, h: Float, focusY: Float) {
         val v = yf * sinT + Z * cosT
         return Offset(cx + f * X / depth, cy - f * v / depth)
     }
+
+    /** [y] derinliğinde ekranın yarım genişliği (metre). */
+    fun halfWidthAt(y: Float): Float = (cx) / meter(y)
 
     fun meter(y: Float, z: Float = 0f): Float {
         val yf = yCam - y
@@ -127,10 +133,21 @@ fun MatchPitchTV(
         val ballZ = rv?.ballZ ?: anim.ballZ
         // Kamera topu izler; kenarlarda durur ki saha boşluğa taşmasın
         val half = 19f
-        val target = ballX.coerceIn(half, L - half)
+        // Kamera: topu izler ama oyuncuların toplandığı yeri de kadrajda tutar (kornerde boş çime bakmasın).
+        // Tekrarda gol atılan kale de kadraja girsin diye kaleye doğru kayar.
+        val near = if (rv != null) rv.agents.filter { kotlin.math.abs(it.x - ballX) < 26f }.map { it.y }
+        else anim.agents.filter { it.alpha > 0.5f && kotlin.math.abs(it.x - ballX) < 26f }.map { it.y }
+        val crowdY = if (near.size >= 3) near.sorted()[near.size / 2] else W / 2
+        val goalX = if (rv != null) (if (rv.goalX > L / 2) L else 0f) else ballX
+        val tx = if (rv != null) ballX + (goalX - ballX) * 0.45f else ballX
+        val target = tx.coerceIn(half, L - half)
+        val ty = (ballY * 0.5f + crowdY * 0.5f).coerceIn(W * 0.15f, W * 0.85f)
         cam.x = if (cam.x.isNaN()) target else cam.x + (target - cam.x) * 0.07f
-        cam.y = if (cam.y.isNaN()) ballY else cam.y + (ballY - cam.y) * 0.05f
-        val c = TvCam(cam.x, size.width, size.height, cam.y)
+        cam.y = if (cam.y.isNaN()) ty else cam.y + (ty - cam.y) * 0.05f
+        // Top yatayda da kadrajda kalsın (kale çizgisi ve köşe bayrağı dahil)
+        val hw = TvCam(cam.x, size.width, size.height, cam.y, ballY).halfWidthAt(ballY) * 0.8f
+        cam.x = cam.x.coerceIn(ballX - hw, ballX + hw)
+        val c = TvCam(cam.x, size.width, size.height, cam.y, ballY)
 
         drawStands(c, crowd, t)
         drawGrass(c)

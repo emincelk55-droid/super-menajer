@@ -126,11 +126,7 @@ class ScreensTest {
             }
         }
         paparazzi.snapshot("24_offside_line") { pitch() }
-        n = 0
-        while (anim.replayView == null && n++ < 30 * 20) anim.update(1f / 30f)
-        while ((anim.replayView?.progress ?: 1f) < 0.7f && n++ < 30 * 40) anim.update(1f / 30f)
-        paparazzi.snapshot("25_goal_replay") { pitch() }
-        paparazzi.snapshot("25b_goal_replay_tv") {
+        val tvShot = @androidx.compose.runtime.Composable {
             AppTheme {
                 com.supermenajer.game.ui.MatchPitchTV(
                     anim, c1, androidx.compose.ui.graphics.Color(0xFFF2F2F2), androidx.compose.ui.graphics.Color(0xFF26C6DA), androidx.compose.ui.graphics.Color(0xFFFF7043), false, 1f,
@@ -138,6 +134,21 @@ class ScreensTest {
                 )
             }
         }
+        n = 0
+        while (anim.replayView == null && n++ < 30 * 20) anim.update(1f / 30f)
+        // Tekrarın başında da gol atılan kale kadrajda olmalı
+        while ((anim.replayView?.progress ?: 1f) < 0.12f && n++ < 30 * 40) anim.update(1f / 30f)
+        paparazzi.snapshot("25a_goal_replay_tv_start") { tvShot() }
+        while ((anim.replayView?.progress ?: 1f) < 0.7f && n++ < 30 * 40) anim.update(1f / 30f)
+        paparazzi.snapshot("25_goal_replay") { pitch() }
+        paparazzi.snapshot("25b_goal_replay_tv") { tvShot() }
+        // Korner: kamera boş çime değil, ceza sahasındaki kalabalığa bakmalı
+        anim.skipReplay()
+        repeat(30 * 8) { anim.update(1f / 30f) }
+        anim.play(com.supermenajer.game.engine.MatchEvent(30, com.supermenajer.game.engine.Ev.CORNER, 0, "Korner", sim.home.onPitch.last().p.id, "", -1, 0))
+        n = 0
+        while (n++ < 30 * 3) anim.update(1f / 30f)
+        paparazzi.snapshot("25c_corner_tv") { tvShot() }
     }
 
     /** Derbi: aynı şehrin kulüpleri ve iki devin maçı derbi sayılır; derbi haftası kartı ve tribün koreografisi. */
@@ -266,6 +277,11 @@ class ScreensTest {
         GameRepo.leagueTab = 2; shot("08_euro")
         GameRepo.leagueTab = 3; shot("09_fixtures")
         GameRepo.tab = 2; GameRepo.tacticsMode = 0; shot("10_tactics")
+        run {
+            val f0 = GameRepo.game!!.userTeam.formation
+            for (f in listOf("4-2-3-1", "3-5-2", "5-3-2")) { GameRepo.setFormation(f); shot("10t_formation_" + f.replace("-", "")) }
+            GameRepo.setFormation(f0)
+        }
         GameRepo.tacticsPanel = 1; shot("10b_formations")
         GameRepo.tacticsPanel = 2; shot("10a_instructions")
         GameRepo.tacticsPanel = 3; shot("10c_roles"); GameRepo.tacticsPanel = 0

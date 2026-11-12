@@ -58,7 +58,7 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
     class ReplayAgent(val side: Int, val gk: Boolean, val number: Int, val x: Float, val y: Float)
 
     /** Tekrarın o anki karesi (gösterilmiyorsa null). */
-    class ReplayView(val agents: List<ReplayAgent>, val ballX: Float, val ballY: Float, val ballZ: Float, val progress: Float)
+    class ReplayView(val agents: List<ReplayAgent>, val ballX: Float, val ballY: Float, val ballZ: Float, val progress: Float, val goalX: Float = ballX)
 
     private val rnd = Random(seed)
     val agents = mutableListOf<Agent>()
@@ -120,7 +120,7 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
                 val y = if (kb >= 0) a.ys[k] + (b.ys[kb] - a.ys[k]) * u else a.ys[k]
                 list += ReplayAgent(ag.side, ag.gk, ag.number, x, y)
             }
-            return ReplayView(list, a.bx + (b.bx - a.bx) * u, a.by + (b.by - a.by) * u, a.bz + (b.bz - a.bz) * u, pos / (replay.size - 1).coerceAtLeast(1))
+            return ReplayView(list, a.bx + (b.bx - a.bx) * u, a.by + (b.by - a.by) * u, a.bz + (b.bz - a.bz) * u, pos / (replay.size - 1).coerceAtLeast(1), replay.last().bx)
         }
 
     /** Tekrarı geç (sahaya dokununca). */

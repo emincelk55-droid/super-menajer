@@ -105,17 +105,66 @@ private fun persX(lat: Float, fy: Float): Float {
 }
 
 /** Dizilişin saha dışı oyuncu derinlik aralığı (en geri, en ileri). */
-private fun depthRange(slots: List<Slot>): Pair<Float, Float> {
-    val out = slots.filter { it.pos != com.supermenajer.game.model.Pos.GK }
-    val lo = out.minOfOrNull { it.y } ?: 0f
-    val hi = out.maxOfOrNull { it.y } ?: 1f
-    return lo to (if (hi - lo < 0.05f) lo + 0.05f else hi)
+/** Dizilişin derinlik sıraları (kaleci hariç): birbirine çok yakın y'ler aynı sıra sayılır. */
+private class DepthRows(val rows: List<Float>) {
+    fun rank(y: Float): Int = rows.indices.minByOrNull { kotlin.math.abs(rows[it] - y) } ?: 0
 }
 
-/** Diziliş noktası → saha kesri (x, y). Kendi kalemiz altta, hücum yukarı; kaleci ayrı sırada. */
-private fun slotFrac(s: Slot, range: Pair<Float, Float>): Pair<Float, Float> {
-    val fy = if (s.pos == com.supermenajer.game.model.Pos.GK) 0.9f
-    else 0.65f - ((s.y - range.first) / (range.second - range.first)).coerceIn(0f, 1f) * 0.52f
+private fun depthRange(slots: List<Slot>): DepthRows {
+    val ys = slots.filter { it.pos != com.supermenajer.game.model.Pos.GK }.map { it.y }.sorted()
+    val rows = mutableListOf<Float>()
+    for (y in ys) if (rows.isEmpty() || y - rows.last() > 0.06f) rows += y
+    return DepthRows(rows.ifEmpty { listOf(0.5f) })
+}
+
+/** Saha üstünde en ön ve en arka sıranın konumu (kesir) ve kaleci sırası. */
+private const val ROW_FRONT = 0.11f
+private const val ROW_BACK = 0.67f
+private const val ROW_GK = 0.895f
+
+/** Sıralar arası mesafe (saha yüksekliği kesri): kart boyu buna göre küçülür ki kartlar üst üste binmesin. */
+private fun rowGap(d: DepthRows): Float =
+    if (d.rows.size <= 1) ROW_GK - ROW_BACK else minOf((ROW_BACK - ROW_FRONT) / (d.rows.size - 1), ROW_GK - ROW_BACK)
+
+/**
+ * Taktik sahası yerleşimi: kartlar ancak yatayda çakışıyorsa dikeyde aralanır (kanatlar ile 10 numara
+ * aynı hizada durabilir). Sığmazsa kart küçültülür. Dönüş: slot başına y kesri ve kart genişliği (dp).
+ */
+private fun boardLayout(slots: List<Slot>, bwDp: Float, bhDp: Float): Pair<FloatArray, Float> {
+    val d = depthRange(slots)
+    val n = d.rows.size
+    val out = FloatArray(slots.size)
+    var w = minOf(bhDp * 0.19f, 64f)
+    while (true) {
+        val cardH = (w * 1.3f + 3f) / bhDp
+        val cardWf = w * 1.08f / (bwDp * 0.8f)
+        val rowY = FloatArray(n)
+        var ok = true
+        for (r in 0 until n) {
+            val target = if (n <= 1) (ROW_FRONT + ROW_BACK) / 2 else ROW_BACK - r * (ROW_BACK - ROW_FRONT) / (n - 1)
+            var y = target
+            val mine = slots.filter { it.pos != com.supermenajer.game.model.Pos.GK && d.rank(it.y) == r }
+            for (q in 0 until r) {
+                val theirs = slots.filter { it.pos != com.supermenajer.game.model.Pos.GK && d.rank(it.y) == q }
+                val clash = mine.any { a -> theirs.any { b -> kotlin.math.abs(a.x - b.x) < cardWf } }
+                if (clash) y = minOf(y, rowY[q] - cardH)
+            }
+            rowY[r] = y
+            if (y < ROW_FRONT - 0.045f) ok = false
+        }
+        if (ok || w <= 40f) {
+            slots.forEachIndexed { i, s -> out[i] = if (s.pos == com.supermenajer.game.model.Pos.GK) ROW_GK else rowY[d.rank(s.y)].coerceAtLeast(ROW_FRONT - 0.06f) }
+            return out to w
+        }
+        w -= 2f
+    }
+}
+
+/** Diziliş noktası → saha kesri (x, y). Kendi kalemiz altta, hücum yukarı; sıralar eşit aralıklı, kaleci ayrı sırada. */
+private fun slotFrac(s: Slot, d: DepthRows): Pair<Float, Float> {
+    val fy = if (s.pos == com.supermenajer.game.model.Pos.GK) ROW_GK
+    else if (d.rows.size <= 1) (ROW_FRONT + ROW_BACK) / 2
+    else ROW_BACK - d.rank(s.y) * (ROW_BACK - ROW_FRONT) / (d.rows.size - 1)
     val lat = 0.1f + s.x * 0.8f
     return persX(lat, fy) to fy
 }
@@ -418,10 +467,12 @@ fun TacticsBoard(g: Game) {
                     drawPerspectivePitch()
                     if (panel == 2) drawInstructionOverlay(g, GameRepo.instrSub)
                 }
-                val cardW = (bh.value * 0.175f).coerceIn(50f, 64f).dp
+                val (rowFy, cw) = remember(t.formation, bw, bh) { boardLayout(slots, bw.value, bh.value) }
+                val cardW = cw.dp
                 slots.forEachIndexed { i, s ->
                     val p = g.player(t.lineup.getOrNull(i) ?: -1)
-                    val (fx, fy) = slotFrac(s, range)
+                    val fy = rowFy[i]
+                    val fx = persX(0.1f + s.x * 0.8f, fy)
                     val d = Positions.slotDet(s)
                     val fit = p?.let { if (it.pos != s.pos && !Positions.canPlay(it, d)) 0.0 else Positions.fit(it, d) } ?: 1.0
                     val fitC = if (fit < 0.93) Red else if (fit < 1.0) Gold else Green
