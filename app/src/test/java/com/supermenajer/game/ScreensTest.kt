@@ -151,6 +151,34 @@ class ScreensTest {
         paparazzi.snapshot("25c_corner_tv") { tvShot() }
     }
 
+    /** Test modu turu: yapay zekâ kurgusal dünyada (Trabzon benzeri kulüp) bir buçuk sezon oynar, sonra ekranlar çekilir. */
+    @Test
+    fun autoplayTour() {
+        GameRepo.init(Files.createTempDirectory("smauto").toFile())
+        val w = Generator.newWorld(kotlin.random.Random(21)).also { Season.computeExpectations(it) }
+        val undo = com.supermenajer.game.game.Fictional.apply(w)
+        GameRepo.newCareer(w, "Otopilot", w.divisionTeams(0).sortedByDescending { it.reputation }[3].id)
+        val g = GameRepo.game!!
+        g.introDone = true; g.ceremonySeen = 999
+        val log = com.supermenajer.game.game.AutoPilot.Log()
+        val rnd = kotlin.random.Random(5)
+        var n = 0
+        while ((log.seasons < 1 || g.week < 12) && n++ < 3000) com.supermenajer.game.game.AutoPilot.step(log, rnd)
+        g.pendingEvent = null; g.press = null; g.medical.clear(); g.offers.clear(); g.monthAwardsNew = false
+        g.addNews("🤖 Test modu raporu", "Otopilot ${log.matches} maç oynadı (${log.wins}G ${log.draws}B ${log.losses}M). Alış ${log.bought}, satış ${log.sold}. Tutarlılık denetimi: " +
+            com.supermenajer.game.game.Invariants.check(g).ifEmpty { listOf("sorun yok ✓") }.joinToString(" | "))
+        GameRepo.screen = Screen.MAIN
+        GameRepo.tab = GameRepo.TAB_HOME; shot("auto_01_home")
+        GameRepo.tab = GameRepo.TAB_SQUAD; GameRepo.squadMode = 0; shot("auto_02_squad")
+        GameRepo.tab = GameRepo.TAB_TACTICS; GameRepo.tacticsMode = 0; shot("auto_03_tactics")
+        GameRepo.tab = GameRepo.TAB_LEAGUE; GameRepo.leagueTab = 0; GameRepo.leagueSel = g.userTeam.division; shot("auto_04_table")
+        GameRepo.leagueTab = 5; shot("auto_05_history")
+        GameRepo.tab = GameRepo.TAB_TRANSFER; shot("auto_06_transfer")
+        GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3; shot("auto_07_finance")
+        GameRepo.tab = GameRepo.TAB_INBOX; GameRepo.inboxCat = 0; GameRepo.openNews(g.news.first()); shot("auto_08_inbox_report")
+        println("OTOTUR ${g.userTeam.name} sezon ${g.season} hafta ${g.week} · ${log.actions.takeLast(6)}")
+    }
+
     /** Derbi: aynı şehrin kulüpleri ve iki devin maçı derbi sayılır; derbi haftası kartı ve tribün koreografisi. */
     @Test
     fun derbyAtmosphere() {

@@ -51,11 +51,32 @@ object Fictional {
         }
     }
 
-    /** Gerçek bir kişiyle aynı olmayan uydurma ad. */
-    private fun personName(rnd: Random, nation: String, real: Set<String>): String {
+    /**
+     * Tanınmış futbolcuların ayırt edici soyadları (güç 66+, gerçek veride en çok 4 kez geçen): kurgusal adda
+     * "Xhaka", "Mudryk" gibi yıldız soyadları çıkmasın. Demir, Silva gibi yaygın soyadları serbest kalır.
+     */
+    fun famousSurnames(): Set<String> {
+        val count = HashMap<String, Int>()
+        val strong = HashSet<String>()
+        for (id in leagueIds) RealWorld.load(id)?.teams?.forEach { t ->
+            for (p in t.players) {
+                for (nm in listOf(p.name, Alias.person(p.name))) {
+                    val sur = nm.substringAfterLast(' ').lowercase()
+                    if (sur.length < 3) continue
+                    count[sur] = (count[sur] ?: 0) + 1
+                    if (p.ovr >= 66) strong += sur
+                }
+            }
+        }
+        return strong.filter { (count[it] ?: 0) <= 4 }.toHashSet()
+    }
+
+    /** Gerçek bir kişiyle aynı olmayan, yıldız soyadı taşımayan uydurma ad. */
+    private fun personName(rnd: Random, nation: String, real: Set<String>, famous: Set<String> = emptySet()): String {
+        fun bad(n: String) = n.lowercase() in real || n.substringAfterLast(' ').lowercase() in famous
         var n = Generator.fictionalName(rnd, nation)
         var k = 0
-        while (n.lowercase() in real && k++ < 20) n = Generator.fictionalName(rnd, nation)
+        while (bad(n) && k++ < 40) n = Generator.fictionalName(rnd, if (k > 20) "TR" else nation)
         return n
     }
 
@@ -63,6 +84,7 @@ object Fictional {
         val rnd = Random(g.teams.size * 7919L + g.players.size)
         val real = realClubNames()
         val people = realPeople()
+        val famous = famousSurnames()
         val usedNames = HashSet<String>()
         val usedShort = g.teams.filter { !it.real }.map { it.short }.toMutableSet()
         val teams = HashMap<Int, Triple<String, String, String>>()
@@ -91,7 +113,7 @@ object Fictional {
         val players = HashMap<Int, String>()
         for (p in g.players) {
             players[p.id] = p.name
-            p.name = personName(rnd, p.nation, people)
+            p.name = personName(rnd, p.nation, people, famous)
         }
         g.fictionalNames = true
         g.reindex()

@@ -679,9 +679,11 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
             val lineShift = when (tm.defLine) { 0 -> -6f; 2 -> 6f; else -> 0f } + when (tm.mentality) { 0 -> -4f; 2 -> 4f; else -> 0f }
             val shift = (if (inPoss) -6f + pr * 52f + atkPush else -10f + pr * 44f) + lineShift
             val dd = (a.baseD * (if (inPoss) 1f else 0.85f) + shift).coerceIn(3f, L - 4f)
-            val spread = when (tm.width) { 0 -> 0.8f; 2 -> 1.18f; else -> 1f }
+            val spread = when (tm.width) { 0 -> 0.76f; 2 -> 1.24f; else -> 1f }
+            // Topsuzken de genişlik biraz hissedilir (dar takım kompakt savunur)
+            val defSpread = when (tm.width) { 0 -> 0.66f; 2 -> 0.8f; else -> 0.72f }
             val lat = if (inPoss) W / 2 + (a.baseY - W / 2) * spread + (by - W / 2) * 0.28f
-            else W / 2 + (a.baseY - W / 2) * 0.72f + (by - W / 2) * 0.38f
+            else W / 2 + (a.baseY - W / 2) * defSpread + (by - W / 2) * 0.38f
             val wob = sin(time * 0.6f + a.id * 1.7f) * 1.4f
             a.tx = fromD(a.side, dd + wob)
             a.ty = (lat + sin(time * 0.45f + a.id) * 1.2f).coerceIn(1.5f, W - 1.5f)

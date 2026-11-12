@@ -193,7 +193,8 @@ private fun DevamButton(g: Game) {
         !g.isMatchDay -> if (g.week == 1) "Hazırlık" else "Maç yok"
         else -> "Maç yok"
     }
-    val main = if (GameRepo.advancing) listOf(Color(0xFFF5C542), Color(0xFFE0A21B)) else listOf(Color(0xFF34F5C0), Color(0xFF12C795))
+    val auto = GameRepo.autoRunning
+    val main = if (auto) listOf(Color(0xFFB388FF), Color(0xFF7C4DFF)) else if (GameRepo.advancing) listOf(Color(0xFFF5C542), Color(0xFFE0A21B)) else listOf(Color(0xFF34F5C0), Color(0xFF12C795))
     Row(
         Modifier.height(48.dp).width(210.dp).pressClick(0.94f, enabled = active) { GameRepo.continueGame() }
             .shadow(10.dp, shape, ambientColor = main[1], spotColor = main[1]).clip(shape).background(Brush.horizontalGradient(main))
@@ -201,11 +202,11 @@ private fun DevamButton(g: Game) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(devamTitle(g), color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1, lineHeight = 19.sp)
-            Text("$date · $wk", color = Color(0xFF06231A).copy(alpha = 0.75f), fontSize = 10.sp, maxLines = 1, lineHeight = 11.sp)
+            Text(if (auto) "🤖 Durdur" else devamTitle(g), color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1, lineHeight = 19.sp)
+            Text(if (auto) GameRepo.autoStatus.removePrefix("🤖 Otopilot · ") else "$date · $wk", color = Color(0xFF06231A).copy(alpha = 0.75f), fontSize = 10.sp, maxLines = 1, lineHeight = 11.sp)
         }
         Box(Modifier.fillMaxHeight().width(46.dp).background(Color(0xFF0B1A2E)), contentAlignment = Alignment.Center) {
-            Text(if (GameRepo.advancing) "⏸" else "›", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(if (GameRepo.advancing || auto) "⏸" else "›", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

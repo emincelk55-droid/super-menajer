@@ -108,11 +108,13 @@ object Names {
     }
 
     fun name(pool: Pool, rnd: Random): String {
+        // Soyadı sıradan havuzdan: havuzlardaki gerçek yıldız soyadları (Mbappé, Haaland...) üretilen oyunculara verilmez
+        val last = Surnames.forNation(pool.nation) ?: pool.last
         repeat(8) {
-            val n = "${pool.first.random(rnd)} ${pool.last.random(rnd)}"
+            val n = "${pool.first.random(rnd)} ${last.random(rnd)}"
             if (n !in blocked) return n
         }
-        return "${pool.first.random(rnd)} ${pool.last.random(rnd)}"
+        return "${pool.first.random(rnd)} ${last.random(rnd)}"
     }
 
     fun isBlocked(name: String) = name in blocked

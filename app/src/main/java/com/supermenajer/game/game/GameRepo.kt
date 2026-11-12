@@ -162,6 +162,7 @@ object GameRepo {
     fun continueGame() {
         val g = game ?: return
         when {
+            autoRunning -> autoRunning = false
             advancing -> advancing = false
             g.fired -> tab = TAB_HOME
             g.pendingEvent != null -> tab = TAB_HOME
@@ -190,7 +191,56 @@ object GameRepo {
         }
     }
 
+    /** Test modu (otopilot) çalışıyor mu; durum satırı. */
+    var autoRunning by mutableStateOf(false)
+    var autoStatus by mutableStateOf("")
+    private var autoJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Test modu: yapay zekâ menajer [days] gün (≤0: sezon sonuna kadar) senin yerine oynar; her adımda
+     * dünya tutarlılığını denetler, bitince gelen kutusuna rapor bırakır. Tekrar çağrılırsa durur.
+     */
+    fun autoPlay(days: Int) {
+        val g = game ?: return
+        if (autoRunning) { autoRunning = false; return }
+        autoRunning = true
+        advancing = false
+        val log = AutoPilot.Log()
+        val problems = LinkedHashSet<String>()
+        val startDate = g.date
+        val startSeason = g.season
+        autoJob?.cancel()
+        autoJob = scope.launch {
+            var steps = 0
+            try {
+                while (autoRunning && game === g && steps++ < 3000) {
+                    val newSeason = AutoPilot.step(log, Random)
+                    if (steps % 4 == 0) problems += Invariants.check(g)
+                    autoStatus = "🤖 Otopilot · ${GameCalendar.format(g.date)} · ${log.wins}G ${log.draws}B ${log.losses}M"
+                    bump()
+                    if (newSeason || (days > 0 && g.date - startDate >= days) || g.season != startSeason) break
+                    kotlinx.coroutines.delay(15)
+                }
+            } catch (e: Throwable) {
+                problems += "ÇÖKME: ${e::class.simpleName}: ${e.message}"
+            }
+            autoRunning = false
+            autoStatus = ""
+            if (game !== g) return@launch
+            val body = buildString {
+                append("Otopilot ${g.date - startDate} gün oynadı. Maçlar: ${log.matches} (${log.wins}G ${log.draws}B ${log.losses}M). ")
+                append("Alış ${log.bought}, satış ${log.sold}, sözleşme uzatma ${log.renewed}, olay kararı ${log.events}. ")
+                if (log.actions.isNotEmpty()) append("Son işler: " + log.actions.takeLast(5).joinToString(" · ") + ". ")
+                append(if (problems.isEmpty()) "Tutarlılık denetimi: sorun yok ✓" else "Bulunan sorunlar (${problems.size}): " + problems.take(8).joinToString(" | "))
+            }
+            g.addNews("🤖 Test modu raporu", body)
+            save(force = true)
+            bump()
+        }
+    }
+
     fun continueLabel(g: Game): String = when {
+        autoRunning -> "🤖 DURDUR"
         advancing -> "⏸ DURDUR"
         g.fired -> "TEKLİFLER"
         g.pendingEvent != null -> "⚡ KARAR VER"

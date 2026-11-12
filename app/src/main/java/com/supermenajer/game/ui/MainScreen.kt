@@ -166,6 +166,14 @@ private fun SettingsDialog() {
                     }
                     OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.editorOpen = true }, modifier = Modifier.fillMaxWidth()) { Text("🛠 Veri editörü") }
                     OutlinedButton(onClick = { Tips.reset(); GameRepo.settingsOpen = false }, modifier = Modifier.fillMaxWidth()) { Text("💡 İpuçlarını yeniden göster") }
+                    Spacer(Modifier.height(6.dp))
+                    Text("🤖 TEST MODU", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Yapay zekâ senin yerine oynar (maçlar, transferler, kararlar) ve oyunu denetler; bitince gelen kutuna rapor bırakır. Devam düğmesiyle durdurabilirsin.", color = TextDim, fontSize = 11.sp, lineHeight = 14.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.autoPlay(7) }, modifier = Modifier.weight(1f)) { Text("1 hafta") }
+                        OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.autoPlay(30) }, modifier = Modifier.weight(1f)) { Text("1 ay") }
+                        OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.autoPlay(0) }, modifier = Modifier.weight(1f)) { Text("Sezon sonu") }
+                    }
                     OutlinedButton(onClick = { confirm = 1 }, modifier = Modifier.fillMaxWidth()) { Text("🏠 Ana menüye dön") }
                     OutlinedButton(onClick = { confirm = 2 }, modifier = Modifier.fillMaxWidth()) { Text("🚪 Oyundan çık", color = Red) }
                     Spacer(Modifier.height(6.dp))

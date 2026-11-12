@@ -237,6 +237,10 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Gazete kartı: alt satır manşetin kendi haberi; söylentiler ayrıca sayılır.
 - Kadrolar: yapay zekâ takımları en çok 28 oyuncu ve 3 kaleci (fazlalar serbest oyuncu olur); gençlerden fazla kaleci birikmesi giderildi.
 - Ana sayfa haber bandı çerçeveli ve kenarları yumuşak.
+- 🤖 Test modu (Ayarlar → Test modu): yapay zekâ menajer 1 hafta, 1 ay ya da sezon sonuna kadar senin yerine oynar (maçlar, transferler, sözleşmeler, olay kartları, basın, sponsor) ve her adımda dünyanın tutarlılığını denetler; bitince gelen kutusuna rapor bırakır. Çalışırken Devam düğmesi mor "🤖 Durdur" olur.
+- Otomatik oyun testi: yapay zekâ 5 farklı kariyerde (Süper Lig devi/küçüğü, 1. Lig, İngiltere, Brezilya) 2'şer sezon oynar; çökme, tutarsızlık ve kayıt/geri yükleme denetlenir. Ekran turu testi bir buçuk sezon sonra tüm ekranları çeker.
+- Uydurma oyuncu adları artık ülkelere göre sıradan soyadlarından üretiliyor: altyapı ve kurgusal dünyada "Mbappé", "Haaland", "Xhaka" gibi yıldız soyadları çıkmıyor.
+- Genişlik talimatı sahada daha belirgin (dar takım topsuzken de kompakt).
 
 ### v2.14
 - Denge: goller tek yıldız forvette fazla toplanmıyor (gol kralı tüm kupalarda ~25-50 gol, gerçek ligler gibi);

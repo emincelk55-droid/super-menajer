@@ -35,6 +35,11 @@ class FictionalTest {
         println("KURGU örnek: ${g.teams.filter { it.real }.take(8).joinToString { "${it.name} (${it.short}, ${it.stadiumName})" }}")
         println("KURGU oyuncu: ${g.players.take(6).joinToString { it.name }} · gerçekle aynı: $peopleClash")
         assertEquals(0, peopleClash)
+        // Yıldız soyadları (Xhaka, Mudryk...) kurgusal dünyada geçmemeli
+        val famous = Fictional.famousSurnames()
+        val famousLeft = g.players.filter { it.name.substringAfterLast(' ').lowercase() in famous }
+        println("KURGU yıldız soyadı kalan: ${famousLeft.size} / ${g.players.size} ${famousLeft.take(8).map { it.name }}")
+        assertTrue(famousLeft.size <= g.players.size / 200)
         assertEquals(g.teams.size, g.teams.map { it.short }.toSet().size)
         assertTrue(g.fictionalNames)
 
