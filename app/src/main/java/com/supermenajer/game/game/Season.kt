@@ -12,6 +12,8 @@ import com.supermenajer.game.model.Pos
 import com.supermenajer.game.model.SeasonRecord
 import com.supermenajer.game.model.Team
 import kotlin.math.roundToLong
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 object Season {
@@ -120,6 +122,29 @@ object Season {
             }
         }
         t.timeWasting = rnd.nextDouble() < 0.3
+    }
+
+    /**
+     * Yönetim payı: maaşlar ayrı bütçeden ödendiği için harcamayan kulübün kasası sonsuza dek şişiyordu.
+     * Sezon başında, kasada liginin normalinin (medyan bütçenin 2,5 katı, en az 20M) üstünde kalan paranın
+     * yarısını yönetim borç ödemesi ve yatırımlar için alır. Para biriktirmek yine mümkün ama sınırsız değil.
+     */
+    fun boardSweep(g: Game) {
+        for (d in g.teams.map { it.division }.distinct()) {
+            val teams = g.divisionTeams(d)
+            if (teams.size < 2) continue
+            val median = teams.map { it.budget }.sorted()[teams.size / 2]
+            val cap = maxOf(20_000_000L, median * 5 / 2)
+            for (t in teams) {
+                if (t.budget <= cap) continue
+                val take = (t.budget - cap) / 2
+                Economy.earn(t, Economy.BOARD_SHARE, -take)
+                if (t.id == g.userTeamId) g.addNews(
+                    "Yönetim fazla bütçeyi kullandı",
+                    "Kasada liginin çok üstünde para birikmişti. Yönetim ${money(take)} tutarını borç ödemesi ve kulüp yatırımları için aldı. Kalan transfer bütçen: ${money(t.budget)}. İpucu: parayı biriktirmek yerine kadroya yatırım yap.",
+                )
+            }
+        }
     }
 
     /**
@@ -465,7 +490,7 @@ object Season {
             Fans.afterMatch(g, f)
             if (Comp.isCup(f.comp) && f.winner >= 0) {
                 val prize = listOf(150_000L, 250_000L, 400_000L, 700_000L, 1_500_000L)[f.round]
-                Economy.earn(g.team(f.winner), Economy.CUP, prize)
+                Economy.earn(g.team(f.winner), Comp.name(f.comp), prize)
             }
         }
         when (d.type) {
@@ -537,11 +562,12 @@ object Season {
                 (if (mine) coachF else 1.0) * Facilities.trainingFactor(team) * Traits.devFactor(p) *
                 (if (mine && p.age <= 21) Perks.youthDev(g) else 1.0)
             val gap = p.potential - p.overall
-            if (p.age <= 24 && gap > 0 && rnd.nextDouble() < (0.14 + gap * 0.01) * intF * youthF) {
+            val starF = if (p.overall >= 80) g.starDev else 1.0
+            if (p.age <= 24 && gap > 0 && rnd.nextDouble() < (0.14 + gap * 0.01) * intF * youthF * g.worldDev * starF) {
                 improve(p, 1, rnd, focus)
-            } else if (p.age in 25..29 && gap > 0 && rnd.nextDouble() < 0.05 * intF * Traits.devFactor(p)) {
+            } else if (p.age in 25..29 && gap > 0 && rnd.nextDouble() < 0.05 * intF * Traits.devFactor(p) * g.worldDev * starF) {
                 improve(p, 1, rnd, focus)
-            } else if (p.age >= 31 && rnd.nextDouble() < (0.04 + (p.age - 31) * 0.02) / intF.coerceAtMost(1.0)) {
+            } else if (p.age >= 31 && rnd.nextDouble() < (0.04 + (p.age - 31) * 0.02) / intF.coerceAtMost(1.0) / g.worldDev) {
                 decline(p, 1, rnd)
             }
             // Antrenman sakatlığı
@@ -608,7 +634,7 @@ object Season {
             g.cupWinners[comp] = w
             if (comp == Comp.CUP) g.cupWinner = w
             val t = g.team(w)
-            Economy.earn(t, Economy.CUP, 3_000_000L)
+            Economy.earn(t, Comp.name(comp), 3_000_000L)
             t.reputation = (t.reputation + 2).coerceAtMost(95)
             if (Leagues.cupCountry(comp) == g.userCountry) g.addNews("${Comp.name(comp)} sahibini buldu!", "${t.name} kupayı müzesine götürdü! 🏆")
             if (w == g.userTeamId) {
@@ -902,6 +928,16 @@ object Season {
         if (WorldGen.addMissingLeagues(g, rnd)) g.addNews("🌍 Yeni ligler", "Belçika, İskoçya, Brezilya ve Arjantin ligleri bu sezondan itibaren oyunda! Gözlemcilerin yeni yeteneklere bakabilir.")
         Economy.processContracts(g, rnd)
 
+        // Dünya dengesi: yıldız (80+) sayısı başlangıca göre azaldıysa gençler biraz hızlı, arttıysa biraz yavaş gelişir.
+        // Gerçek veriden gelen yaş kuşakları 15 yıllık bir dalga yaratıyordu; bu geri besleme onu sönümler.
+        run {
+            val elite = g.players.count { it.teamId >= 0 && it.overall >= 80 }
+            if (g.eliteBase <= 0) g.eliteBase = elite.coerceAtLeast(1)
+            g.worldDev = (g.eliteBase.toDouble() / elite.coerceAtLeast(1)).pow(2.5).coerceIn(0.65, 1.45)
+            val stars = g.players.count { it.teamId >= 0 && it.overall >= 85 }
+            if (g.starBase <= 0) g.starBase = stars.coerceAtLeast(1)
+            g.starDev = (g.starBase.toDouble() / stars.coerceAtLeast(1)).pow(2.0).coerceIn(0.4, 1.25)
+        }
         val retired = mutableListOf<Player>()
         for (p in g.players.toList()) {
             p.promiseUntil = 0
@@ -910,14 +946,15 @@ object Season {
             p.age++
             val gap = p.potential - p.overall
             when {
-                p.age <= 23 && gap > 0 -> improve(p, (gap / 3).coerceIn(1, 6) + rnd.nextInt(0, 2), rnd)
+                p.age <= 23 && gap > 0 -> improve(p, (((gap / 3).coerceIn(1, 6) + rnd.nextInt(0, 2)) * g.worldDev * (if (p.overall >= 80) g.starDev else 1.0)).roundToInt().coerceAtLeast(1), rnd)
                 p.age <= 27 && gap > 0 -> improve(p, rnd.nextInt(0, 3), rnd)
-                p.age >= 31 -> decline(p, rnd.nextInt(1, 2 + (p.age - 30)), rnd)
+                p.age >= 31 -> decline(p, (rnd.nextInt(1, 2 + (p.age - 30)) / g.worldDev).roundToInt(), rnd)
             }
             // Emeklilik: 32'den itibaren artar, iyi oyuncular daha uzun oynar
             val retireChance = when {
                 p.age >= 40 || p.id in g.retiring -> 1.0
-                p.age >= 32 -> (doubleArrayOf(0.06, 0.14, 0.26, 0.42, 0.58, 0.74, 0.88, 0.95)[p.age - 32]) * (if (p.overall >= 80) 0.5 else if (p.overall >= 72) 0.8 else 1.0)
+                p.age >= 32 -> (doubleArrayOf(0.06, 0.14, 0.26, 0.42, 0.58, 0.74, 0.88, 0.95)[p.age - 32]) * (if (p.overall >= 80) 0.5 else if (p.overall >= 72) 0.8 else 1.0) /
+                    g.worldDev.coerceIn(0.8, 1.3)
                 else -> 0.0
             }
             if (rnd.nextDouble() < retireChance) {
@@ -993,6 +1030,7 @@ object Season {
         Generator.topUpFreeAgents(g, rnd)
         g.season++
         start(g, rnd)
+        boardSweep(g)
         g.addNews("Yeni sezon", "${g.season} sezonu başlıyor! Yönetimin hedefi: ${objectiveText(g.userTeam)}. Transfer dönemi açık.")
     }
 }

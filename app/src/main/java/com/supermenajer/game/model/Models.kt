@@ -479,6 +479,12 @@ class Game(
     /** Takım uyumu (0-100), bekleyen olay, menajer pazarı, menajer deneyimi ve yetenekleri. */
     var cohesion: Double = 60.0,
     var pendingEvent: GameEvent? = null,
+    /** Dünya dengesi: ilk sezondaki 80+ oyuncu sayısı ve buna göre gelişim çarpanı (yıldız sayısı dalgalanmasın). */
+    var eliteBase: Int = 0,
+    var worldDev: Double = 1.0,
+    /** Süperstar (85+) dengesi: ilk sezon sayısı ve 80+ güçteki oyuncuların gelişim çarpanı. */
+    var starBase: Int = 0,
+    var starDev: Double = 1.0,
     var investorDone: Boolean = false,
     var managers: MutableMap<Int, String> = mutableMapOf(),
     var mgrSecurity: MutableMap<Int, Double> = mutableMapOf(),

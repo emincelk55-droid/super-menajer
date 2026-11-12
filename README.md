@@ -241,6 +241,11 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Otomatik oyun testi: yapay zekâ 5 farklı kariyerde (Süper Lig devi/küçüğü, 1. Lig, İngiltere, Brezilya) 2'şer sezon oynar; çökme, tutarsızlık ve kayıt/geri yükleme denetlenir. Ekran turu testi bir buçuk sezon sonra tüm ekranları çeker.
 - Uydurma oyuncu adları artık ülkelere göre sıradan soyadlarından üretiliyor: altyapı ve kurgusal dünyada "Mbappé", "Haaland", "Xhaka" gibi yıldız soyadları çıkmıyor.
 - Genişlik talimatı sahada daha belirgin (dar takım topsuzken de kompakt).
+- 10 sezonluk otopilot testi (LONG_TEST=1): her sezon ekonomi, dünya gücü, kayıt boyutu ve hız ölçülür. Bulunan ve düzeltilenler:
+  - Uçuk skorlar (11-0, 16-2): önde olan takım fark açıldıkça gaz kesiyor; 6+ farklı maç %1'den %0,4'e indi.
+  - Bütçe şişmesi: maaşlar kasadan düşmediği için harcamayan kulübün parası sınırsız birikiyordu (80M → 500M). Yönetim artık sezon başında liginin normalinin çok üstündeki paranın yarısını borç ödemesine ayırıyor.
+  - Dünya gücü dalgası: 80+ ve 85+ oyuncu sayısı kendini dengeliyor (gelişim, altyapı kalitesi, yaşlı oyuncu düşüşü ve emeklilik dünya durumuna göre hafifçe ayarlanır).
+  - Kupa gelirleri defterde ülkenin kendi kupası adıyla görünüyor (her ülkede "Türkiye Kupası" yazıyordu).
 
 ### v2.14
 - Denge: goller tek yıldız forvette fazla toplanmıyor (gol kralı tüm kupalarda ~25-50 gol, gerçek ligler gibi);

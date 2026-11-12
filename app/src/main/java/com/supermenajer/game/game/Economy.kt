@@ -26,6 +26,7 @@ object Economy {
     const val STAFF = "Teknik ekip tazminatı"
     const val BUILD = "İnşaat ve tesisler"
     const val SPONSOR = "Sponsorluk gelirleri"
+    const val BOARD_SHARE = "Yönetim payı (borç ödemesi)"
 
     private val superPrize = listOf(
         20_000_000L, 13_000_000L, 9_000_000L, 7_000_000L, 5_500_000L, 4_500_000L, 4_000_000L, 3_500_000L, 3_000_000L,

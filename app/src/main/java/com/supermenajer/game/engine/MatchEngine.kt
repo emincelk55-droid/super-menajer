@@ -271,6 +271,9 @@ class MatchSim(
         // Önde olan takım zaman geçiriyorsa oyun yavaşlar
         val leader = if (home.goals > away.goals) home else if (away.goals > home.goals) away else null
         if (minute >= 70 && leader != null && leader.team.timeWasting) pShot *= 0.85
+        // Oyun yönetimi: fark açıldıkça önde olan takım gaz keser (gerçekte 6+ farklı skor çok nadirdir)
+        val lead = atk.goals - def.goals
+        if (lead >= 2) pShot *= (1.0 - 0.13 * (lead - 1)).coerceAtLeast(0.45)
         val r = rnd.nextDouble()
         var handled = false
         // Kontra atak: hücuma çıkan rakibin arkasına
