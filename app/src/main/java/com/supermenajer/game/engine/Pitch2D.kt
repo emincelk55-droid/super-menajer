@@ -193,6 +193,9 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
     private var spot = HashMap<Int, Pair<Float, Float>>()
     private var stepWait = 0f
     private var celebrator: Agent? = null
+
+    /** Gol sevinci / tekrarı sürüyorsa golü atan taraf (0 ev, 1 deplasman), yoksa -1. */
+    val scoringSide: Int get() = if (celebrating) celebrator?.side ?: -1 else -1
     private var kickoffSide = 0
 
     init {

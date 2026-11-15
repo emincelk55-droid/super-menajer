@@ -142,6 +142,10 @@ class ScreensTest {
             }
         }
         n = 0
+        // Gol anı: top ağlarda, file esner, panolarda GOOOL, taraftar ayakta
+        while (anim.scoringSide < 0 && n++ < 30 * 20) anim.update(1f / 30f)
+        repeat(6) { anim.update(1f / 30f) }
+        paparazzi.snapshot("25e_goal_moment_tv") { tvShot() }
         while (anim.replayView == null && n++ < 30 * 20) anim.update(1f / 30f)
         // Tekrarın başında da gol atılan kale kadrajda olmalı
         while ((anim.replayView?.progress ?: 1f) < 0.12f && n++ < 30 * 40) anim.update(1f / 30f)
