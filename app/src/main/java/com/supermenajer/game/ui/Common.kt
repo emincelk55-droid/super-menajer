@@ -53,9 +53,41 @@ val Blue = Color(0xFF5B8CFF)
 val TextMain = Color(0xFFE8ECF8)
 val TextDim = Color(0xFF8E9AB8)
 
+/**
+ * Oyunun yazı tipi: Barlow (SIL Open Font License, docs/licenses). Normal ağırlıklar Barlow,
+ * en kalın (Black) yazılar — skorlar, başlıklar, güç sayıları — dar Barlow Condensed: TV skor bandı havası.
+ */
+val GameFont = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlow_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlow_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlow_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlow_bold, FontWeight.Bold),
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlow_extrabold, FontWeight.ExtraBold),
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlowcondensed_black, FontWeight.Black),
+)
+
+/** Dar başlık yazısı (skor bantları, büyük rakamlar). */
+val GameFontCondensed = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlowcondensed_extrabold, FontWeight.ExtraBold),
+    androidx.compose.ui.text.font.Font(com.supermenajer.game.R.font.barlowcondensed_black, FontWeight.Black),
+)
+
+private fun gameTypography(): androidx.compose.material3.Typography {
+    val t = androidx.compose.material3.Typography()
+    fun androidx.compose.ui.text.TextStyle.f() = copy(fontFamily = GameFont)
+    return androidx.compose.material3.Typography(
+        displayLarge = t.displayLarge.f(), displayMedium = t.displayMedium.f(), displaySmall = t.displaySmall.f(),
+        headlineLarge = t.headlineLarge.f(), headlineMedium = t.headlineMedium.f(), headlineSmall = t.headlineSmall.f(),
+        titleLarge = t.titleLarge.f(), titleMedium = t.titleMedium.f(), titleSmall = t.titleSmall.f(),
+        bodyLarge = t.bodyLarge.f(), bodyMedium = t.bodyMedium.f(), bodySmall = t.bodySmall.f(),
+        labelLarge = t.labelLarge.f(), labelMedium = t.labelMedium.f(), labelSmall = t.labelSmall.f(),
+    )
+}
+
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
     MaterialTheme(
+        typography = gameTypography(),
         colorScheme = darkColorScheme(
             primary = Green, onPrimary = Color.Black,
             secondary = Gold, onSecondary = Color.Black,
@@ -274,7 +306,7 @@ fun SectionCard(title: String? = null, modifier: Modifier = Modifier, content: @
             .border(1.dp, Line.copy(alpha = 0.55f), RoundedCornerShape(14.dp)).padding(14.dp),
     ) {
         if (title != null) {
-            Text(title.uppercase(), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            CardTitle(title, TextDim, 12.sp, FontWeight.Bold, Teal, letterSpacing = 1.sp, upper = true)
             Spacer(Modifier.height(10.dp))
         }
         content()

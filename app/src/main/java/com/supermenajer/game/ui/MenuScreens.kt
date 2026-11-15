@@ -269,7 +269,7 @@ fun TitleScreen() {
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text("SÜPER MENAJER", fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 2.sp)
-                        Text("$APP_VERSION · 13 lig · gerçek kadrolar", color = TextDim, fontSize = 11.sp)
+                        Text("$APP_VERSION · 17 lig · 12 ülke", color = TextDim, fontSize = 11.sp)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -366,7 +366,7 @@ private fun MenuButton(icon: String, title: String, sub: String?, primary: Boole
         Box(
             Modifier.size(34.dp).clip(CircleShape).background(if (primary) Color.Black.copy(alpha = 0.15f) else Green.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
-        ) { Text(icon, color = if (primary) Color.Black else Green, fontSize = 16.sp, fontWeight = FontWeight.Black) }
+        ) { GIcon(icon, 20.dp, if (primary) Color.Black else Green) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = fg, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)

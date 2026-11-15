@@ -334,7 +334,7 @@ fun MatchScreen() {
                             .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
                             .clickable { running = false; subSide = 1; showSubs = true }.padding(horizontal = 12.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text("🔁 Değişiklik (${sim.away.subsLeft})", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                    ) { IconLabel("🔁 Değişiklik (${sim.away.subsLeft})", TextMain, 13.sp, iconTint = Teal) }
                 }
             }
         }
@@ -953,10 +953,7 @@ private fun MatchControls(
                         .clickable(enabled = sim.canShout) { open = true }.padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        if (sim.canShout) "📣 Bağır" else "📣 ${10 - (sim.minute - sim.lastShout)}'",
-                        fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (sim.canShout) Gold else TextDim,
-                    )
+                    IconLabel(if (sim.canShout) "📣 Bağır" else "📣 ${10 - (sim.minute - sim.lastShout)}'", if (sim.canShout) Gold else TextDim, 13.sp)
                 }
                 androidx.compose.material3.DropdownMenu(open, onDismissRequest = { open = false }, modifier = Modifier.background(Color(0xFF141A36))) {
                     listOf("📣 Coş", "😠 Bas!", "🎯 Odaklan", "🧘 Sakin ol").forEachIndexed { i, s ->
@@ -968,12 +965,12 @@ private fun MatchControls(
                 Modifier.height(40.dp).pressClick(0.95f, onClick = onTactics).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
                     .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("📋 Taktik", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { IconLabel("📋 Taktik", TextMain, 13.sp, iconTint = Teal) }
             Box(
                 Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
                     .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable(onClick = onSubs).padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("🔁 Değişiklik (${us.subsLeft})", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { IconLabel("🔁 Değişiklik (${us.subsLeft})", TextMain, 13.sp, iconTint = Teal) }
         } else {
             Spacer(Modifier.weight(1f))
         }

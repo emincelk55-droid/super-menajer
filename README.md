@@ -230,6 +230,11 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
   konfeti, "KUPAYI KALDIR"); her kupa bir kez kutlanır. Sezon sonu kartında 🏆 Ödül Gecesi: yılın oyuncusu, gol kralı,
   asist kralı, yılın genci, yılın kalecisi ve yılın menajeri sırayla açılır; bizim oyuncumuz kazanırsa altın çerçeve.
 
+### Geliştirmede (henüz APK yok)
+- Görsel yenileme: oyunun yazı tipi Barlow (SIL Open Font License); skorlar, başlıklar ve güç sayıları dar Barlow Condensed ile TV skor bandı havasında. Lisans: docs/licenses/Barlow-OFL.txt.
+- İkonlar: menü, üst çubuk, görev kısayolları, ana sayfa butonları, maç butonları ve kart başlıklarındaki emojiler her cihazda aynı görünen Material Symbols vektör ikonlarına dönüştü (Apache 2.0).
+- Ana menü ve yeni kariyer ekranında lig sayısı güncellendi (17 lig, 12 ülke).
+
 ### v2.15
 - Taktik sahası: kartlar artık üst üste binmiyor (yalnız aynı hizadaki kartlar aralanır, gerekirse küçülür).
 - TV kamerası: kornerde ve topun kenara gittiği anlarda top ve oyuncular kadrajda; gol tekrarı kaleye doğru çerçevelenir.

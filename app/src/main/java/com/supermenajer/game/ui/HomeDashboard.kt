@@ -93,7 +93,7 @@ fun DashCard(
         if (title != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.padding(end = 7.dp).width(3.dp).height(15.dp).clip(RoundedCornerShape(2.dp)).background(Brush.verticalGradient(listOf(Teal, Blue))))
-                Text(title, fontWeight = FontWeight.Black, fontSize = 15.sp, color = TextMain, modifier = Modifier.weight(1f), maxLines = 1)
+                CardTitle(title, TextMain, 15.sp, FontWeight.Black, Teal, Modifier.weight(1f))
                 if (badge > 0) {
                     Box(Modifier.clip(CircleShape).background(Red).padding(horizontal = 7.dp, vertical = 1.dp)) {
                         Text(if (badge > 99) "99+" else "$badge", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -115,7 +115,7 @@ fun RoundIconButton(icon: String, size: Dp = 40.dp, dot: Boolean = false, onClic
                 .background(Brush.verticalGradient(listOf(Color(0xFF2E3870), Color(0xFF141A3A))))
                 .border(1.dp, Brush.verticalGradient(listOf(Color(0xFF6876C0), Color(0xFF353F75))), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Text(icon, fontSize = (size.value * 0.45f).sp, color = TextMain, fontWeight = FontWeight.Bold) }
+        ) { GIcon(icon, size * 0.52f, TextMain) }
         if (dot) Box(Modifier.align(Alignment.TopEnd).size(12.dp).clip(CircleShape).background(Red).border(1.5.dp, Color.White, CircleShape))
     }
 }
@@ -129,7 +129,7 @@ private fun ResourceChip(icon: String, value: String, color: Color = TextMain, o
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(icon, fontSize = 16.sp)
+        GIcon(icon, 18.dp, color)
         Spacer(Modifier.width(6.dp))
         Text(value, color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
     }
@@ -222,7 +222,7 @@ private fun TaskChip(icon: String, label: String, onClick: () -> Unit) {
         Box(
             Modifier.size(30.dp).clip(CircleShape).background(Color(0xFF232B57)).border(1.dp, Color(0xFF414C82), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Text(icon, fontSize = 15.sp) }
+        ) { GIcon(icon, 17.dp, Teal) }
         Spacer(Modifier.width(8.dp))
         Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
     }
@@ -310,7 +310,7 @@ fun MenuDrawer(g: Game, onClose: () -> Unit) {
                         .clickable { GameRepo.tab = e.tab; onClose() }.padding(horizontal = 12.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(e.icon, fontSize = 18.sp, modifier = Modifier.width(32.dp))
+                    GIcon(e.icon, 22.dp, if (sel) Teal else TextDim, Modifier.width(32.dp))
                     Text(e.label, fontWeight = if (sel) FontWeight.Black else FontWeight.SemiBold, fontSize = 15.sp, color = if (sel) Teal else TextMain, modifier = Modifier.weight(1f))
                     val b = e.badge(g)
                     if (b > 0) Box(Modifier.clip(CircleShape).background(Red).padding(horizontal = 7.dp, vertical = 1.dp)) {
@@ -427,8 +427,8 @@ private fun RatingPill(v: Int) {
 @Composable
 private fun InfoCell(icon: String, title: String, sub: String, modifier: Modifier) {
     Row(modifier.padding(horizontal = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, fontSize = 14.sp)
-        Spacer(Modifier.width(4.dp))
+        GIcon(icon, 16.dp, Teal)
+        Spacer(Modifier.width(5.dp))
         Column {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(sub, color = TextDim, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -445,7 +445,7 @@ private fun SideButton(label: String, accent: Boolean = false, modifier: Modifie
             .border(1.dp, if (accent) Color.White.copy(alpha = 0.5f) else Teal.copy(alpha = 0.6f), shape)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart,
-    ) { Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = if (accent) Color(0xFF06231A) else TextMain, maxLines = 1) }
+    ) { IconLabel(label, if (accent) Color(0xFF06231A) else TextMain, 15.sp, iconTint = if (accent) Color(0xFF06231A) else Teal) }
 }
 
 /** Sıradaki maç: iki arma, takım güçleri, turnuva/tarih/stadyum ve kısayollar. */

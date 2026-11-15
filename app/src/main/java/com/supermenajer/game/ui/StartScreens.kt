@@ -407,7 +407,7 @@ private fun OptionsStep(
                 }
             }
             ToggleRow("🔍 Özellik maskeleme", "Gözlemci raporu olmayan oyuncuların değerleri tahmini görünür.", true, enabled = false) {}
-            ToggleRow("🌍 13 lig aktif", "Türkiye, İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz ve Hollanda.", true, enabled = false) {}
+            ToggleRow("🌍 17 lig aktif", "Türkiye, İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz, Hollanda, Belçika, İskoçya, Brezilya ve Arjantin.", true, enabled = false) {}
         }
     }
 }
