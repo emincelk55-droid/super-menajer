@@ -47,23 +47,23 @@ fun SponsorsView(g: Game) {
     val us = g.userTeam
     LazyVerticalStaggeredGrid(StaggeredGridCells.Adaptive(330.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(10.dp), verticalItemSpacing = 10.dp, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         item(span = StaggeredGridItemSpan.FullLine) {
-            SectionCard("💼 Sponsorluk özeti") {
+            SectionCard(L("💼 Sponsorluk özeti", "💼 Sponsorship summary")) {
                 Row(Modifier.fillMaxWidth()) {
                     Column(Modifier.weight(1f)) {
-                        Text("Bu sezon kazanılan", color = TextDim, fontSize = 11.sp)
+                        Text(L("Bu sezon kazanılan", "Earned this season"), color = TextDim, fontSize = 11.sp)
                         Text(money(us.income[Economy.SPONSOR] ?: 0L), fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Green)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("Sezonluk sabit", color = TextDim, fontSize = 11.sp)
+                        Text(L("Sezonluk sabit", "Fixed per season"), color = TextDim, fontSize = 11.sp)
                         Text(money(Sponsors.seasonBase(g)), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("Galibiyet primi", color = TextDim, fontSize = 11.sp)
+                        Text(L("Galibiyet primi", "Win bonus"), color = TextDim, fontSize = 11.sp)
                         Text(money(g.sponsors.sumOf { it.winBonus }), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("Teklifler kulübün itibarına, ligine, Avrupa'da oynamasına ve şampiyonluklara göre büyür.", color = TextDim, fontSize = 12.sp)
+                Text(L("Teklifler kulübün itibarına, ligine, Avrupa'da oynamasına ve şampiyonluklara göre büyür.", "Offers grow with the club's reputation, league, European football and titles."), color = TextDim, fontSize = 12.sp)
                 message?.let { Text(it, color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
             }
         }
@@ -73,13 +73,13 @@ fun SponsorsView(g: Game) {
                     val cur = Sponsors.current(g, slot)
                     if (cur != null) {
                         SponsorDeal(cur, showYears = true)
-                        if (slot == Sponsors.STADIUM) Text("Stadının yeni adı: ${us.stadiumName}", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                        if (slot == Sponsors.STADIUM) Text(L("Stadının yeni adı: ${us.stadiumName}", "The stadium's new name: ${us.stadiumName}"), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                     } else {
                         val offers = Sponsors.offers(g, slot)
                         if (offers.isEmpty()) {
-                            Text("Bu alan boş. Yeni teklifler sezon başında gelecek.", color = TextDim, fontSize = 13.sp)
+                            Text(L("Bu alan boş. Yeni teklifler sezon başında gelecek.", "This slot is empty. New offers arrive at the start of the season."), color = TextDim, fontSize = 13.sp)
                         } else {
-                            Text("Boş! Gelen teklifler:", color = Red, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(L("Boş! Gelen teklifler:", "Empty! Incoming offers:"), color = Red, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             offers.forEach { o ->
                                 Column(
                                     Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp),
@@ -89,7 +89,7 @@ fun SponsorsView(g: Game) {
                                     Button(
                                         onClick = { message = GameRepo.signSponsor(o) },
                                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                                    ) { Text("İmzala · ${o.yearsLeft} sezon") }
+                                    ) { Text(L("İmzala · ${o.yearsLeft} sezon", "Sign · ${o.yearsLeft} seasons")) }
                                 }
                             }
                         }
@@ -110,11 +110,11 @@ private fun SponsorDeal(s: Sponsor, showYears: Boolean) {
     }
     Spacer(Modifier.height(4.dp))
     Row(Modifier.fillMaxWidth()) {
-        DealStat("Sezonluk", money(s.base), Modifier.weight(1f))
-        DealStat("Galibiyet", if (s.winBonus > 0) money(s.winBonus) else "-", Modifier.weight(1f))
-        DealStat("Kupa", if (s.titleBonus > 0) money(s.titleBonus) else "-", Modifier.weight(1f))
+        DealStat(L("Sezonluk", "Per season"), money(s.base), Modifier.weight(1f))
+        DealStat(L("Galibiyet", "Win"), if (s.winBonus > 0) money(s.winBonus) else "-", Modifier.weight(1f))
+        DealStat(L("Kupa", "Cup"), if (s.titleBonus > 0) money(s.titleBonus) else "-", Modifier.weight(1f))
     }
-    if (showYears) Text("${s.yearsLeft} sezon kaldı", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+    if (showYears) Text(L("${s.yearsLeft} sezon kaldı", "${s.yearsLeft} seasons left"), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 }
 
 @Composable
@@ -129,12 +129,12 @@ private fun DealStat(label: String, value: String, modifier: Modifier) {
 @Composable
 fun SponsorOffersCard(g: Game) {
     val slots = g.sponsorOffers.map { it.slot }.distinct()
-    SectionCard("💼 Sponsor teklifleri") {
+    SectionCard(L("💼 Sponsor teklifleri", "💼 Sponsor offers")) {
         Text(
-            "${slots.joinToString { Sponsors.slotNames[it].lowercase() }} için teklifler bekliyor. Boş alanlar para kazandırmaz!",
+            L("${slots.joinToString { Sponsors.slotNames[it].lowercase() }} için teklifler bekliyor. Boş alanlar para kazandırmaz!", "Offers are waiting for ${slots.joinToString { Sponsors.slotNames[it].lowercase() }}. Empty slots earn nothing!"),
             color = TextDim, fontSize = 13.sp,
         )
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 2 }, modifier = Modifier.fillMaxWidth()) { Text("Teklifleri incele") }
+        Button(onClick = { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 2 }, modifier = Modifier.fillMaxWidth()) { Text(L("Teklifleri incele", "Review offers")) }
     }
 }

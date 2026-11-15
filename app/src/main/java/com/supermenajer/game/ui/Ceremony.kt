@@ -105,7 +105,7 @@ fun TrophyCeremony(g: Game, trophy: String, onClose: () -> Unit) {
         }
         key(burst) { GoalCelebration(c1, c2, confetti = true, seed = 1000 + burst, showText = false) }
         Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text("ŞAMPİYON!", color = Gold, fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 8.sp,
+            Text(L("ŞAMPİYON!", "CHAMPIONS!"), color = Gold, fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 8.sp,
                 modifier = Modifier.graphicsLayer { alpha = rise.value.coerceIn(0f, 1f) })
             Canvas(
                 Modifier.size(150.dp).graphicsLayer {
@@ -120,7 +120,7 @@ fun TrophyCeremony(g: Game, trophy: String, onClose: () -> Unit) {
             )
             Text("${g.userTeam.name} · ${g.managerName}", color = TextDim, fontSize = 14.sp)
             Spacer(Modifier.height(18.dp))
-            SmTrophyButton("KUPAYI KALDIR  🏆", onClose)
+            SmTrophyButton(L("KUPAYI KALDIR  🏆", "LIFT THE TROPHY  🏆"), onClose)
         }
     }
 }
@@ -172,7 +172,7 @@ fun AwardsNightDialog(g: Game) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("🏆 ÖDÜL GECESİ", color = Gold, fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 3.sp)
+                    Text(L("🏆 ÖDÜL GECESİ", "🏆 AWARDS NIGHT"), color = Gold, fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 3.sp)
                     Text("${g.season}-${(g.season + 1) % 100} · ${g.leagueName(g.userTeam)}", color = TextDim, fontSize = 13.sp)
                 }
                 Text("✕", fontSize = 20.sp, color = TextDim, modifier = Modifier.clip(RoundedCornerShape(50)).clickable { GameRepo.awardsOpen = false }.padding(6.dp))

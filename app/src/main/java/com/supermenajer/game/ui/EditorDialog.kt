@@ -63,14 +63,14 @@ fun EditorDialog(g: Game) {
                 .background(Brush.verticalGradient(listOf(CardTop, CardBottom))).border(1.dp, CardLine, RoundedCornerShape(16.dp)).padding(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🛠 Veri Editörü", fontWeight = FontWeight.Black, fontSize = 20.sp, modifier = Modifier.weight(1f))
+                Text(L("🛠 Veri Editörü", "🛠 Data Editor"), fontWeight = FontWeight.Black, fontSize = 20.sp, modifier = Modifier.weight(1f))
                 Text("✕", fontSize = 20.sp, color = TextDim, modifier = Modifier.clip(CircleShape).clickable { GameRepo.editorOpen = false }.padding(6.dp))
             }
-            Text("Oyuncu bilgilerini düzenle. Kendi takımın listelenir; başka oyuncu için en az 2 harf yaz.", color = TextDim, fontSize = 12.sp)
+            Text(L("Oyuncu bilgilerini düzenle. Kendi takımın listelenir; başka oyuncu için en az 2 harf yaz.", "Edit player details. Your own squad is listed; type at least 2 letters for other players."), color = TextDim, fontSize = 12.sp)
             Spacer(Modifier.height(6.dp))
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.width(300.dp).fillMaxHeight()) {
-                    OutlinedTextField(query, { query = it.take(30) }, singleLine = true, placeholder = { Text("🔍 Oyuncu ara") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(query, { query = it.take(30) }, singleLine = true, placeholder = { Text(L("🔍 Oyuncu ara", "🔍 Search player")) }, modifier = Modifier.fillMaxWidth())
                     LazyColumn(Modifier.weight(1f)) {
                         items(list.size) { i ->
                             val p = list[i]
@@ -89,7 +89,7 @@ fun EditorDialog(g: Game) {
                 }
                 val p = g.player(selId)
                 Box(Modifier.weight(1f).fillMaxHeight()) {
-                    if (p == null) Text("Düzenlemek için soldan bir oyuncu seç.", color = TextDim, modifier = Modifier.align(Alignment.Center))
+                    if (p == null) Text(L("Düzenlemek için soldan bir oyuncu seç.", "Pick a player on the left to edit."), color = TextDim, modifier = Modifier.align(Alignment.Center))
                     else EditForm(g, p)
                 }
             }
@@ -106,11 +106,11 @@ private fun EditForm(g: Game, p: Player) {
         mutableStateOf(listOf(p.pace, p.shooting, p.passing, p.dribbling, p.defending, p.physical, p.goalkeeping).map { it.toFloat() })
     }
     var saved by remember(p.id) { mutableStateOf(false) }
-    val labels = listOf("Hız", "Şut", "Pas", "Teknik", "Savunma", "Fizik", "Kalecilik")
+    val labels = listOf(L("Hız", "Pace"), L("Şut", "Shooting"), L("Pas", "Passing"), L("Teknik", "Technique"), L("Savunma", "Defending"), L("Fizik", "Physical"), L("Kalecilik", "Goalkeeping"))
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-        OutlinedTextField(name, { name = it.take(28); saved = false }, label = { Text("Ad") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        SliderRow("Yaş", age, 15f..42f) { age = it; saved = false }
-        SliderRow("Potansiyel", pot, 30f..99f) { pot = it; saved = false }
+        OutlinedTextField(name, { name = it.take(28); saved = false }, label = { Text(L("Ad", "Name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        SliderRow(L("Yaş", "Age"), age, 15f..42f) { age = it; saved = false }
+        SliderRow(L("Potansiyel", "Potential"), pot, 30f..99f) { pot = it; saved = false }
         labels.forEachIndexed { i, l ->
             if (i == 6 && p.pos != Pos.GK) return@forEachIndexed
             SliderRow(l, attrs.value[i], 10f..99f) { v -> attrs.value = attrs.value.toMutableList().also { it[i] = v }; saved = false }
@@ -125,7 +125,7 @@ private fun EditForm(g: Game, p: Player) {
                     saved = true
                 },
             contentAlignment = Alignment.Center,
-        ) { Text(if (saved) "✓ Kaydedildi (güç ${p.overall})" else "Kaydet", color = Color(0xFF06231A), fontWeight = FontWeight.Black) }
+        ) { Text(if (saved) L("✓ Kaydedildi (güç ${p.overall})", "✓ Saved (overall ${p.overall})") else L("Kaydet", "Save"), color = Color(0xFF06231A), fontWeight = FontWeight.Black) }
     }
 }
 

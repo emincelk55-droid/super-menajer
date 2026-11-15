@@ -341,11 +341,11 @@ fun FormDots(form: String) {
 }
 
 fun moraleText(m: Double): String = when {
-    m >= 85 -> "Çok mutlu 😄"
-    m >= 65 -> "Mutlu 🙂"
-    m >= 45 -> "Normal 😐"
-    m >= 25 -> "Mutsuz 🙁"
-    else -> "Çok mutsuz 😠"
+    m >= 85 -> L("Çok mutlu 😄", "Very happy 😄")
+    m >= 65 -> L("Mutlu 🙂", "Happy 🙂")
+    m >= 45 -> L("Normal 😐", "Okay 😐")
+    m >= 25 -> L("Mutsuz 🙁", "Unhappy 🙁")
+    else -> L("Çok mutsuz 😠", "Very unhappy 😠")
 }
 
 /**

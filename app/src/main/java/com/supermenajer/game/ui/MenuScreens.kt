@@ -63,12 +63,12 @@ import kotlin.math.sin
 
 const val APP_VERSION = "v2.15"
 
-private val tips = listOf(
-    "İpucu: DEVAM düğmesi günleri tek tek geçirir, önemli bir olayda durur.",
-    "İpucu: Oyuncuları taktik ekranında sürükleyerek yerlerini değiştirebilirsin.",
-    "İpucu: Gözlemci raporu olmadan oyuncunun gerçek gücünü bilemezsin.",
-    "İpucu: Genç oyuncuları kiralık göndermek gelişimlerini hızlandırır.",
-    "İpucu: Yönetimin güveni sıfıra inerse kovulursun. Hedefi takip et!",
+private val tips get() = listOf(
+    L("İpucu: DEVAM düğmesi günleri tek tek geçirir, önemli bir olayda durur.", "Tip: The CONTINUE button moves day by day and stops on important events."),
+    L("İpucu: Oyuncuları taktik ekranında sürükleyerek yerlerini değiştirebilirsin.", "Tip: Drag players on the tactics screen to swap their positions."),
+    L("İpucu: Gözlemci raporu olmadan oyuncunun gerçek gücünü bilemezsin.", "Tip: Without a scout report you can't know a player's real ability."),
+    L("İpucu: Genç oyuncuları kiralık göndermek gelişimlerini hızlandırır.", "Tip: Loaning out young players speeds up their development."),
+    L("İpucu: Yönetimin güveni sıfıra inerse kovulursun. Hedefi takip et!", "Tip: If the board's confidence drops to zero you're sacked. Keep an eye on the objective!"),
 )
 
 /** Oyun markası: koyu lacivert-mor gradyan, stadyum ışıkları ve perspektif saha çizgileri. */
@@ -166,14 +166,14 @@ private fun Wordmark(big: Boolean) {
 fun BrandWordmark(size: androidx.compose.ui.unit.TextUnit, align: Alignment.Horizontal = Alignment.CenterHorizontally) {
     Column(horizontalAlignment = align) {
         Text(
-            "SÜPER", fontWeight = FontWeight.Black, letterSpacing = 8.sp, lineHeight = size * 1.05f, fontSize = size,
+            L("SÜPER", "SUPER"), fontWeight = FontWeight.Black, letterSpacing = 8.sp, lineHeight = size * 1.05f, fontSize = size,
             style = androidx.compose.ui.text.TextStyle(
                 brush = Brush.verticalGradient(listOf(Color(0xFFFFF6CC), Color(0xFFE2B33C), Color(0xFFB8891A))),
                 shadow = androidx.compose.ui.graphics.Shadow(Color(0xFFE2B33C).copy(alpha = 0.45f), Offset(0f, 0f), 18f),
             ),
         )
         Text(
-            "MENAJER", fontWeight = FontWeight.Black, letterSpacing = 8.sp, lineHeight = size * 1.05f, fontSize = size,
+            L("MENAJER", "MANAGER"), fontWeight = FontWeight.Black, letterSpacing = 8.sp, lineHeight = size * 1.05f, fontSize = size,
             style = androidx.compose.ui.text.TextStyle(
                 brush = Brush.verticalGradient(listOf(Color(0xFF7CFFD8), Green, Color(0xFF0B9F78))),
                 shadow = androidx.compose.ui.graphics.Shadow(Green.copy(alpha = 0.5f), Offset(0f, 0f), 20f),
@@ -202,11 +202,11 @@ fun SplashScreen() {
     )
     val done = progress.value >= 1f
     val stage = when {
-        progress.value < 0.25f -> "Ligler yükleniyor..."
-        progress.value < 0.5f -> "6.500 oyuncu hazırlanıyor..."
-        progress.value < 0.75f -> "Stadyumlar açılıyor..."
-        progress.value < 1f -> "Fikstür çekiliyor..."
-        else -> "Hazır!"
+        progress.value < 0.25f -> L("Ligler yükleniyor...", "Loading leagues...")
+        progress.value < 0.5f -> L("6.500 oyuncu hazırlanıyor...", "Preparing 6,500 players...")
+        progress.value < 0.75f -> L("Stadyumlar açılıyor...", "Opening the stadiums...")
+        progress.value < 1f -> L("Fikstür çekiliyor...", "Drawing the fixtures...")
+        else -> L("Hazır!", "Ready!")
     }
     MenuBackground(
         Modifier.clickable(remember { MutableInteractionSource() }, null, enabled = done) { GameRepo.screen = Screen.TITLE },
@@ -220,7 +220,7 @@ fun SplashScreen() {
             GameCrest(96.dp)
             Spacer(Modifier.height(10.dp))
             Wordmark(big = true)
-            Text("FUTBOL MENAJERLİK OYUNU · 2026/27", color = TextDim, fontSize = 12.sp, letterSpacing = 3.sp)
+            Text(L("FUTBOL MENAJERLİK OYUNU · 2026/27", "FOOTBALL MANAGEMENT GAME · 2026/27"), color = TextDim, fontSize = 12.sp, letterSpacing = 3.sp)
             Spacer(Modifier.height(22.dp))
             Box(Modifier.width(360.dp).height(8.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f))) {
                 Box(
@@ -230,7 +230,7 @@ fun SplashScreen() {
             }
             Spacer(Modifier.height(8.dp))
             if (done) {
-                Text("▶  BAŞLAMAK İÇİN DOKUN", color = Green, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 2.sp, modifier = Modifier.alpha(pulse))
+                Text(L("▶  BAŞLAMAK İÇİN DOKUN", "▶  TAP TO START"), color = Green, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 2.sp, modifier = Modifier.alpha(pulse))
             } else {
                 Text("$stage  ${(progress.value * 100).toInt()}%", color = TextDim, fontSize = 13.sp)
             }
@@ -268,24 +268,24 @@ fun TitleScreen() {
                     GameCrest(54.dp)
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("SÜPER MENAJER", fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 2.sp)
-                        Text("$APP_VERSION · 17 lig · 12 ülke", color = TextDim, fontSize = 11.sp)
+                        Text(L("SÜPER MENAJER", "SUPER MANAGER"), fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 2.sp)
+                        Text(L("$APP_VERSION · 17 lig · 12 ülke", "$APP_VERSION · 17 leagues · 12 countries"), color = TextDim, fontSize = 11.sp)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
                 if (last != null) {
-                    MenuButton("▶", "DEVAM ET", "${last.team} · ${last.detail.substringAfterLast(" · ")}", primary = true, enterDelay = 80) { load(last.n) }
+                    MenuButton("▶", L("DEVAM ET", "CONTINUE"), "${last.team} · ${last.detail.substringAfterLast(" · ")}", primary = true, enterDelay = 80) { load(last.n) }
                     Spacer(Modifier.height(6.dp))
                 }
-                MenuButton("＋", "YENİ KARİYER", "Kulübünü seç, efsaneni yaz", selected = panel == 2, enterDelay = 140) { panel = 2 }
+                MenuButton("＋", L("YENİ KARİYER", "NEW CAREER"), L("Kulübünü seç, efsaneni yaz", "Pick your club, write your legend"), selected = panel == 2, enterDelay = 140) { panel = 2 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("📂", "KARİYER YÜKLE", "${slots.count { it.exists }}/3 kayıt", selected = panel == 1, enterDelay = 200) { panel = 1 }
+                MenuButton("📂", L("KARİYER YÜKLE", "LOAD CAREER"), L("${slots.count { it.exists }}/3 kayıt", "${slots.count { it.exists }}/3 saves"), selected = panel == 1, enterDelay = 200) { panel = 1 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("👥", "İKİ KİŞİLİK MAÇ", "Aynı telefonda arkadaşınla oyna", selected = panel == 4, enterDelay = 260) { panel = 4 }
+                MenuButton("👥", L("İKİ KİŞİLİK MAÇ", "TWO-PLAYER MATCH"), L("Aynı telefonda arkadaşınla oyna", "Play a friend on the same phone"), selected = panel == 4, enterDelay = 260) { panel = 4 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("❓", "NASIL OYNANIR", "Kısa rehber", selected = panel == 3, enterDelay = 320) { panel = 3 }
+                MenuButton("❓", L("NASIL OYNANIR", "HOW TO PLAY"), L("Kısa rehber", "Quick guide"), selected = panel == 3, enterDelay = 320) { panel = 3 }
                 Spacer(Modifier.height(6.dp))
-                MenuButton("✕", "ÇIKIŞ", null, enterDelay = 380) { (ctx as? android.app.Activity)?.finishAndRemoveTask() }
+                MenuButton("✕", L("ÇIKIŞ", "QUIT"), null, enterDelay = 380) { (ctx as? android.app.Activity)?.finishAndRemoveTask() }
             }
             // Sağ: seçili panel
             Column(
@@ -296,13 +296,13 @@ fun TitleScreen() {
             ) {
                 when (panel) {
                     0 -> if (last != null) {
-                        Text("SON KARİYER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(L("SON KARİYER", "LAST CAREER"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             SlotBadge(last, 74.dp)
                             Spacer(Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(last.team, fontWeight = FontWeight.Black, fontSize = 24.sp, maxLines = 1)
-                                if (last.manager.isNotEmpty()) Text("Menajer: ${last.manager}", color = TextDim, fontSize = 13.sp)
+                                if (last.manager.isNotEmpty()) Text(L("Menajer: ${last.manager}", "Manager: ${last.manager}"), color = TextDim, fontSize = 13.sp)
                                 Text(last.detail, color = TextDim, fontSize = 13.sp)
                             }
                         }
@@ -310,31 +310,31 @@ fun TitleScreen() {
                             Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(12.dp))
                                 .background(Brush.horizontalGradient(listOf(Color(0xFF0FB98A), Green))).clickable { load(last.n) },
                             contentAlignment = Alignment.Center,
-                        ) { Text("KALDIĞIN YERDEN DEVAM ET  ▶", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp) }
-                        Text("Yeni bir kulüple başlamak için YENİ KARİYER'i, diğer kayıtların için KARİYER YÜKLE'yi seç.", color = TextDim, fontSize = 12.sp)
+                        ) { Text(L("KALDIĞIN YERDEN DEVAM ET  ▶", "CONTINUE WHERE YOU LEFT OFF  ▶"), color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp) }
+                        Text(L("Yeni bir kulüple başlamak için YENİ KARİYER'i, diğer kayıtların için KARİYER YÜKLE'yi seç.", "Choose NEW CAREER to start with a new club, or LOAD CAREER for your other saves."), color = TextDim, fontSize = 12.sp)
                     }
                     1 -> {
-                        Text("KAYIT YUVALARI", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(L("KAYIT YUVALARI", "SAVE SLOTS"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         slots.forEach { s ->
-                            SlotRow(s, if (s.exists) "YÜKLE" else "YENİ", confirmDelete == s.n,
+                            SlotRow(s, if (s.exists) L("YÜKLE", "LOAD") else L("YENİ", "NEW"), confirmDelete == s.n,
                                 onDelete = { if (confirmDelete == s.n) { GameRepo.deleteSlot(s.n); confirmDelete = 0 } else confirmDelete = s.n },
                             ) { if (s.exists) load(s.n) else startNew(s.n) }
                         }
                     }
                     2 -> {
-                        Text("YENİ KARİYER · YUVA SEÇ", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Text("Dolu bir yuvayı seçersen eski kariyer silinir.", color = TextDim, fontSize = 12.sp)
-                        slots.forEach { s -> SlotRow(s, if (s.exists) "ÜZERİNE YAZ" else "BAŞLA", false, onDelete = null) { startNew(s.n) } }
+                        Text(L("YENİ KARİYER · YUVA SEÇ", "NEW CAREER · CHOOSE SLOT"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(L("Dolu bir yuvayı seçersen eski kariyer silinir.", "Choosing a used slot deletes the old career."), color = TextDim, fontSize = 12.sp)
+                        slots.forEach { s -> SlotRow(s, if (s.exists) L("ÜZERİNE YAZ", "OVERWRITE") else L("BAŞLA", "START"), false, onDelete = null) { startNew(s.n) } }
                     }
                     4 -> VersusPanel()
                     else -> {
-                        Text("NASIL OYNANIR", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(L("NASIL OYNANIR", "HOW TO PLAY"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         listOf(
-                            "🏟" to "Bir kulüp seç. Yönetimin sezon hedefi ve transfer bütçesi kulübe göre değişir.",
-                            "▶" to "Sağ üstteki DEVAM ET ile günler ilerler; maç günü maça çıkarsın.",
-                            "📋" to "Taktik ekranında dizilişi, oyuncu rollerini ve takım talimatlarını belirle.",
-                            "💶" to "Transfer döneminde oyuncu al-sat, gözlemci gönder, sözleşmeleri yönet.",
-                            "📈" to "Gençleri geliştir, tesisleri büyüt, yönetimin ve taraftarın güvenini koru.",
+                            "🏟" to L("Bir kulüp seç. Yönetimin sezon hedefi ve transfer bütçesi kulübe göre değişir.", "Pick a club. The board's season objective and transfer budget depend on the club."),
+                            "▶" to L("Sağ üstteki DEVAM ET ile günler ilerler; maç günü maça çıkarsın.", "CONTINUE at the top right moves the days; on match day you play the match."),
+                            "📋" to L("Taktik ekranında dizilişi, oyuncu rollerini ve takım talimatlarını belirle.", "Set your formation, player roles and team instructions on the tactics screen."),
+                            "💶" to L("Transfer döneminde oyuncu al-sat, gözlemci gönder, sözleşmeleri yönet.", "Buy and sell players, send scouts and manage contracts in the transfer window."),
+                            "📈" to L("Gençleri geliştir, tesisleri büyüt, yönetimin ve taraftarın güvenini koru.", "Develop youngsters, grow your facilities and keep the board's and fans' trust."),
                         ).forEach { (i, t) ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(i, fontSize = 20.sp, modifier = Modifier.width(36.dp))
@@ -343,7 +343,7 @@ fun TitleScreen() {
                         }
                     }
                 }
-                if (error) Text("Kayıt dosyası okunamadı.", color = Red)
+                if (error) Text(L("Kayıt dosyası okunamadı.", "The save file couldn't be read."), color = Red)
             }
         }
     }
@@ -404,11 +404,11 @@ private fun SlotRow(s: GameRepo.SlotInfo, action: String, confirmDelete: Boolean
                 Text(s.team, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
                 Text(listOf(s.manager, s.detail).filter { it.isNotEmpty() }.joinToString(" · "), color = TextDim, fontSize = 11.sp, maxLines = 2)
             } else {
-                Text("Yuva ${s.n} · boş", color = TextDim, fontSize = 15.sp)
+                Text(L("Yuva ${s.n} · boş", "Slot ${s.n} · empty"), color = TextDim, fontSize = 15.sp)
             }
         }
         if (s.exists && onDelete != null) {
-            TextButton(onClick = onDelete) { Text(if (confirmDelete) "Sil?" else "🗑", color = if (confirmDelete) Red else TextDim, fontWeight = FontWeight.Bold) }
+            TextButton(onClick = onDelete) { Text(if (confirmDelete) L("Sil?", "Delete?") else "🗑", color = if (confirmDelete) Red else TextDim, fontWeight = FontWeight.Bold) }
         }
         Box(
             Modifier.clip(RoundedCornerShape(10.dp)).background(if (s.exists && action == "YÜKLE") Green else Color.Transparent)
@@ -446,14 +446,14 @@ private fun VersusPanel() {
     LaunchedEffect(Unit) {
         if (world == null) world = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { GameRepo.awaitWorld() }
     }
-    Text("İKİ KİŞİLİK MAÇ", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-    Text("Telefonu aranızda paylaşın: 1. oyuncu ev sahibi takımı, 2. oyuncu deplasman takımını yönetir (mentalite ve oyuncu değişikliği). Kariyere etkisi yoktur.", color = TextDim, fontSize = 12.sp)
+    Text(L("İKİ KİŞİLİK MAÇ", "TWO-PLAYER MATCH"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+    Text(L("Telefonu aranızda paylaşın: 1. oyuncu ev sahibi takımı, 2. oyuncu deplasman takımını yönetir (mentalite ve oyuncu değişikliği). Kariyere etkisi yoktur.", "Share the phone: player 1 controls the home team, player 2 the away team (mentality and substitutions). It doesn't affect your career."), color = TextDim, fontSize = 12.sp)
     val w = world
     if (w == null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.material3.CircularProgressIndicator(color = Teal, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
-            Text("Takımlar yükleniyor...", color = TextDim)
+            Text(L("Takımlar yükleniyor...", "Loading teams..."), color = TextDim)
         }
         return
     }
@@ -471,7 +471,7 @@ private fun VersusPanel() {
             Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF151D3D)).padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("${k + 1}. OYUNCU", fontWeight = FontWeight.Black, fontSize = 13.sp, color = if (k == 0) Teal else Gold, modifier = Modifier.width(86.dp))
+            Text(L("${k + 1}. OYUNCU", "PLAYER ${k + 1}"), fontWeight = FontWeight.Black, fontSize = 13.sp, color = if (k == 0) Teal else Gold, modifier = Modifier.width(86.dp))
             if (team != null) TeamBadge(team, 34.dp)
             Spacer(Modifier.width(8.dp))
             SmDropdown(leagues[sel.first].name, leagues.map { it.name }, Modifier.weight(1f)) { if (k == 0) l1 = it else l2 = it }
@@ -487,5 +487,5 @@ private fun VersusPanel() {
             .background(if (ok) Brush.horizontalGradient(listOf(Color(0xFF0FB98A), Green)) else Brush.horizontalGradient(listOf(Surface2, Surface2)))
             .clickable(enabled = ok) { GameRepo.takePreparedWorld(); GameRepo.startVersus(w, a!!.id, b!!.id) },
         contentAlignment = Alignment.Center,
-    ) { Text(if (ok) "MAÇA BAŞLA  ▶" else "İki farklı takım seçin", color = if (ok) Color.Black else TextDim, fontWeight = FontWeight.Black, fontSize = 15.sp) }
+    ) { Text(if (ok) L("MAÇA BAŞLA  ▶", "KICK OFF  ▶") else L("İki farklı takım seçin", "Pick two different teams"), color = if (ok) Color.Black else TextDim, fontWeight = FontWeight.Black, fontSize = 15.sp) }
 }

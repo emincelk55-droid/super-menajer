@@ -67,7 +67,7 @@ import kotlin.math.roundToLong
 fun SquadTab(g: Game) {
     Column(Modifier.fillMaxSize()) {
         val a2 = g.squad(g.userTeamId).count { it.reserve }
-        FmTabs(listOf("Oyuncular", "Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", "A2 Takımı ($a2)", "🌱 Gelişim"), GameRepo.squadMode) { GameRepo.squadMode = it }
+        FmTabs(listOf(L("Oyuncular", "Players"), L("Takım Dinamikleri · uyum ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}", "Team Dynamics · chemistry ${com.supermenajer.game.game.Dynamics.pct(g.cohesion)}"), L("A2 Takımı ($a2)", "B Team ($a2)"), L("🌱 Gelişim", "🌱 Development")), GameRepo.squadMode) { GameRepo.squadMode = it }
         when (GameRepo.squadMode) {
             1 -> DynamicsView(g)
             2 -> ReservesView(g)
@@ -86,7 +86,7 @@ fun StaffView(g: Game) {
         item(span = StaggeredGridItemSpan.FullLine) {
             val wages = com.supermenajer.game.game.Economy.squadWages(g, us.id)
             Text(
-                "Teknik ekip maaşları: ${money(StaffLogic.wages(g))}/hafta · Toplam maaş yükü ${money(wages)} / ${money(us.wageBudget)}",
+                L("Teknik ekip maaşları: ${money(StaffLogic.wages(g))}/hafta · Toplam maaş yükü ${money(wages)} / ${money(us.wageBudget)}", "Staff wages: ${money(StaffLogic.wages(g))}/week · Total wage bill ${money(wages)} / ${money(us.wageBudget)}"),
                 color = TextDim, fontSize = 12.sp,
             )
             message?.let { Text(it, color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
@@ -96,12 +96,12 @@ fun StaffView(g: Game) {
                 val st = StaffLogic.of(g, role)
                 SectionCard("${StaffLogic.roleIcons[role]} ${StaffLogic.roleNames[role]}") {
                     if (st == null) {
-                        Text("Boş kadro! Kulübün gönüllüleri idare ediyor (kalite 6).", color = Red, fontSize = 13.sp)
+                        Text(L("Boş kadro! Kulübün gönüllüleri idare ediyor (kalite 6).", "Vacant post! Club volunteers are covering (quality 6)."), color = Red, fontSize = 13.sp)
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(st.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text("${Generator.flag(st.nation)} ${st.age} yaş · ${money(st.wage)}/hafta", color = TextDim, fontSize = 12.sp)
+                                Text(L("${Generator.flag(st.nation)} ${st.age} yaş · ${money(st.wage)}/hafta", "${Generator.flag(st.nation)} ${st.age} yrs · ${money(st.wage)}/week"), color = TextDim, fontSize = 12.sp)
                             }
                             QualityBadge(st.quality)
                         }
@@ -111,7 +111,7 @@ fun StaffView(g: Game) {
                     Text(effectText(g, role), color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(6.dp))
                     OutlinedButton(onClick = { openRole = if (openRole == role) -1 else role; message = null }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (openRole == role) "Adayları gizle" else "Yeni ${StaffLogic.roleNames[role].lowercase()} ara")
+                        Text(if (openRole == role) L("Adayları gizle", "Hide candidates") else L("Yeni ${StaffLogic.roleNames[role].lowercase()} ara", "Find a new ${StaffLogic.roleNames[role].lowercase()}"))
                     }
                     if (openRole == role) {
                         val old = st?.wage ?: 0L
@@ -125,12 +125,12 @@ fun StaffView(g: Game) {
                                 Column(Modifier.weight(1f)) {
                                     Text(c.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     val diff = c.wage - old
-                                    Text("${Generator.flag(c.nation)} ${c.age} yaş · ${money(c.wage)}/hf (${if (diff >= 0) "+" else ""}${money(diff)})", color = TextDim, fontSize = 12.sp)
+                                    Text(L("${Generator.flag(c.nation)} ${c.age} yaş · ${money(c.wage)}/hf (${if (diff >= 0) "+" else ""}${money(diff)})", "${Generator.flag(c.nation)} ${c.age} yrs · ${money(c.wage)}/wk (${if (diff >= 0) "+" else ""}${money(diff)})"), color = TextDim, fontSize = 12.sp)
                                 }
-                                Button(onClick = { message = GameRepo.hireStaff(c); openRole = -1 }) { Text("İşe al") }
+                                Button(onClick = { message = GameRepo.hireStaff(c); openRole = -1 }) { Text(L("İşe al", "Hire")) }
                             }
                         }
-                        if (st != null) Text("Not: Mevcut çalışana 4 haftalık maaşı (${money(st.wage * 4)}) tazminat ödenir.", color = TextDim, fontSize = 11.sp)
+                        if (st != null) Text(L("Not: Mevcut çalışana 4 haftalık maaşı (${money(st.wage * 4)}) tazminat ödenir.", "Note: the current employee receives 4 weeks' wages (${money(st.wage * 4)}) as compensation."), color = TextDim, fontSize = 11.sp)
                     }
                 }
             }
@@ -155,10 +155,10 @@ private fun QualityBadge(q: Int) {
 }
 
 private fun effectText(g: Game, role: Int): String = when (role) {
-    StaffLogic.ASSISTANT -> "Konuşma etkisi: %${(StaffLogic.talkFactor(g) * 100).toInt()}"
-    StaffLogic.COACH -> "Oyuncu gelişim hızı: %${(StaffLogic.coachFactor(g) * 100).toInt()}"
-    StaffLogic.PHYSIO -> "Sakatlık riski: %${(StaffLogic.physioRisk(g) * 100).toInt()} · Hızlı iyileşme şansı: %${(StaffLogic.physioHeal(g) * 100).toInt()}"
-    else -> "Tahmin aralığı: kendi ligin ±${StaffLogic.scoutUncertainty(g, true)}, diğer ligler ±${StaffLogic.scoutUncertainty(g, false)} · Haftalık öneri: ${StaffLogic.scoutReports(g)}"
+    StaffLogic.ASSISTANT -> L("Konuşma etkisi: %${(StaffLogic.talkFactor(g) * 100).toInt()}", "Talk effect: %${(StaffLogic.talkFactor(g) * 100).toInt()}")
+    StaffLogic.COACH -> L("Oyuncu gelişim hızı: %${(StaffLogic.coachFactor(g) * 100).toInt()}", "Player development speed: %${(StaffLogic.coachFactor(g) * 100).toInt()}")
+    StaffLogic.PHYSIO -> L("Sakatlık riski: %${(StaffLogic.physioRisk(g) * 100).toInt()} · Hızlı iyileşme şansı: %${(StaffLogic.physioHeal(g) * 100).toInt()}", "Injury risk: %${(StaffLogic.physioRisk(g) * 100).toInt()} · Quick recovery chance: %${(StaffLogic.physioHeal(g) * 100).toInt()}")
+    else -> L("Tahmin aralığı: kendi ligin ±${StaffLogic.scoutUncertainty(g, true)}, diğer ligler ±${StaffLogic.scoutUncertainty(g, false)} · Haftalık öneri: ${StaffLogic.scoutReports(g)}", "Estimate range: your league ±${StaffLogic.scoutUncertainty(g, true)}, other leagues ±${StaffLogic.scoutUncertainty(g, false)} · Weekly suggestions: ${StaffLogic.scoutReports(g)}")
 }
 
 @Composable
@@ -179,15 +179,15 @@ private fun PlayersList(g: Game) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Sırala:", color = TextDim, fontSize = 12.sp)
-                Chip("Mevki", sort == 0) { sort = 0 }
-                Chip("Güç", sort == 1) { sort = 1 }
-                Chip("Yaş", sort == 2) { sort = 2 }
-                Chip("Gol", sort == 3) { sort = 3 }
-                Chip("Puan", sort == 4) { sort = 4 }
+                Text(L("Sırala:", "Sort:"), color = TextDim, fontSize = 12.sp)
+                Chip(L("Mevki", "Position"), sort == 0) { sort = 0 }
+                Chip(L("Güç", "Overall"), sort == 1) { sort = 1 }
+                Chip(L("Yaş", "Age"), sort == 2) { sort = 2 }
+                Chip(L("Gol", "Goals"), sort == 3) { sort = 3 }
+                Chip(L("Puan", "Points"), sort == 4) { sort = 4 }
                 Text(
-                    "${squad.size} oyuncu · Maaşlar: ${money(squad.sumOf { it.wage })} / ${money(t.wageBudget)}" +
-                        squad.count { it.contractYears == 1 }.let { if (it > 0) " · $it sözleşme bitiyor" else "" },
+                    L("${squad.size} oyuncu · Maaşlar: ${money(squad.sumOf { it.wage })} / ${money(t.wageBudget)}", "${squad.size} players · Wages: ${money(squad.sumOf { it.wage })} / ${money(t.wageBudget)}") +
+                        squad.count { it.contractYears == 1 }.let { if (it > 0) L(" · $it sözleşme bitiyor", " · $it contracts ending") else "" },
                     color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp),
                 )
             }
@@ -216,13 +216,13 @@ private fun PlayersList(g: Game) {
         if (loans.isNotEmpty()) {
             item(key = "loans", span = full) {
                 Text(
-                    "KİRALIKTAKİLER (${loans.size})", color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                    L("KİRALIKTAKİLER (${loans.size})", "ON LOAN (${loans.size})"), color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp,
                     modifier = Modifier.padding(start = 14.dp, top = 10.dp, bottom = 4.dp),
                 )
             }
             gridItems(loans, key = { "L" + it.id }) { p ->
                 val club = g.teamOrNull(p.teamId)
-                PlayerRow(g, p, false, extra = "${club?.short ?: "-"} · ${p.apps}M ${p.goals}G · ${p.startOvr}→${p.overall}")
+                PlayerRow(g, p, false, extra = L("${club?.short ?: "-"} · ${p.apps}M ${p.goals}G · ${p.startOvr}→${p.overall}", "${club?.short ?: "-"} · ${p.apps}A ${p.goals}G · ${p.startOvr}→${p.overall}"))
             }
         }
     }
@@ -255,11 +255,11 @@ fun PlayerRow(g: Game, p: Player, starting: Boolean, extra: String? = null, onCl
                 if (p.suspended > 0) Text("  🟥", fontSize = 12.sp)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${Generator.flag(p.nation)} ${p.age} yaş", color = TextDim, fontSize = 12.sp)
+                Text(L("${Generator.flag(p.nation)} ${p.age} yaş", "${Generator.flag(p.nation)} ${p.age} yrs"), color = TextDim, fontSize = 12.sp)
                 Spacer(Modifier.width(8.dp))
                 Bar((p.fitness / 100).toFloat(), fitColor(p.fitness), Modifier.width(44.dp), 5.dp)
                 Spacer(Modifier.width(8.dp))
-                Text(extra ?: (if (p.apps > 0) "${p.apps}M ${p.goals}G ${p.assists}A · ${"%.1f".format(p.avgRating)}" else ""), color = TextDim, fontSize = 12.sp, maxLines = 1)
+                Text(extra ?: (if (p.apps > 0) L("${p.apps}M ${p.goals}G ${p.assists}A · ${"%.1f".format(p.avgRating)}", "${p.apps}A ${p.goals}G ${p.assists}As · ${"%.1f".format(p.avgRating)}") else ""), color = TextDim, fontSize = 12.sp, maxLines = 1)
             }
         }
         Spacer(Modifier.width(8.dp))
@@ -282,42 +282,42 @@ fun PlayerDialog(g: Game, p: Player) {
                 Spacer(Modifier.height(8.dp))
             }
             if (loaned) {
-                Text("Kiralıkta: ${team?.name} (${team?.let { g.leagueName(it) }})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(L("Kiralıkta: ${team?.name} (${team?.let { g.leagueName(it) }})", "On loan: ${team?.name} (${team?.let { g.leagueName(it) }})"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(6.dp))
-                OutlinedButton(onClick = { GameRepo.recallLoan(p); GameRepo.selectedPlayer = null }, modifier = Modifier.fillMaxWidth()) { Text("Kiralıktan geri çağır") }
+                OutlinedButton(onClick = { GameRepo.recallLoan(p); GameRepo.selectedPlayer = null }, modifier = Modifier.fillMaxWidth()) { Text(L("Kiralıktan geri çağır", "Recall from loan")) }
             } else if (own) {
                 val t = g.userTeam
-                if (p.wantsAway) Text("😠 Transfer talep etti. Forma ver, konuş ya da sat.", color = Red, fontSize = 13.sp)
-                Text("BİREBİR KONUŞMA" + if (!GameRepo.canTalk(p)) " (bu hafta konuşuldu)" else "", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                if (p.wantsAway) Text(L("😠 Transfer talep etti. Forma ver, konuş ya da sat.", "😠 Has asked for a transfer. Play him, talk to him or sell him."), color = Red, fontSize = 13.sp)
+                Text(L("BİREBİR KONUŞMA", "ONE-TO-ONE TALK") + if (!GameRepo.canTalk(p)) L(" (bu hafta konuşuldu)", " (talked this week)") else "", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("👏 Övgü", "🗣 Eleştiri", "🤝 Forma sözü").forEachIndexed { i, n ->
+                    listOf(L("👏 Övgü", "👏 Praise"), L("🗣 Eleştiri", "🗣 Criticise"), L("🤝 Forma sözü", "🤝 Promise playing time")).forEachIndexed { i, n ->
                         Chip(n, false, Modifier.weight(1f)) { if (GameRepo.canTalk(p)) message = GameRepo.talkToPlayer(p, i) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
                 if (p.id in t.lineup) {
-                    OutlinedButton(onClick = { GameRepo.removeFromLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("Yedeğe Al") }
+                    OutlinedButton(onClick = { GameRepo.removeFromLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text(L("Yedeğe Al", "Drop to bench")) }
                 } else if (p.available) {
-                    Button(onClick = { GameRepo.addToLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text("İlk 11'e Al") }
+                    Button(onClick = { GameRepo.addToLineup(p) }, modifier = Modifier.fillMaxWidth()) { Text(L("İlk 11'e Al", "Start")) }
                 }
                 if (p.loanFrom < 0) {
                     OutlinedButton(
-                        onClick = { message = GameRepo.setReserve(p, !p.reserve) ?: if (!p.reserve) "A takıma alındı." else "A2 takımına gönderildi." },
+                        onClick = { message = GameRepo.setReserve(p, !p.reserve) ?: if (!p.reserve) L("A takıma alındı.", "Moved to the first team.") else L("A2 takımına gönderildi.", "Sent to the B team.") },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(if (p.reserve) "⬆ A takıma al" else "⬇ A2 takımına gönder") }
+                    ) { Text(if (p.reserve) L("⬆ A takıma al", "⬆ Move to first team") else L("⬇ A2 takımına gönder", "⬇ Send to B team")) }
                 }
                 Spacer(Modifier.height(6.dp))
                 if (p.loanFrom < 0) ContractBox(g, p) { message = it }
-                else Text("Kiralık oyuncu · ${g.teamOrNull(p.loanFrom)?.name ?: ""} kulübünden", color = Blue, fontSize = 12.sp)
+                else Text(L("Kiralık oyuncu · ${g.teamOrNull(p.loanFrom)?.name ?: ""} kulübünden", "Loan player · from ${g.teamOrNull(p.loanFrom)?.name ?: ""}"), color = Blue, fontSize = 12.sp)
                 if (p.age <= 23 && p.loanFrom < 0 && p.id !in t.lineup) {
                     Spacer(Modifier.height(6.dp))
-                    OutlinedButton(onClick = { GameRepo.loanOut(p)?.let { message = it } }, modifier = Modifier.fillMaxWidth()) { Text("🔁 Kiralık gönder (gelişsin)") }
+                    OutlinedButton(onClick = { GameRepo.loanOut(p)?.let { message = it } }, modifier = Modifier.fillMaxWidth()) { Text(L("🔁 Kiralık gönder (gelişsin)", "🔁 Send on loan (to develop)")) }
                 }
                 Spacer(Modifier.height(6.dp))
                 if (p.loanFrom < 0) {
                     OutlinedButton(onClick = { message = GameRepo.toggleListed(p) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (p.listed) "🏷️ Satış listesinden çıkar" else "🏷️ Satış listesine koy")
+                        Text(if (p.listed) L("🏷️ Satış listesinden çıkar", "🏷️ Remove from transfer list") else L("🏷️ Satış listesine koy", "🏷️ Put on transfer list"))
                     }
                     Spacer(Modifier.height(6.dp))
                 }
@@ -327,17 +327,17 @@ fun PlayerDialog(g: Game, p: Player) {
                 } else if (o == null) {
                     OutlinedButton(onClick = {
                         offer = GameRepo.makeOffer(p)
-                        if (offer == null) message = if (!Season.transferWindowOpen(g)) "Transfer dönemi kapalı." else "Şu an bu oyuncu için teklif yapan kulüp yok (veya kadro çok dar)."
-                    }, modifier = Modifier.fillMaxWidth()) { Text("📣 Kulüplere hemen teklif ettir") }
+                        if (offer == null) message = if (!Season.transferWindowOpen(g)) L("Transfer dönemi kapalı.", "The transfer window is closed.") else L("Şu an bu oyuncu için teklif yapan kulüp yok (veya kadro çok dar).", "No club is bidding for this player right now (or the squad is too thin).")
+                    }, modifier = Modifier.fillMaxWidth()) { Text(L("📣 Kulüplere hemen teklif ettir", "📣 Offer him to clubs now")) }
                 } else {
-                    Text("${o.buyer.name} teklif yaptı: ${money(o.price)}", fontWeight = FontWeight.Bold)
+                    Text(L("${o.buyer.name} teklif yaptı: ${money(o.price)}", "${o.buyer.name} bid: ${money(o.price)}"), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = { GameRepo.acceptOffer(o)?.let { message = it; offer = null } }, modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Gold),
-                        ) { Text("Kabul Et") }
-                        OutlinedButton(onClick = { offer = null }, modifier = Modifier.weight(1f)) { Text("Reddet") }
+                        ) { Text(L("Kabul Et", "Accept")) }
+                        OutlinedButton(onClick = { offer = null }, modifier = Modifier.weight(1f)) { Text(L("Reddet", "Reject")) }
                     }
                 }
             } else {
@@ -345,7 +345,7 @@ fun PlayerDialog(g: Game, p: Player) {
                     val requested = com.supermenajer.game.game.Scouting.requested(g, p)
                     OutlinedButton(
                         onClick = { message = GameRepo.scout(p) }, enabled = !requested, modifier = Modifier.fillMaxWidth(),
-                    ) { Text(if (requested) "🔍 Gözlemci izliyor, rapor yarın" else "🔍 Gözlemci gönder (${money(com.supermenajer.game.game.Scouting.COST)})") }
+                    ) { Text(if (requested) L("🔍 Gözlemci izliyor, rapor yarın", "🔍 Scout is watching, report tomorrow") else L("🔍 Gözlemci gönder (${money(com.supermenajer.game.game.Scouting.COST)})", "🔍 Send scout (${money(com.supermenajer.game.game.Scouting.COST)})")) }
                     Spacer(Modifier.height(8.dp))
                 }
                 val block = GameRepo.transferBlock(p)
@@ -353,20 +353,20 @@ fun PlayerDialog(g: Game, p: Player) {
                     Text(block, color = Red, fontSize = 13.sp)
                 } else {
                     Text(
-                        if (p.teamId < 0) "Serbest oyuncu · bonservis yok" else "Tahmini bonservis: ~${money(GameRepo.askingPrice(p))} · ${team?.name}",
+                        if (p.teamId < 0) L("Serbest oyuncu · bonservis yok", "Free agent · no fee") else L("Tahmini bonservis: ~${money(GameRepo.askingPrice(p))} · ${team?.name}", "Estimated fee: ~${money(GameRepo.askingPrice(p))} · ${team?.name}"),
                         color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     )
-                    Text("Maaş beklentisi: ~${money(p.demandWage)}/hafta", color = TextDim, fontSize = 12.sp)
+                    Text(L("Maaş beklentisi: ~${money(p.demandWage)}/hafta", "Wage expectation: ~${money(p.demandWage)}/week"), color = TextDim, fontSize = 12.sp)
                     Spacer(Modifier.height(6.dp))
                     Button(
                         onClick = { GameRepo.startTalks(p)?.let { message = it } },
                         modifier = Modifier.fillMaxWidth().height(46.dp),
-                    ) { Text("🤝 Transfer görüşmesi başlat", fontWeight = FontWeight.Bold) }
+                    ) { Text(L("🤝 Transfer görüşmesi başlat", "🤝 Start transfer talks"), fontWeight = FontWeight.Bold) }
                 }
                 if (p.teamId >= 0 && p.releaseClause > 0) {
                     Spacer(Modifier.height(6.dp))
                     OutlinedButton(onClick = { message = GameRepo.payReleaseClause(p) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("💥 Serbest kalma bedelini öde: ${money(p.releaseClause)}")
+                        Text(L("💥 Serbest kalma bedelini öde: ${money(p.releaseClause)}", "💥 Pay the release clause: ${money(p.releaseClause)}"))
                     }
                 }
                 if (p.teamId >= 0 && p.contractYears <= 1) {
@@ -374,21 +374,21 @@ fun PlayerDialog(g: Game, p: Player) {
                     val pc = com.supermenajer.game.game.Contracts
                     OutlinedButton(onClick = { message = GameRepo.signPreContract(p) }, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            if (p.preContract == g.userTeamId) "✍️ Ön sözleşme imzalandı · sezon sonu gelecek"
-                            else "✍️ Ön sözleşme teklif et (imza parası ${money(pc.signingBonus(p))})",
+                            if (p.preContract == g.userTeamId) L("✍️ Ön sözleşme imzalandı · sezon sonu gelecek", "✍️ Pre-contract signed · joins at season end")
+                            else L("✍️ Ön sözleşme teklif et (imza parası ${money(pc.signingBonus(p))})", "✍️ Offer a pre-contract (signing bonus ${money(pc.signingBonus(p))})"),
                         )
                     }
-                    if (p.preContract != g.userTeamId) Text("Sözleşmesi bu sezon bitiyor: 17. haftadan sonra bedelsiz gelmesi için ön sözleşme yapabilirsin.", color = TextDim, fontSize = 11.sp)
+                    if (p.preContract != g.userTeamId) Text(L("Sözleşmesi bu sezon bitiyor: 17. haftadan sonra bedelsiz gelmesi için ön sözleşme yapabilirsin.", "His contract ends this season: after week 17 you can agree a pre-contract to sign him for free."), color = TextDim, fontSize = 11.sp)
                 }
-                Text("Bütçen: ${money(g.userTeam.budget)}", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(L("Bütçen: ${money(g.userTeam.budget)}", "Your budget: ${money(g.userTeam.budget)}"), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
     }
     var ptab by remember(p.id) { mutableIntStateOf(0) }
     val tabs = buildList {
-        add("Nitelikler"); add("Bilgi")
-        if (own && p.loanFrom < 0) add("Antrenman")
-        add(if (own || loaned) "İşlemler" else "Transfer")
+        add(L("Nitelikler", "Attributes")); add(L("Bilgi", "Info"))
+        if (own && p.loanFrom < 0) add(L("Antrenman", "Training"))
+        add(if (own || loaned) L("İşlemler", "Actions") else L("Transfer", "Transfers"))
     }
     WideDialog(onDismissRequest = { GameRepo.selectedPlayer = null }, maxWidth = 980.dp) {
         Column(
@@ -417,27 +417,27 @@ fun PlayerDialog(g: Game, p: Player) {
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         DetChip(p)
-                        Text("  ${Generator.flag(p.nation)} ${p.age} yaş · ${com.supermenajer.game.game.Positions.feet[p.foot.coerceIn(0, 2)]}", color = TextDim, fontSize = 12.sp, maxLines = 1)
+                        Text(L("  ${Generator.flag(p.nation)} ${p.age} yaş · ${com.supermenajer.game.game.Positions.feet[p.foot.coerceIn(0, 2)]}", "  ${Generator.flag(p.nation)} ${p.age} yrs · ${com.supermenajer.game.game.Positions.feet[p.foot.coerceIn(0, 2)]}"), color = TextDim, fontSize = 12.sp, maxLines = 1)
                     }
                     Text(
-                        "Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}" +
-                            " · Mevkiler: ${com.supermenajer.game.game.Positions.codes(p)}",
+                        L("Özellik: ${com.supermenajer.game.game.Positions.natRoleName(p)}", "Trait: ${com.supermenajer.game.game.Positions.natRoleName(p)}") +
+                            L(" · Mevkiler: ${com.supermenajer.game.game.Positions.codes(p)}", " · Positions: ${com.supermenajer.game.game.Positions.codes(p)}"),
                         color = Gold, fontSize = 12.sp, maxLines = 1,
                     )
-                    Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name} · ${g.leagueName(it)}" } ?: "Serbest oyuncu", color = TextDim, fontSize = 12.sp, maxLines = 1)
+                    Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name} · ${g.leagueName(it)}" } ?: L("Serbest oyuncu", "Free agent"), color = TextDim, fontSize = 12.sp, maxLines = 1)
                     if (own && p.promiseUntil > 0) {
                         val played = p.apps - p.promiseBaseApps
                         Text(
-                            "🤝 Forma sözü: $played/${p.promiseNeed} maç · ${(p.promiseUntil - g.week).coerceAtLeast(0)} hafta kaldı",
+                            L("🤝 Forma sözü: $played/${p.promiseNeed} maç · ${(p.promiseUntil - g.week).coerceAtLeast(0)} hafta kaldı", "🤝 Playing-time promise: $played/${p.promiseNeed} matches · ${(p.promiseUntil - g.week).coerceAtLeast(0)} weeks left"),
                             color = if (played >= p.promiseNeed) Green else Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                         )
                     }
                 }
                 Row(Modifier.weight(1.2f), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    HeaderStat(money(p.value), "Değer")
-                    if (p.teamId >= 0) HeaderStat(money(p.wage), "Maaş/hafta")
-                    HeaderStat(if (p.teamId < 0) "–" else "${p.contractYears} sezon", "Sözleşme", if (p.contractYears == 1 && p.teamId >= 0) Red else TextMain)
-                    HeaderStat(if (known) moraleText(p.morale).substringBefore(' ') else "?", "Moral")
+                    HeaderStat(money(p.value), L("Değer", "Value"))
+                    if (p.teamId >= 0) HeaderStat(money(p.wage), L("Maaş/hafta", "Wage/week"))
+                    HeaderStat(if (p.teamId < 0) "–" else L("${p.contractYears} sezon", "${p.contractYears} seasons"), L("Sözleşme", "Contract"), if (p.contractYears == 1 && p.teamId >= 0) Red else TextMain)
+                    HeaderStat(if (known) moraleText(p.morale).substringBefore(' ') else "?", L("Moral", "Morale"))
                 }
                 Spacer(Modifier.width(8.dp))
                 PositionMap(p, Modifier.size(132.dp, 84.dp).clip(RoundedCornerShape(6.dp)))
@@ -455,7 +455,7 @@ fun PlayerDialog(g: Game, p: Player) {
                         "⚖", fontSize = 20.sp, color = Teal,
                         modifier = Modifier.clip(CircleShape).clickable {
                             GameRepo.compareWith(p)
-                            if (GameRepo.compare == null) message = "Karşılaştırma için sabitlendi. Başka bir oyuncunun profilinde ⚖'ye bas."
+                            if (GameRepo.compare == null) message = L("Karşılaştırma için sabitlendi. Başka bir oyuncunun profilinde ⚖'ye bas.", "Pinned for comparison. Tap ⚖ on another player's profile.")
                             else GameRepo.selectedPlayer = null
                         }.padding(6.dp),
                     )
@@ -479,7 +479,7 @@ fun PlayerDialog(g: Game, p: Player) {
                 message?.takeIf { ptab == 0 }?.let { Text(it, color = Gold, fontSize = 13.sp); Spacer(Modifier.height(6.dp)) }
                 when (tabs[ptab.coerceIn(0, tabs.lastIndex)]) {
                     "Nitelikler" -> {
-                        if (!known) Text("🔍 Gözlemci raporu yok: değerler tahmini. Transfer sekmesinden gözlemci gönderebilirsin.", color = Gold, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                        if (!known) Text(L("🔍 Gözlemci raporu yok: değerler tahmini. Transfer sekmesinden gözlemci gönderebilirsin.", "🔍 No scout report: values are estimates. You can send a scout from the transfer tab."), color = Gold, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
                         AttributeTable(
                             p, known,
                             extra = listOf(
@@ -491,32 +491,32 @@ fun PlayerDialog(g: Game, p: Player) {
                     }
                     "Bilgi" -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         Column(Modifier.weight(1f)) {
-                            InfoLine("Potansiyel", com.supermenajer.game.game.Scouting.potText(g, p))
-                            if (!known) InfoLine("Bilgi", "Gözlemci raporu yok", Gold)
+                            InfoLine(L("Potansiyel", "Potential"), com.supermenajer.game.game.Scouting.potText(g, p))
+                            if (!known) InfoLine(L("Bilgi", "Info"), L("Gözlemci raporu yok", "No scout report"), Gold)
                             else if (!own && !loaned && p.id in g.scouted) Text(com.supermenajer.game.game.Scouting.report(g, p), color = TextDim, fontSize = 12.sp)
-                            InfoLine("Mevki", com.supermenajer.game.game.Positions.det(p).label)
-                            if (!own) InfoLine("Maaş talebi", "${money(p.demandWage)}/hafta")
-                            if (p.releaseClause > 0) InfoLine("Serbest kalma bedeli", money(p.releaseClause))
-                            if (p.injuredWeeks > 0 && p.injuryType.isNotEmpty()) InfoLine("Sakatlık türü", p.injuryType, Red)
-                            if (p.fragileWeeks > 0) InfoLine("Sağlık uyarısı", "Yeniden sakatlanma riski (${p.fragileWeeks} hafta)", Gold)
-                            InfoLine("Kişilik", if (known) com.supermenajer.game.game.Traits.name(p) else "? (gözlemci raporu gerekli)")
+                            InfoLine(L("Mevki", "Position"), com.supermenajer.game.game.Positions.det(p).label)
+                            if (!own) InfoLine(L("Maaş talebi", "Wage demand"), L("${money(p.demandWage)}/hafta", "${money(p.demandWage)}/week"))
+                            if (p.releaseClause > 0) InfoLine(L("Serbest kalma bedeli", "Release clause"), money(p.releaseClause))
+                            if (p.injuredWeeks > 0 && p.injuryType.isNotEmpty()) InfoLine(L("Sakatlık türü", "Injury type"), p.injuryType, Red)
+                            if (p.fragileWeeks > 0) InfoLine(L("Sağlık uyarısı", "Medical warning"), L("Yeniden sakatlanma riski (${p.fragileWeeks} hafta)", "Re-injury risk (${p.fragileWeeks} weeks)"), Gold)
+                            InfoLine(L("Kişilik", "Personality"), if (known) com.supermenajer.game.game.Traits.name(p) else L("? (gözlemci raporu gerekli)", "? (scout report needed)"))
                             if (known) Text(com.supermenajer.game.game.Traits.info[com.supermenajer.game.game.Traits.of(p)], color = TextDim, fontSize = 11.sp)
-                            if (p.squadRole >= 0 && p.teamId == g.userTeamId) InfoLine("Söz verilen rol", com.supermenajer.game.game.TransferTalks.roleNames[p.squadRole])
-                            if (p.injuredWeeks > 0) InfoLine("Sakatlık", "${p.injuredWeeks} hafta", Red)
-                            if (p.suspended > 0) InfoLine("Ceza", "${p.suspended} maç", Red)
+                            if (p.squadRole >= 0 && p.teamId == g.userTeamId) InfoLine(L("Söz verilen rol", "Promised role"), com.supermenajer.game.game.TransferTalks.roleNames[p.squadRole])
+                            if (p.injuredWeeks > 0) InfoLine(L("Sakatlık", "Injury"), L("${p.injuredWeeks} hafta", "${p.injuredWeeks} weeks"), Red)
+                            if (p.suspended > 0) InfoLine(L("Ceza", "Suspension"), L("${p.suspended} maç", "${p.suspended} matches"), Red)
                         }
                         Column(Modifier.weight(1f)) {
-                            Text("BU SEZON", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(L("BU SEZON", "THIS SEASON"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(8.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                                Stat("Maç", "${p.apps}")
-                                Stat("Gol", "${p.goals}")
-                                Stat("Asist", "${p.assists}")
-                                Stat("Ort. Puan", if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
+                                Stat(L("Maç", "Apps"), "${p.apps}")
+                                Stat(L("Gol", "Goals"), "${p.goals}")
+                                Stat(L("Asist", "Assists"), "${p.assists}")
+                                Stat(L("Ort. Puan", "Avg. Rating"), if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
                             }
                             if (p.career.isNotEmpty()) {
                                 Spacer(Modifier.height(12.dp))
-                                Text("KARİYER GEÇMİŞİ", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(L("KARİYER GEÇMİŞİ", "CAREER HISTORY"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
                                 for (line in p.career.takeLast(8).reversed()) {
                                     val c = line.split("|")
@@ -524,21 +524,21 @@ fun PlayerDialog(g: Game, p: Player) {
                                     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                                         Text("${c[0]}-${(c[0].toIntOrNull()?.plus(1) ?: 0) % 100}", color = TextDim, fontSize = 12.sp, modifier = Modifier.width(56.dp))
                                         Text(c[1], fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                                        Text("${c[2]}M ${c[3]}G ${c[4]}A · ${c[5]}", color = TextDim, fontSize = 12.sp)
+                                        Text(L("${c[2]}M ${c[3]}G ${c[4]}A · ${c[5]}", "${c[2]}A ${c[3]}G ${c[4]}As · ${c[5]}"), color = TextDim, fontSize = 12.sp)
                                     }
                                 }
                             }
                             Spacer(Modifier.height(12.dp))
-                            Text("ANA ÖZELLİKLER (1-20)", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(L("ANA ÖZELLİKLER (1-20)", "KEY ATTRIBUTES (1-20)"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(6.dp))
                             val rg = { v: Int -> com.supermenajer.game.game.Scouting.range(g, p, v) }
-                            if (p.pos == Pos.GK) Attr("Kalecilik", p.goalkeeping, rg(p.goalkeeping))
-                            Attr("Hız", p.pace, rg(p.pace))
-                            Attr("Şut", p.shooting, rg(p.shooting))
-                            Attr("Pas", p.passing, rg(p.passing))
-                            Attr("Teknik", p.dribbling, rg(p.dribbling))
-                            Attr("Savunma", p.defending, rg(p.defending))
-                            Attr("Fizik", p.physical, rg(p.physical))
+                            if (p.pos == Pos.GK) Attr(L("Kalecilik", "Goalkeeping"), p.goalkeeping, rg(p.goalkeeping))
+                            Attr(L("Hız", "Pace"), p.pace, rg(p.pace))
+                            Attr(L("Şut", "Shooting"), p.shooting, rg(p.shooting))
+                            Attr(L("Pas", "Passing"), p.passing, rg(p.passing))
+                            Attr(L("Teknik", "Technique"), p.dribbling, rg(p.dribbling))
+                            Attr(L("Savunma", "Defending"), p.defending, rg(p.defending))
+                            Attr(L("Fizik", "Physical"), p.physical, rg(p.physical))
                         }
                     }
                     "Antrenman" -> TrainingBox(p)
@@ -650,42 +650,42 @@ fun TransferTab(g: Game) {
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = query, onValueChange = { query = it.take(30) }, singleLine = true,
-                placeholder = { Text("🔍 Oyuncu ara") }, modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(L("🔍 Oyuncu ara", "🔍 Search player")) }, modifier = Modifier.fillMaxWidth(),
             )
-            FilterTitle("Liste")
+            FilterTitle(L("Liste", "List"))
             FlowChips {
-                Chip("Tümü", mode == 0) { mode = 0 }
-                Chip("Bütçeme uygun", mode == 2) { mode = 2 }
-                Chip("Serbest", mode == 1) { mode = 1 }
-                Chip("Genç (≤21)", mode == 3) { mode = 3 }
-                Chip("⭐ Kısa liste (${g.watch.size})", mode == 4) { mode = 4 }
-                Chip("🔭 Gözlemci", mode == 5) { mode = 5 }
+                Chip(L("Tümü", "All"), mode == 0) { mode = 0 }
+                Chip(L("Bütçeme uygun", "Affordable"), mode == 2) { mode = 2 }
+                Chip(L("Serbest", "Free agent"), mode == 1) { mode = 1 }
+                Chip(L("Genç (≤21)", "Young (≤21)"), mode == 3) { mode = 3 }
+                Chip(L("⭐ Kısa liste (${g.watch.size})", "⭐ Shortlist (${g.watch.size})"), mode == 4) { mode = 4 }
+                Chip(L("🔭 Gözlemci", "🔭 Scout"), mode == 5) { mode = 5 }
             }
-            FilterTitle("Mevki")
+            FilterTitle(L("Mevki", "Position"))
             FlowChips {
-                Chip("Hepsi", detFilter == null) { detFilter = null }
+                Chip(L("Hepsi", "All"), detFilter == null) { detFilter = null }
                 com.supermenajer.game.game.Positions.Det.entries.forEach { d -> Chip(d.code, detFilter == d) { detFilter = d } }
             }
-            FilterTitle("Yaş: ${ages.start.toInt()}–${ages.endInclusive.toInt()}")
+            FilterTitle(L("Yaş: ${ages.start.toInt()}–${ages.endInclusive.toInt()}", "Age: ${ages.start.toInt()}–${ages.endInclusive.toInt()}"))
             androidx.compose.material3.RangeSlider(
                 value = ages, onValueChange = { ages = it.start.roundToInt().toFloat()..it.endInclusive.roundToInt().toFloat() },
                 valueRange = 15f..40f, steps = 24,
             )
-            FilterTitle("En az güç (tahmini): ${minOvr.toInt()}")
+            FilterTitle(L("En az güç (tahmini): ${minOvr.toInt()}", "Min. overall (estimated): ${minOvr.toInt()}"))
             androidx.compose.material3.Slider(value = minOvr, onValueChange = { minOvr = it.roundToInt().toFloat() }, valueRange = 40f..90f, steps = 49)
-            FilterTitle("En fazla bonservis: " + if (maxPriceStep == priceSteps.lastIndex) "sınırsız" else money(maxPrice))
+            FilterTitle(L("En fazla bonservis: ", "Max. fee: ") + if (maxPriceStep == priceSteps.lastIndex) L("sınırsız", "unlimited") else money(maxPrice))
             androidx.compose.material3.Slider(
                 value = maxPriceStep.toFloat(), onValueChange = { maxPriceStep = it.roundToInt() },
                 valueRange = 0f..priceSteps.lastIndex.toFloat(), steps = priceSteps.size - 2,
             )
-            FilterTitle("Ülke")
+            FilterTitle(L("Ülke", "Country"))
             FlowChips {
-                Chip("🌍 Tümü", country == null) { country = null }
+                Chip(L("🌍 Tümü", "🌍 All"), country == null) { country = null }
                 Season.activeCountries(g).forEach { c -> Chip(Generator.flag(com.supermenajer.game.model.Leagues.flagOf(c)), country == c) { country = c } }
             }
-            FilterTitle("Sırala")
+            FilterTitle(L("Sırala", "Sort"))
             FlowChips {
-                listOf("Güç", "Potansiyel", "En ucuz", "En genç").forEachIndexed { i, n -> Chip(n, sort == i) { sort = i } }
+                listOf(L("Güç", "Overall"), L("Potansiyel", "Potential"), L("En ucuz", "Cheapest"), L("En genç", "Youngest")).forEachIndexed { i, n -> Chip(n, sort == i) { sort = i } }
             }
             Spacer(Modifier.height(10.dp))
             ScoutCard(g)
@@ -698,15 +698,15 @@ fun TransferTab(g: Game) {
         ) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "${list.size}${if (list.size >= 150) "+" else ""} oyuncu · ⭐ kısa listeye ekle, ⚖ karşılaştır (oyuncu profilinden)",
+                    L("${list.size}${if (list.size >= 150) "+" else ""} oyuncu · ⭐ kısa listeye ekle, ⚖ karşılaştır (oyuncu profilinden)", "${list.size}${if (list.size >= 150) "+" else ""} players · ⭐ add to shortlist, ⚖ compare (from the player profile)"),
                     color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 )
             }
-            if (list.isEmpty()) item { Text("Uygun oyuncu bulunamadı.", color = TextDim, modifier = Modifier.padding(16.dp)) }
+            if (list.isEmpty()) item { Text(L("Uygun oyuncu bulunamadı.", "No suitable players found."), color = TextDim, modifier = Modifier.padding(16.dp)) }
             items(list.size, key = { list[it].first.id }) { i ->
                 val (p, price) = list[i]
                 val t = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
-                val team = t?.let { Generator.flag(g.flagOf(it)) + " " + it.short } ?: "Serbest"
+                val team = t?.let { Generator.flag(g.flagOf(it)) + " " + it.short } ?: L("Serbest", "Free agent")
                 val pot = if (com.supermenajer.game.game.Scouting.known(g, p) && (mode == 3 || sort == 1)) " · P${p.potential}" else ""
                 val star = if (p.id in g.watch) "⭐ " else ""
                 PlayerRow(g, p, false, extra = "$star$team · ${money(price)}$pot")
@@ -740,8 +740,8 @@ private fun FlowChips(content: @Composable () -> Unit) {
 private fun TrainingBox(p: Player) {
     val dev = com.supermenajer.game.game.Development
     Spacer(Modifier.height(12.dp))
-    Text("BİREYSEL ANTRENMAN", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    Text("Seçilen özellik haftalık antrenmanlarda öne çıkar.", color = TextDim, fontSize = 11.sp)
+    Text(L("BİREYSEL ANTRENMAN", "INDIVIDUAL TRAINING"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    Text(L("Seçilen özellik haftalık antrenmanlarda öne çıkar.", "The chosen attribute gets priority in weekly training."), color = TextDim, fontSize = 11.sp)
     Spacer(Modifier.height(4.dp))
     FlowChips {
         dev.focusNames.forEachIndexed { i, n ->
@@ -752,7 +752,7 @@ private fun TrainingBox(p: Player) {
     val opts = dev.learnable(p).filter { !com.supermenajer.game.game.Positions.canPlay(p, it) }
     if (opts.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
-        Text("YENİ MEVKİ ÖĞRET", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(L("YENİ MEVKİ ÖĞRET", "TEACH A NEW POSITION"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         FlowChips {
             opts.forEach { d -> Chip(d.code + " · " + d.label, p.learnDet == d.ordinal) { GameRepo.setLearn(p, d.ordinal) } }
@@ -763,7 +763,7 @@ private fun TrainingBox(p: Player) {
                 Bar(p.learnProgress / 100f, Blue, Modifier.weight(1f), 7.dp)
                 Text("  %${p.learnProgress}", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-            Text("Genç oyuncular yeni mevkiyi daha hızlı öğrenir.", color = TextDim, fontSize = 11.sp)
+            Text(L("Genç oyuncular yeni mevkiyi daha hızlı öğrenir.", "Young players learn a new position faster."), color = TextDim, fontSize = 11.sp)
         }
     }
 }
@@ -774,26 +774,26 @@ private fun ContractBox(g: Game, p: Player, onMessage: (String) -> Unit) {
     var years by remember(p.id) { mutableIntStateOf(3) }
     var open by remember(p.id) { mutableStateOf(p.contractYears == 1) }
     if (!open) {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text("📝 Sözleşme Uzat") }
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text(L("📝 Sözleşme Uzat", "📝 Extend Contract")) }
         return
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface2).padding(10.dp)) {
         val demand = com.supermenajer.game.game.Economy.renewalDemand(g, p)
-        Text("Sözleşme yenileme", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(L("Sözleşme yenileme", "Contract renewal"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         if (demand == null) {
-            Text("${p.name} kulüpte mutlu değil, şu an uzatmak istemiyor. Moralini yükseltmeyi dene.", color = Red, fontSize = 12.sp)
+            Text(L("${p.name} kulüpte mutlu değil, şu an uzatmak istemiyor. Moralini yükseltmeyi dene.", "${p.name} isn't happy at the club and doesn't want to extend right now. Try to raise his morale."), color = Red, fontSize = 12.sp)
             return@Column
         }
-        Text("İstediği maaş: ${money(demand)}/hafta (şu an ${money(p.wage)})", color = TextDim, fontSize = 12.sp)
+        Text(L("İstediği maaş: ${money(demand)}/hafta (şu an ${money(p.wage)})", "Wage requested: ${money(demand)}/week (currently ${money(p.wage)})"), color = TextDim, fontSize = 12.sp)
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            (1..5).forEach { y -> Chip("$y yıl", years == y, Modifier.weight(1f)) { years = y } }
+            (1..5).forEach { y -> Chip(L("$y yıl", "$y yrs"), years == y, Modifier.weight(1f)) { years = y } }
         }
         Spacer(Modifier.height(6.dp))
         Button(onClick = {
             val err = GameRepo.renewContract(p, years)
-            onMessage(err ?: "${p.name} ile $years yıllık sözleşme imzalandı! ✍️")
-        }, modifier = Modifier.fillMaxWidth()) { Text("İmzala", fontWeight = FontWeight.Bold) }
+            onMessage(err ?: L("${p.name} ile $years yıllık sözleşme imzalandı! ✍️", "Signed a $years-year contract with ${p.name}! ✍️"))
+        }, modifier = Modifier.fillMaxWidth()) { Text(L("İmzala", "Sign"), fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -804,12 +804,12 @@ private fun ScoutCard(g: Game) {
     val country = g.scoutCountry.ifEmpty { g.userCountry }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface1).padding(10.dp)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
-            Text("🔍 Gözlemci: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} $country · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}", fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(L("🔍 Gözlemci: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} $country · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}", "🔍 Scout: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} $country · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}"), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(if (open) "▲" else "▼", color = TextDim)
         }
         if (open) {
             Spacer(Modifier.height(6.dp))
-            Text("Gözlemcin her hafta seçtiğin ülkeden bir oyuncu önerir. Önerilenler Gözlem listesine eklenir ve tüm bilgileri açılır.", color = TextDim, fontSize = 11.sp)
+            Text(L("Gözlemcin her hafta seçtiğin ülkeden bir oyuncu önerir. Önerilenler Gözlem listesine eklenir ve tüm bilgileri açılır.", "Your scout suggests a player from the chosen country every week. Suggested players are added to the scouting list with full details."), color = TextDim, fontSize = 11.sp)
             Spacer(Modifier.height(6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Season.activeCountries(g).forEach { c ->
@@ -835,22 +835,22 @@ private fun ReservesView(g: Game) {
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                DashCard("A2 Kadrosu (${res.size})", Modifier.fillMaxWidth()) {
-                    Text("A2'deki oyuncular A takım maçlarına alınmaz. Her lig haftası A2 maçı oynarlar; 22 yaş altı oyuncular bu maçlarla gelişir, 24 yaş üstü oyuncuların morali düşer.", color = TextDim, fontSize = 12.sp)
+                DashCard(L("A2 Kadrosu (${res.size})", "B Team Squad (${res.size})"), Modifier.fillMaxWidth()) {
+                    Text(L("A2'deki oyuncular A takım maçlarına alınmaz. Her lig haftası A2 maçı oynarlar; 22 yaş altı oyuncular bu maçlarla gelişir, 24 yaş üstü oyuncuların morali düşer.", "Players in the B team aren't picked for first-team matches. They play a B-team match every league week; under-22s develop through these matches, over-24s lose morale."), color = TextDim, fontSize = 12.sp)
                     msg?.let { Text(it, color = Gold, fontSize = 12.sp) }
                     Spacer(Modifier.height(6.dp))
-                    if (res.isEmpty()) Text("A2 takımında oyuncu yok.", color = TextDim, fontSize = 13.sp)
+                    if (res.isEmpty()) Text(L("A2 takımında oyuncu yok.", "No players in the B team."), color = TextDim, fontSize = 13.sp)
                     res.forEach { p ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.weight(1f)) { PlayerRow(g, p, false, extra = "${p.age} yaş · P${com.supermenajer.game.game.Scouting.potText(g, p)} · moral ${p.morale.toInt()}") }
-                            OutlinedButton(onClick = { msg = GameRepo.setReserve(p, false) }) { Text("⬆ A takım") }
+                            Box(Modifier.weight(1f)) { PlayerRow(g, p, false, extra = L("${p.age} yaş · P${com.supermenajer.game.game.Scouting.potText(g, p)} · moral ${p.morale.toInt()}", "${p.age} yrs · P${com.supermenajer.game.game.Scouting.potText(g, p)} · morale ${p.morale.toInt()}")) }
+                            OutlinedButton(onClick = { msg = GameRepo.setReserve(p, false) }) { Text(L("⬆ A takım", "⬆ First team")) }
                         }
                     }
                 }
             }
             item {
-                DashCard("A2 Sonuçları", Modifier.fillMaxWidth()) {
-                    if (g.a2Results.isEmpty()) Text("Henüz A2 maçı oynanmadı.", color = TextDim, fontSize = 13.sp)
+                DashCard(L("A2 Sonuçları", "B Team Results"), Modifier.fillMaxWidth()) {
+                    if (g.a2Results.isEmpty()) Text(L("Henüz A2 maçı oynanmadı.", "No B-team matches played yet."), color = TextDim, fontSize = 13.sp)
                     g.a2Results.take(8).forEach { r ->
                         val c = r.split("|")
                         Row(Modifier.padding(vertical = 3.dp)) {
@@ -863,11 +863,11 @@ private fun ReservesView(g: Game) {
         }
         LazyColumn(Modifier.weight(1f).fillMaxHeight()) {
             item {
-                DashCard("A2'ye gönderilebilecekler", Modifier.fillMaxWidth()) {
-                    Text("İlk 11 dışındaki oyuncular (önce gençler).", color = TextDim, fontSize = 12.sp)
+                DashCard(L("A2'ye gönderilebilecekler", "Can be sent to the B team"), Modifier.fillMaxWidth()) {
+                    Text(L("İlk 11 dışındaki oyuncular (önce gençler).", "Players outside the starting XI (youngsters first)."), color = TextDim, fontSize = 12.sp)
                     cand.take(20).forEach { p ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.weight(1f)) { PlayerRow(g, p, false, extra = "${p.age} yaş · güç ${p.overall}") }
+                            Box(Modifier.weight(1f)) { PlayerRow(g, p, false, extra = L("${p.age} yaş · güç ${p.overall}", "${p.age} yrs · overall ${p.overall}")) }
                             OutlinedButton(onClick = { msg = GameRepo.setReserve(p, true) }) { Text("⬇ A2") }
                         }
                     }
@@ -882,7 +882,7 @@ private fun ReservesView(g: Game) {
 fun YouthView(g: Game) {
     val rows = com.supermenajer.game.game.Youth.rows(g)
     if (rows.isEmpty()) {
-        Text("Kadroda 21 yaş altı ya da kiralıkta oyuncu yok. Altyapı seçmeleri ve genç transferleriyle başla.", color = TextDim, modifier = Modifier.padding(16.dp))
+        Text(L("Kadroda 21 yaş altı ya da kiralıkta oyuncu yok. Altyapı seçmeleri ve genç transferleriyle başla.", "No under-21 or loaned-out players in the squad. Start with academy trials and young signings."), color = TextDim, modifier = Modifier.padding(16.dp))
         return
     }
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -890,7 +890,7 @@ fun YouthView(g: Game) {
         contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-            Text("Potansiyel aralığı antrenörünün kalitesine göre daralır. Kiralıktaki oyuncuların performansı da burada.", color = TextDim, fontSize = 12.sp)
+            Text(L("Potansiyel aralığı antrenörünün kalitesine göre daralır. Kiralıktaki oyuncuların performansı da burada.", "The potential range narrows with the quality of your coach. Loaned-out players' performances are shown here too."), color = TextDim, fontSize = 12.sp)
         }
         items(rows.size) { i -> YouthCard(g, rows[i]) }
     }
@@ -907,10 +907,10 @@ private fun YouthCard(g: Game, r: com.supermenajer.game.game.Youth.Row) {
             Column(Modifier.weight(1f)) {
                 Text(p.name, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${p.age} yaş · ${com.supermenajer.game.game.Positions.det(p).code}" + (r.loanClub?.let { " · 🔁 Kiralık: $it" } ?: ""),
+                    L("${p.age} yaş · ${com.supermenajer.game.game.Positions.det(p).code}", "${p.age} yrs · ${com.supermenajer.game.game.Positions.det(p).code}") + (r.loanClub?.let { L(" · 🔁 Kiralık: $it", " · 🔁 On loan: $it") } ?: ""),
                     color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
-                Text("Potansiyel ${r.potLow}–${r.potHigh}", color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(L("Potansiyel ${r.potLow}–${r.potHigh}", "Potential ${r.potLow}–${r.potHigh}"), color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 OvrBadge(p.overall, 40.dp)

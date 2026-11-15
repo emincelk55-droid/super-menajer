@@ -151,6 +151,32 @@ class ScreensTest {
         paparazzi.snapshot("25c_corner_tv") { tvShot() }
     }
 
+    /** İngilizce arayüz: ana menü, ana sayfa, kadro, taktik, lig, transfer, kulüp ve ayarlar. */
+    @Test
+    fun englishScreens() {
+        com.supermenajer.game.game.Lang.set(true)
+        try {
+            GameRepo.init(Files.createTempDirectory("smen").toFile())
+            GameRepo.preparedWorld = Generator.newWorld(kotlin.random.Random(9)).also { Season.computeExpectations(it) }
+            GameRepo.screen = Screen.TITLE; shot("en_00_menu")
+            val w = Generator.newWorld(kotlin.random.Random(9)).also { Season.computeExpectations(it) }
+            com.supermenajer.game.game.Fictional.apply(w)
+            GameRepo.newCareer(w, "Alex Morgan", w.divisionTeams(10).sortedByDescending { it.reputation }[4].id)
+            val g = GameRepo.game!!
+            g.introDone = true; g.ceremonySeen = 999
+            GameRepo.screen = Screen.MAIN
+            GameRepo.tab = GameRepo.TAB_HOME; shot("en_01_home")
+            GameRepo.tab = GameRepo.TAB_SQUAD; GameRepo.squadMode = 0; shot("en_02_squad")
+            GameRepo.tab = GameRepo.TAB_TACTICS; GameRepo.tacticsMode = 0; shot("en_03_tactics")
+            GameRepo.tab = GameRepo.TAB_LEAGUE; GameRepo.leagueTab = 0; GameRepo.leagueSel = g.userTeam.division; shot("en_04_table")
+            GameRepo.tab = GameRepo.TAB_TRANSFER; shot("en_05_transfer")
+            GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3; shot("en_06_finance")
+            GameRepo.settingsOpen = true; shot("en_07_settings"); GameRepo.settingsOpen = false
+        } finally {
+            com.supermenajer.game.game.Lang.set(false)
+        }
+    }
+
     /** Test modu turu: yapay zekâ kurgusal dünyada (Trabzon benzeri kulüp) bir buçuk sezon oynar, sonra ekranlar çekilir. */
     @Test
     fun autoplayTour() {

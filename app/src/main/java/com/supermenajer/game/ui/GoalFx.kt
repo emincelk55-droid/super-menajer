@@ -110,7 +110,7 @@ private fun BoxScope.GoalText(progress: Float, c1: Color, c2: Color, ours: Boole
     val alpha = ((1f - progress) / 0.2f).coerceIn(0f, 1f) * inQ.coerceAtLeast(0.15f)
     val top = lerp(c1, Color.White, 0.55f)
     Text(
-        if (ours) "GOOOL!" else "GOL",
+        if (ours) L("GOOOL!", "GOAL!") else L("GOL", "GOAL"),
         modifier = Modifier.align(Alignment.Center).graphicsLayer { scaleX = sc; scaleY = sc; this.alpha = alpha; rotationZ = -6f * (1f - inQ) },
         style = TextStyle(
             brush = Brush.verticalGradient(if (ours) listOf(Color.White, Gold, top) else listOf(Color.White, Color(0xFFB8C0D8))),

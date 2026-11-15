@@ -35,14 +35,14 @@ object Tips {
     class Tip(val title: String, val text: String)
 
     val all: Map<String, Tip> = linkedMapOf(
-        "home" to Tip("🏠 Ana sayfa", "Sağ üstteki DEVAM ET günleri ilerletir; maç günü ya da önemli bir olayda kendiliğinden durur. Karar bekleyen kartlar (basın, sağlık, teklifler) burada en üstte çıkar."),
-        "squad" to Tip("👥 Kadro", "Oyuncuya dokun: profili açılır. Moral, kondisyon ve sözleşmeye göz kulak ol. 🌱 Gelişim sekmesinde gençlerini ve kiralıktakileri takip edersin."),
-        "tactics" to Tip("📋 Taktik", "Oyuncuları sürükleyip sahaya bırak. Turuncu/kırmızı işaret mevkisine uymadığını gösterir. Emin değilsen 'Taktik Oluştur' kadrona en uygun oyun tarzını kurar."),
-        "league" to Tip("🏆 Lig", "Puan durumu, fikstür ve takvim burada. 📈 Analiz sekmesi takımının nerede iyi, nerede kötü olduğunu grafiklerle gösterir."),
-        "transfer" to Tip("💼 Transfer", "Filtrele, kısa listeye ekle, gözlemci gönder. Teklifte önce kulüple bonservisi, sonra oyuncuyla maaşı konuşursun. Maaş bütçesini aşma!"),
-        "inbox" to Tip("✉️ Gelen kutusu", "Yönetimden, oyunculardan ve basından gelen her şey burada. Önemli mesajlar ana sayfaya da düşer."),
-        "club" to Tip("🏟️ Kulüp", "Finans, stadyum, tesisler, sponsorlar ve teknik ekip. İyi bir antrenör gençleri hızlı geliştirir; iyi bir gözlemci rakipleri net görür."),
-        "match" to Tip("⚽ Maç", "Alttan hızı (1x/3x/⚡) ve mentaliteyi seç. 📋 Taktik ile maçı durdurup diziliş ve talimat değiştirebilirsin; yardımcı antrenörün sarı çerçeveli önerilerine dikkat et."),
+        "home" to Tip(L("🏠 Ana sayfa", "🏠 Home"), L("Sağ üstteki DEVAM ET günleri ilerletir; maç günü ya da önemli bir olayda kendiliğinden durur. Karar bekleyen kartlar (basın, sağlık, teklifler) burada en üstte çıkar.", "CONTINUE at the top right moves the days forward and stops by itself on match day or when something important happens. Cards waiting for a decision (press, medical, offers) appear at the top here.")),
+        "squad" to Tip(L("👥 Kadro", "👥 Squad"), L("Oyuncuya dokun: profili açılır. Moral, kondisyon ve sözleşmeye göz kulak ol. 🌱 Gelişim sekmesinde gençlerini ve kiralıktakileri takip edersin.", "Tap a player to open his profile. Keep an eye on morale, fitness and contracts. Follow your youngsters and loanees on the 🌱 Development tab.")),
+        "tactics" to Tip(L("📋 Taktik", "📋 Tactics"), L("Oyuncuları sürükleyip sahaya bırak. Turuncu/kırmızı işaret mevkisine uymadığını gösterir. Emin değilsen 'Taktik Oluştur' kadrona en uygun oyun tarzını kurar.", "Drag players onto the pitch. An orange/red mark means he doesn't suit the position. If unsure, 'Build Tactic' sets up the style that best fits your squad.")),
+        "league" to Tip(L("🏆 Lig", "🏆 League"), L("Puan durumu, fikstür ve takvim burada. 📈 Analiz sekmesi takımının nerede iyi, nerede kötü olduğunu grafiklerle gösterir.", "Table, fixtures and calendar are here. The 📈 Analysis tab shows with charts where your team is good and where it struggles.")),
+        "transfer" to Tip(L("💼 Transfer", "💼 Transfers"), L("Filtrele, kısa listeye ekle, gözlemci gönder. Teklifte önce kulüple bonservisi, sonra oyuncuyla maaşı konuşursun. Maaş bütçesini aşma!", "Filter, add to your shortlist, send scouts. In a bid you first agree the fee with the club, then the wage with the player. Don't exceed the wage budget!")),
+        "inbox" to Tip(L("✉️ Gelen kutusu", "✉️ Inbox"), L("Yönetimden, oyunculardan ve basından gelen her şey burada. Önemli mesajlar ana sayfaya da düşer.", "Everything from the board, players and press is here. Important messages also appear on the home screen.")),
+        "club" to Tip(L("🏟️ Kulüp", "🏟️ Club"), L("Finans, stadyum, tesisler, sponsorlar ve teknik ekip. İyi bir antrenör gençleri hızlı geliştirir; iyi bir gözlemci rakipleri net görür.", "Finances, stadium, facilities, sponsors and staff. A good coach develops youngsters fast; a good scout sees rivals clearly.")),
+        "match" to Tip(L("⚽ Maç", "⚽ Match"), L("Alttan hızı (1x/3x/⚡) ve mentaliteyi seç. 📋 Taktik ile maçı durdurup diziliş ve talimat değiştirebilirsin; yardımcı antrenörün sarı çerçeveli önerilerine dikkat et.", "Choose the speed (1x/3x/⚡) and mentality at the bottom. With 📋 Tactics you can pause the match and change formation and instructions; watch for your assistant's yellow-framed suggestions.")),
     )
 
     /** Ekrandaki ipucu (yoksa null). */
@@ -100,12 +100,12 @@ fun TipBubble() {
             Column(Modifier.weight(1f)) {
                 Text(tip.title, fontWeight = FontWeight.Black, fontSize = 15.sp, color = Teal)
                 Text(tip.text, fontSize = 13.sp, lineHeight = 18.sp, color = TextMain)
-                Text("İpuçlarını kapat", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp).clickable { Tips.disableAll() })
+                Text(L("İpuçlarını kapat", "Turn off tips"), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp).clickable { Tips.disableAll() })
             }
             Spacer(Modifier.width(10.dp))
             Box(
                 Modifier.pressClick(0.94f) { Tips.dismiss() }.clip(RoundedCornerShape(10.dp)).background(Teal).padding(horizontal = 14.dp, vertical = 8.dp),
-            ) { Text("Anladım", color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 13.sp) }
+            ) { Text(L("Anladım", "Got it"), color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 13.sp) }
         }
     }
 }

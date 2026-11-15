@@ -1,5 +1,6 @@
 package com.supermenajer.game.engine
 
+import com.supermenajer.game.game.L
 import com.supermenajer.game.game.Facilities
 import com.supermenajer.game.game.Lineups
 import com.supermenajer.game.model.Comp
@@ -72,7 +73,7 @@ class MatchSim(
     val home = Side(nat?.home ?: game.team(fixture.home), 0)
     val away = Side(nat?.away ?: game.team(fixture.away), 1)
     /** Skor tabelasındaki başlık (milli maçta turnuva adı). */
-    val title: String? get() = nat?.title ?: if (twoPlayer) "👥 İki kişilik maç" else null
+    val title: String? get() = nat?.title ?: if (twoPlayer) L("👥 İki kişilik maç", "👥 Two-player match") else null
     val sides: List<Side> get() = listOf(home, away)
     var minute = 0
         private set
@@ -94,11 +95,11 @@ class MatchSim(
     init {
         setup(home)
         setup(away)
-        ev(Ev.KICKOFF, -1, com.supermenajer.game.game.Talks.derbyName(game, fixture)?.let { "🔥 $it başlıyor! Tribünlerde koreografi, meşaleler yanıyor, stat yerinden oynuyor!" }
+        ev(Ev.KICKOFF, -1, com.supermenajer.game.game.Talks.derbyName(game, fixture)?.let { L("🔥 $it başlıyor! Tribünlerde koreografi, meşaleler yanıyor, stat yerinden oynuyor!", "🔥 $it begins! Choreography in the stands, flares burning, the stadium is shaking!") }
             ?: Comms.kickoff(home.team, away.team, rnd))
         if (nat != null) {
             fixture.attendance = (home.team.stadium * rnd.nextDouble(0.85, 1.0)).toInt()
-            ev(Ev.INFO, -1, "🏟️ ${Facilities.crowdText(this)} · Milli marşlar okundu, tribünler bayraklarla dolu!")
+            ev(Ev.INFO, -1, L("🏟️ ${Facilities.crowdText(this)} · Milli marşlar okundu, tribünler bayraklarla dolu!", "🏟️ ${Facilities.crowdText(this)} · The anthems have been sung, the stands are full of flags!"))
         } else {
             if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
             Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
@@ -107,7 +108,7 @@ class MatchSim(
             // Gizli antrenman: rakibe özel hazırlık
             if (game.secretWeek == fixture.week) {
                 us.onPitch.forEach { it.boost += 0.025 }
-                ev(Ev.INFO, us.index, "🕵️ Gizli antrenmanda çalışılan plan sahada! Oyuncular rakibi ezbere biliyor.")
+                ev(Ev.INFO, us.index, L("🕵️ Gizli antrenmanda çalışılan plan sahada! Oyuncular rakibi ezbere biliyor.", "🕵️ The plan from closed training is on the pitch! The players know the opponent by heart."))
             }
             // Galibiyet primi motivasyonu
             val wb = us.team.winBonus
@@ -118,26 +119,26 @@ class MatchSim(
             when (game.oppInstr) {
                 0 -> them.onPitch.maxByOrNull { it.p.overall }?.let {
                     it.boost -= 0.08
-                    ev(Ev.INFO, us.index, "🎯 Talimat: ${it.p.name} adam adama markajda, nefes aldırılmayacak.")
+                    ev(Ev.INFO, us.index, L("🎯 Talimat: ${it.p.name} adam adama markajda, nefes aldırılmayacak.", "🎯 Instruction: ${it.p.name} is man-marked and won't get a moment's peace."))
                 }
                 1 -> {
                     them.onPitch.filter { it.slot.pos == Pos.FW || it.slot.pos == Pos.MF }.forEach { it.boost -= 0.015 }
-                    ev(Ev.INFO, us.index, "🎯 Talimat: Kanatlar kapatılacak, rakibin orta açmasına izin yok.")
+                    ev(Ev.INFO, us.index, L("🎯 Talimat: Kanatlar kapatılacak, rakibin orta açmasına izin yok.", "🎯 Instruction: Close down the flanks, no crosses allowed."))
                 }
                 2 -> {
                     us.onPitch.filter { it.slot.pos == Pos.FW }.forEach { it.boost += 0.025 }
-                    ev(Ev.INFO, us.index, "🎯 Talimat: Forvetler rakip kaleciye ve stoperlere önde baskı yapacak.")
+                    ev(Ev.INFO, us.index, L("🎯 Talimat: Forvetler rakip kaleciye ve stoperlere önde baskı yapacak.", "🎯 Instruction: The forwards will press the keeper and centre-backs high."))
                 }
                 3 -> {
                     them.onPitch.filter { it.slot.pos == Pos.DF }.forEach { it.boost -= 0.015 }
-                    ev(Ev.INFO, us.index, "🎯 Talimat: Rakibin yavaş savunmasının arkasına koşular.")
+                    ev(Ev.INFO, us.index, L("🎯 Talimat: Rakibin yavaş savunmasının arkasına koşular.", "🎯 Instruction: Runs in behind the opponent's slow defence."))
                 }
             }
         }
         val fanBoost = if (nat != null) 0.01 else com.supermenajer.game.game.Fans.homeBoost(game, fixture)
         if (fanBoost > 0) {
             home.onPitch.forEach { it.boost += fanBoost }
-            ev(Ev.INFO, 0, "📣 Tribünler coşkulu! Taraftar takımını 12. adam gibi destekliyor.")
+            ev(Ev.INFO, 0, L("📣 Tribünler coşkulu! Taraftar takımını 12. adam gibi destekliyor.", "📣 The stands are rocking! The fans back their team like a 12th man."))
         }
     }
 
@@ -279,7 +280,7 @@ class MatchSim(
         // Kontra atak: hücuma çıkan rakibin arkasına
         if (def.team.counter && atk.team.mentality == 2 && rnd.nextDouble() < 0.03) {
             val counter = pick(def.onPitch.filter { it.slot.pos == Pos.FW || it.slot.pos == Pos.MF })
-            if (counter != null) ev(Ev.INFO, def.index, "⚡ Hızlı kontra! ${counter.p.name} boş alana koşuyor...")
+            if (counter != null) ev(Ev.INFO, def.index, L("⚡ Hızlı kontra! ${counter.p.name} boş alana koşuyor...", "⚡ Quick counter! ${counter.p.name} runs into space..."))
             shot(def, atk, if (def === home) sh else sa, sA, forcedQ = 0.12 + rnd.nextDouble() * 0.12)
             handled = true
         }
@@ -287,10 +288,10 @@ class MatchSim(
         if (!handled && r < pShot && def.team.offsideTrap) {
             val t = rnd.nextDouble()
             if (t < 0.15) {
-                pick(atk.onPitch.filter { it.slot.pos == Pos.FW })?.let { ev(Ev.INFO, def.index, "🚩 Ofsayt! ${it.p.name} tuzağa düştü.") }
+                pick(atk.onPitch.filter { it.slot.pos == Pos.FW })?.let { ev(Ev.INFO, def.index, L("🚩 Ofsayt! ${it.p.name} tuzağa düştü.", "🚩 Offside! ${it.p.name} is caught in the trap.")) }
                 handled = true
             } else if (t < 0.21) {
-                ev(Ev.INFO, atk.index, "😱 Ofsayt tuzağı bozuldu, forvet kaleciyle karşı karşıya!")
+                ev(Ev.INFO, atk.index, L("😱 Ofsayt tuzağı bozuldu, forvet kaleciyle karşı karşıya!", "😱 The offside trap fails, the striker is one on one with the keeper!"))
                 shot(atk, def, sA, sD, forcedQ = 0.28 + rnd.nextDouble() * 0.12)
                 handled = true
             }
@@ -497,7 +498,7 @@ class MatchSim(
         s.team.formation = f
         s.team.lineup.clear()
         s.team.lineup.addAll(slots.map { sl -> s.onPitch.firstOrNull { it.slot === sl }?.p?.id ?: -1 })
-        ev(Ev.INFO, s.index, "📋 ${s.team.name} dizilişi değiştirdi: $f")
+        ev(Ev.INFO, s.index, L("📋 ${s.team.name} dizilişi değiştirdi: $f", "📋 ${s.team.name} change formation: $f"))
         return true
     }
 
@@ -551,7 +552,7 @@ class MatchSim(
     }
 
     private fun shootout() {
-        ev(Ev.INFO, -1, "Eşitlik bozulmadı... Kazananı PENALTILAR belirleyecek!")
+        ev(Ev.INFO, -1, L("Eşitlik bozulmadı... Kazananı PENALTILAR belirleyecek!", "Still level... PENALTIES will decide it!"))
         val takers = sides.associateWith { s -> s.onPitch.filter { it.slot.pos != Pos.GK }.sortedByDescending { it.p.shooting } }
         fun kick(s: Side, i: Int): Boolean {
             val list = takers.getValue(s)
@@ -560,7 +561,7 @@ class MatchSim(
             val gk = other(s).gk()?.p?.let { keeperSkill(it) } ?: 40.0
             val p = (0.76 * (taker.p.shooting / 70.0).pow(0.5) / (gk / 70.0).pow(0.5)).coerceIn(0.5, 0.92)
             val scored = rnd.nextDouble() < p
-            ev(Ev.INFO, s.index, (if (scored) "✅ " else "❌ ") + "Penaltı: ${taker.p.name}" + if (scored) " gol!" else " kaçırdı!")
+            ev(Ev.INFO, s.index, (if (scored) "✅ " else "❌ ") + L("Penaltı: ${taker.p.name}", "Penalty: ${taker.p.name}") + if (scored) L(" gol!", " scores!") else L(" kaçırdı!", " misses!"))
             return scored
         }
         var h = 0
@@ -582,7 +583,7 @@ class MatchSim(
         penHome = h
         penAway = a
         val w = if (h > a) home else away
-        ev(Ev.FULL, w.index, "Penaltılar: $h-$a. ${w.team.name} turu geçti!")
+        ev(Ev.FULL, w.index, L("Penaltılar: $h-$a. ${w.team.name} turu geçti!", "Penalties: $h-$a. ${w.team.name} go through!"))
     }
 
     /** Kupa maçında turu geçen takım. */
@@ -605,18 +606,18 @@ class MatchSim(
     /** FM tarzı kenar çizgisi talimatı. 0 cesaretlendir, 1 daha fazlasını iste, 2 odaklan, 3 sakin ol. */
     fun shout(kind: Int): String {
         val us = userSide ?: return ""
-        if (!canShout) return "Oyuncular az önce seni duydu, biraz bekle."
+        if (!canShout) return L("Oyuncular az önce seni duydu, biraz bekle.", "The players just heard you, give it a moment.")
         lastShout = minute
         val diff = us.goals - other(us).goals
         val (delta, msg) = when (kind) {
-            0 -> if (diff < 0) 0.025 to "Oyuncular alkışını duydu, yeniden inandılar!" else 0.01 to "Takım cesaretlendi."
-            1 -> if (diff <= 0) (if (rnd.nextDouble() < 0.7) 0.03 to "Takım tempoyu artırdı!" else -0.01 to "Baskı ters tepti, bazı oyuncular gerildi.") else -0.01 to "Öndeyken bağırman oyuncuları şaşırttı."
-            2 -> 0.015 to "Oyuncular konsantre oldu."
-            else -> { calm = true; 0.0 to "Oyuncular sakinleşti, daha kontrollü oynayacaklar." }
+            0 -> if (diff < 0) 0.025 to L("Oyuncular alkışını duydu, yeniden inandılar!", "The players heard your applause and believe again!") else 0.01 to L("Takım cesaretlendi.", "The team is encouraged.")
+            1 -> if (diff <= 0) (if (rnd.nextDouble() < 0.7) 0.03 to L("Takım tempoyu artırdı!", "The team raised the tempo!") else -0.01 to L("Baskı ters tepti, bazı oyuncular gerildi.", "The pressure backfired, some players got tense.")) else -0.01 to L("Öndeyken bağırman oyuncuları şaşırttı.", "Shouting while ahead confused the players.")
+            2 -> 0.015 to L("Oyuncular konsantre oldu.", "The players are focused.")
+            else -> { calm = true; 0.0 to L("Oyuncular sakinleşti, daha kontrollü oynayacaklar.", "The players calmed down and will play with more control.") }
         }
         val mot = if (delta > 0) com.supermenajer.game.game.Perks.motivation(game) else 1.0
         us.onPitch.forEach { it.boost = (it.boost + delta * mot).coerceIn(-0.06, 0.08) }
-        ev(Ev.INFO, us.index, "📣 Kenar çizgisinden: " + listOf("\"Hadi çocuklar, inanın!\"", "\"Daha fazlasını istiyorum!\"", "\"Odaklanın!\"", "\"Sakin olun!\"")[kind] + " · " + msg)
+        ev(Ev.INFO, us.index, L("📣 Kenar çizgisinden: ", "📣 From the touchline: ") + listOf(L("\"Hadi çocuklar, inanın!\"", "\"Come on lads, believe!\""), L("\"Daha fazlasını istiyorum!\"", "\"I want more!\""), L("\"Odaklanın!\"", "\"Focus!\""), L("\"Sakin olun!\"", "\"Stay calm!\""))[kind] + " · " + msg)
         return msg
     }
 

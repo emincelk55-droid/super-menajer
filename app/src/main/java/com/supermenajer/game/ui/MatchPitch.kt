@@ -198,7 +198,7 @@ private fun DrawScope.drawReplay(
     drawRect(Color.Black.copy(alpha = 0.18f), size = sz)
     drawRect(Color.Black.copy(alpha = 0.75f), size = Size(sz.width, band))
     drawRect(Color.Black.copy(alpha = 0.75f), Offset(0f, sz.height - band), Size(sz.width, band))
-    val label = measurer.measure("⟲ TEKRAR · dokun: geç", TextStyle(color = Color(0xFFFFE14D), fontSize = (band * 0.42f / density / fontScale).sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp))
+    val label = measurer.measure(L("⟲ TEKRAR · dokun: geç", "⟲ REPLAY · tap: skip"), TextStyle(color = Color(0xFFFFE14D), fontSize = (band * 0.42f / density / fontScale).sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp))
     drawText(label, topLeft = Offset(sz.width * 0.03f, (band - label.size.height) / 2f))
     // İlerleme çizgisi
     drawRect(Color(0xFFFFE14D), Offset(0f, sz.height - band * 0.2f), Size(sz.width * rv.progress, band * 0.12f))

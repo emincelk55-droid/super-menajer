@@ -59,19 +59,19 @@ fun TeamProfileDialog(g: Game, t: Team) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(t.name, fontWeight = FontWeight.Black, fontSize = 21.sp)
-                    Text("${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · ${posText(g, t)} sıra · ${t.points} puan", color = TextMain.copy(alpha = 0.85f), fontSize = 13.sp)
-                    Text("Teknik direktör: ${if (t.id == g.userTeamId) g.managerName else g.managers[t.id] ?: "-"} · ${t.stadiumName.ifBlank { t.name + " Stadı" }} (${"%,d".format(t.stadium).replace(',', '.')})", color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(L("${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · ${posText(g, t)} sıra · ${t.points} puan", "${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · ${posText(g, t)} place · ${t.points} pts"), color = TextMain.copy(alpha = 0.85f), fontSize = 13.sp)
+                    Text(L("Teknik direktör: ${if (t.id == g.userTeamId) g.managerName else g.managers[t.id] ?: "-"} · ${t.stadiumName.ifBlank { t.name + " Stadı" }} (${"%,d".format(t.stadium).replace(',', '.')})", "Manager: ${if (t.id == g.userTeamId) g.managerName else g.managers[t.id] ?: "-"} · ${t.stadiumName.ifBlank { t.name + " Stadium" }} (${"%,d".format(t.stadium).replace(',', '.')})"), color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("★".repeat(repStars(t.reputation)) + "☆".repeat(5 - repStars(t.reputation)), color = Gold, fontSize = 14.sp)
-                    Text("Güç ${Lineups.strength(g, t).toInt()} · ${money(t.budget)}", color = TextDim, fontSize = 12.sp)
+                    Text(L("Güç ${Lineups.strength(g, t).toInt()} · ${money(t.budget)}", "Strength ${Lineups.strength(g, t).toInt()} · ${money(t.budget)}"), color = TextDim, fontSize = 12.sp)
                     if (t.form.isNotEmpty()) FormDots(t.form)
                 }
                 Text("✕", fontSize = 20.sp, color = TextDim, modifier = Modifier.padding(start = 10.dp).clip(CircleShape).clickable { close() }.padding(6.dp))
             }
             Row(Modifier.weight(1f).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 LazyColumn(Modifier.weight(1.3f).fillMaxHeight()) {
-                    item { Text("KADRO (${squad.size}) · güçler gözlemci tahminidir", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    item { Text(L("KADRO (${squad.size}) · güçler gözlemci tahminidir", "SQUAD (${squad.size}) · strengths are scout estimates"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                     for (pos in Pos.entries) {
                         val list = squad.filter { it.pos == pos }
                         if (list.isEmpty()) continue
@@ -86,7 +86,7 @@ fun TeamProfileDialog(g: Game, t: Team) {
                                 Text(Positions.det(p).code, color = posColor(p.pos), fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.width(38.dp))
                                 Text(p.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 Text("${Generator.flag(p.nation)} ${p.age}", fontSize = 12.sp, color = TextDim, modifier = Modifier.width(56.dp))
-                                Text(if (p.apps > 0) "${p.apps}M ${p.goals}G" else "", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(60.dp))
+                                Text(if (p.apps > 0) L("${p.apps}M ${p.goals}G", "${p.apps}A ${p.goals}G") else "", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(60.dp))
                                 Text(if (r.first == r.last) "${r.first}" else "${r.first}-${r.last}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = ovrColor((r.first + r.last) / 2), modifier = Modifier.width(52.dp), textAlign = TextAlign.End)
                             }
                         }
@@ -94,8 +94,8 @@ fun TeamProfileDialog(g: Game, t: Team) {
                 }
                 LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
-                        DashCard("Son Maçlar", Modifier.fillMaxWidth()) {
-                            if (results.isEmpty()) Text("Henüz maç oynamadı.", color = TextDim, fontSize = 13.sp)
+                        DashCard(L("Son Maçlar", "Recent Matches"), Modifier.fillMaxWidth()) {
+                            if (results.isEmpty()) Text(L("Henüz maç oynamadı.", "Hasn't played yet."), color = TextDim, fontSize = 13.sp)
                             results.forEachIndexed { i, f ->
                                 if (i > 0) HorizontalDivider(color = CardLine.copy(alpha = 0.6f))
                                 ResultRow(g, f, t.id)
@@ -104,19 +104,19 @@ fun TeamProfileDialog(g: Game, t: Team) {
                     }
                     next?.let { f ->
                         item {
-                            DashCard("Sıradaki Maç", Modifier.fillMaxWidth()) {
+                            DashCard(L("Sıradaki Maç", "Next Match"), Modifier.fillMaxWidth()) {
                                 val opp = g.team(if (f.home == t.id) f.away else f.home)
                                 Text("${opp.name} (${if (f.home == t.id) "iç saha" else "deplasman"}) · ${com.supermenajer.game.game.GameCalendar.format(com.supermenajer.game.game.GameCalendar.dateOf(g, f.week), false)}", fontSize = 13.sp)
                             }
                         }
                     }
                     item {
-                        DashCard("Kulüp", Modifier.fillMaxWidth()) {
+                        DashCard(L("Kulüp", "Club"), Modifier.fillMaxWidth()) {
                             val top = squad.filter { it.goals > 0 }.maxByOrNull { it.goals }
-                            Text("Hedef: ${Season.objectiveText(t)}", fontSize = 13.sp)
-                            Text("Diziliş: ${t.formation} · ${listOf("Defansif", "Dengeli", "Hücum")[t.mentality.coerceIn(0, 2)]}", fontSize = 13.sp)
-                            top?.let { Text("Gol kralı: ${it.name} (${it.goals})", fontSize = 13.sp) }
-                            Text("Ortalama yaş: ${"%.1f".format(squad.map { it.age }.average())}", fontSize = 13.sp)
+                            Text(L("Hedef: ${Season.objectiveText(t)}", "Objective: ${Season.objectiveText(t)}"), fontSize = 13.sp)
+                            Text(L("Diziliş: ${t.formation} · ${listOf("Defansif", "Dengeli", "Hücum")[t.mentality.coerceIn(0, 2)]}", "Formation: ${t.formation} · ${listOf("Defensive", "Balanced", "Attacking")[t.mentality.coerceIn(0, 2)]}"), fontSize = 13.sp)
+                            top?.let { Text(L("Gol kralı: ${it.name} (${it.goals})", "Top scorer: ${it.name} (${it.goals})"), fontSize = 13.sp) }
+                            Text(L("Ortalama yaş: ${"%.1f".format(squad.map { it.age }.average())}", "Average age: ${"%.1f".format(squad.map { it.age }.average())}"), fontSize = 13.sp)
                         }
                     }
                 }

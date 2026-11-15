@@ -54,9 +54,9 @@ val KitColors = listOf(
     0xFF81D4FA, 0xFF1565C0, 0xFF0D47A1, 0xFF283593, 0xFF6A1B9A, 0xFF795548, 0xFF111111, 0xFFFFFFFF,
 )
 
-val CrestShapeNames = listOf("Kalkan", "Yuvarlak", "Modern", "Sivri")
-val CrestPatternNames = listOf("Çizgili", "Yarım", "Bantlı", "Üst bant", "Kuşak", "Düz")
-val KitPatternNames = listOf("Düz", "Dikey çizgi", "Yatay çizgi", "Yarım", "Kuşak")
+val CrestShapeNames get() = listOf(L("Kalkan", "Shield"), L("Yuvarlak", "Round"), L("Modern", "Modern"), L("Sivri", "Pointed"))
+val CrestPatternNames get() = listOf(L("Çizgili", "Striped"), L("Yarım", "Halved"), L("Bantlı", "Banded"), L("Üst bant", "Top band"), L("Kuşak", "Sash"), L("Düz", "Plain"))
+val KitPatternNames get() = listOf(L("Düz", "Plain"), L("Dikey çizgi", "Vertical stripes"), L("Yatay çizgi", "Hoops"), L("Yarım", "Halved"), L("Kuşak", "Sash"))
 
 /** Forma deseni: [c2] rengiyle verilen alana (formanın gövdesi) çizilir. */
 fun DrawScope.drawKitPattern(c2: Color, pattern: Int, left: Float, top: Float, w: Float, h: Float) {
@@ -121,7 +121,7 @@ fun IdentityView(g: Game) {
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         // Sol: önizleme ve ad
         Column(Modifier.weight(0.8f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionCard("🛡️ Kulüp kimliği") {
+            SectionCard(L("🛡️ Kulüp kimliği", "🛡️ Club identity")) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     CrestView(c1, c2, crestShapeOf(t), crestPatternOf(t), t.crestIcon, t.short, 104.dp)
                     KitView(c1, c2, kitPatternOf(t), "10", 104.dp)
@@ -129,45 +129,45 @@ fun IdentityView(g: Game) {
                 Spacer(Modifier.height(8.dp))
                 val fieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Teal, unfocusedBorderColor = CardLine, focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                 OutlinedTextField(
-                    name, { name = it.take(26) }, label = { Text("Kulüp adı") }, singleLine = true,
+                    name, { name = it.take(26) }, label = { Text(L("Kulüp adı", "Club name")) }, singleLine = true,
                     colors = fieldColors, modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
-                        short, { short = it.filter { c -> c.isLetter() }.uppercase().take(3) }, label = { Text("Kısa ad") }, singleLine = true,
+                        short, { short = it.filter { c -> c.isLetter() }.uppercase().take(3) }, label = { Text(L("Kısa ad", "Short name")) }, singleLine = true,
                         colors = fieldColors, modifier = Modifier.width(110.dp),
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "Adı kaydet", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        L("Adı kaydet", "Save name"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                         modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Gold)
                             .pressClick(enabled = name != t.name || short != t.short) { msg = GameRepo.renameClub(name, short) }
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                     )
                 }
                 msg?.let { Text(it, color = Gold, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
-                Text("Renkler maçta formalara, armaya ve tüm ekranlara yansır.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(L("Renkler maçta formalara, armaya ve tüm ekranlara yansır.", "Colours appear on kits, the crest and every screen."), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
         // Sağ: seçenekler
         Column(Modifier.weight(1.4f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionCard("🛡️ Arma") {
-                Text("Şekil", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            SectionCard(L("🛡️ Arma", "🛡️ Crest")) {
+                Text(L("Şekil", "Shape"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 OptionRow(CrestShapeNames.size, crestShapeOf(t), { i -> CrestView(c1, c2, i, crestPatternOf(t), t.crestIcon, t.short, 46.dp) }, { CrestShapeNames[it] }) { i ->
                     GameRepo.editIdentity { it.crestShape = i }
                 }
-                Text("Desen", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                Text(L("Desen", "Pattern"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
                 OptionRow(CrestPatternNames.size, crestPatternOf(t), { i -> CrestView(c1, c2, crestShapeOf(t), i, 0, "", 42.dp) }, { CrestPatternNames[it] }) { i ->
                     GameRepo.editIdentity { it.crestPattern = i }
                 }
-                Text("Simge", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
-                OptionRow(CrestIcons.size, t.crestIcon, { i -> Text(if (i == 0) t.short else CrestIcons[i], fontSize = if (i == 0) 13.sp else 22.sp, fontWeight = FontWeight.Black) }, { if (it == 0) "Kısa ad" else "" }) { i ->
+                Text(L("Simge", "Emblem"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                OptionRow(CrestIcons.size, t.crestIcon, { i -> Text(if (i == 0) t.short else CrestIcons[i], fontSize = if (i == 0) 13.sp else 22.sp, fontWeight = FontWeight.Black) }, { if (it == 0) L("Kısa ad", "Short name") else "" }) { i ->
                     GameRepo.editIdentity { it.crestIcon = i }
                 }
             }
-            SectionCard("🎨 Renkler") {
-                for ((k, label) in listOf("Ana renk", "İkinci renk").withIndex()) {
+            SectionCard(L("🎨 Renkler", "🎨 Colours")) {
+                for ((k, label) in listOf(L("Ana renk", "Primary colour"), L("İkinci renk", "Secondary colour")).withIndex()) {
                     Text(label, color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = if (k == 1) 6.dp else 0.dp, bottom = 4.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         for (col in KitColors) {
@@ -182,7 +182,7 @@ fun IdentityView(g: Game) {
                     }
                 }
             }
-            SectionCard("👕 Forma") {
+            SectionCard(L("👕 Forma", "👕 Kit")) {
                 OptionRow(KitPatternNames.size, kitPatternOf(t), { i -> KitView(c1, c2, i, "", 48.dp) }, { KitPatternNames[it] }) { i ->
                     GameRepo.editIdentity { it.kitPattern = i }
                 }

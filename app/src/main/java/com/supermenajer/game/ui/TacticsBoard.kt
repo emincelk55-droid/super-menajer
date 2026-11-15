@@ -325,7 +325,7 @@ fun SmPlayerCard(
             if (p != null && !p.available) Text(if (p.injuredWeeks > 0) "🚑" else "🟥", fontSize = 11.sp, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
         }
         Text(
-            p?.name?.substringAfterLast(' ')?.uppercase() ?: "BOŞ", fontSize = (width.value * 0.14f).sp, lineHeight = (width.value * 0.16f).sp,
+            p?.name?.substringAfterLast(' ')?.uppercase() ?: L("BOŞ", "EMPTY"), fontSize = (width.value * 0.14f).sp, lineHeight = (width.value * 0.16f).sp,
             fontWeight = FontWeight.Black, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 2.dp, vertical = 1.dp),
         )
@@ -502,7 +502,7 @@ fun TacticsBoard(g: Game) {
                         Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple)))
                             .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(20.dp)).clickable { GameRepo.tacticWizard = true }.padding(horizontal = 14.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text("🧠 Taktik Oluştur", fontWeight = FontWeight.Black, fontSize = 13.sp) }
+                    ) { Text(L("🧠 Taktik Oluştur", "🧠 Build Tactic"), fontWeight = FontWeight.Black, fontSize = 13.sp) }
                 }
                 Row(
                     Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xEE0B1028))
@@ -510,12 +510,12 @@ fun TacticsBoard(g: Game) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Diziliş", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(L("Diziliş", "Formation"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text(t.formation, color = Teal, fontWeight = FontWeight.Black, fontSize = 15.sp)
                     }
                     Box(Modifier.padding(horizontal = 8.dp).width(1.dp).height(30.dp).background(CardLine))
                     Column {
-                        Text("Kimya", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(L("Kimya", "Chemistry"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${Dynamics.pct(g.cohesion)}", color = Teal, fontWeight = FontWeight.Black, fontSize = 15.sp)
                             Spacer(Modifier.width(4.dp))
@@ -526,7 +526,7 @@ fun TacticsBoard(g: Game) {
             }
             // Sağ: sekmeler
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                SmTabBar(listOf("Kadro", "Diziliş", "Talimatlar", "Roller", "Antrenman"), panel) { i ->
+                SmTabBar(listOf(L("Kadro", "Squad"), L("Diziliş", "Formation"), L("Talimatlar", "Instructions"), L("Roller", "Roles"), L("Antrenman", "Training")), panel) { i ->
                     if (i == 4) GameRepo.tacticsMode = 1 else GameRepo.tacticsPanel = i
                     sel = -1; benchSel = -1
                 }
@@ -588,10 +588,10 @@ private fun SquadPanel(
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text(
                 when {
-                    drag != null -> "Sahaya bırak · sahadan buraya bırakırsan oyuncu kadro dışı kalır"
-                    sel >= 0 -> "${Positions.slotDet(slots[sel]).label} için bir oyuncu seç (yeşil: doğal mevki)"
-                    benchSel >= 0 -> "Şimdi sahada bir mevkiye dokun · tekrar dokun: profil"
-                    else -> "Dokun ve sahaya koy, basılı tutup sürükle. İki kez dokun: profil."
+                    drag != null -> L("Sahaya bırak · sahadan buraya bırakırsan oyuncu kadro dışı kalır", "Drop on the pitch · drop a player here from the pitch to leave him out")
+                    sel >= 0 -> L("${Positions.slotDet(slots[sel]).label} için bir oyuncu seç (yeşil: doğal mevki)", "Pick a player for ${Positions.slotDet(slots[sel]).label} (green: natural position)")
+                    benchSel >= 0 -> L("Şimdi sahada bir mevkiye dokun · tekrar dokun: profil", "Now tap a position on the pitch · tap again: profile")
+                    else -> L("Dokun ve sahaya koy, basılı tutup sürükle. İki kez dokun: profil.", "Tap and place on the pitch, or press and drag. Double tap: profile.")
                 },
                 color = if (sel >= 0 || benchSel >= 0 || drag != null) Gold else TextDim, fontSize = 11.sp, maxLines = 2,
             )
@@ -640,9 +640,9 @@ private fun FormationPanel(g: Game, onSelect: (String) -> Unit) {
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                LineStatBox("Hücum", atk)
-                LineStatBox("Orta saha", mid)
-                LineStatBox("Savunma", def)
+                LineStatBox(L("Hücum", "Attack"), atk)
+                LineStatBox(L("Orta saha", "Midfield"), mid)
+                LineStatBox(L("Savunma", "Defending"), def)
             }
         }
         items(Formations.names) { f ->
@@ -691,63 +691,63 @@ private fun InstrRow(label: String, info: String, value: String, options: List<S
     HorizontalDivider(color = CardLine.copy(alpha = 0.6f))
 }
 
-private val yesNo = listOf("Hayır", "Evet")
+private val yesNo get() = listOf(L("Hayır", "No"), L("Evet", "Yes"))
 
 /** Talimatlar sekmesi: Genel / Hücum / Savunma / Takım görevleri alt sekmeleri ve açılır seçimler. */
 @Composable
 private fun InstructionsPanel(g: Game, sub: Int, onSub: (Int) -> Unit) {
     val t = g.userTeam
     Column(Modifier.fillMaxSize()) {
-        SmTabBar(listOf("Genel", "Hücum", "Savunma", "Takım görevleri"), sub, Modifier.padding(horizontal = 6.dp), small = true, onSelect = onSub)
+        SmTabBar(listOf(L("Genel", "General"), L("Hücum", "Attack"), L("Savunma", "Defending"), L("Takım görevleri", "Team duties")), sub, Modifier.padding(horizontal = 6.dp), small = true, onSelect = onSub)
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
             when (sub) {
                 0 -> {
                     item {
-                        val o = listOf("Defansif", "Dengeli", "Hücum")
-                        val info = listOf("Geride kal, kontrayı bekle.", "Dengeli oyun.", "Rakip yarı sahada baskı, daha çok atak.")
-                        InstrRow("Mentalite", info[t.mentality], o[t.mentality], o) { GameRepo.setMentality(it) }
+                        val o = listOf(L("Defansif", "Defensive"), L("Dengeli", "Balanced"), L("Hücum", "Attack"))
+                        val info = listOf(L("Geride kal, kontrayı bekle.", "Sit deep and wait for the counter."), L("Dengeli oyun.", "Balanced play."), L("Rakip yarı sahada baskı, daha çok atak.", "Press in the opponent's half, more attacks."))
+                        InstrRow(L("Mentalite", "Mentality"), info[t.mentality], o[t.mentality], o) { GameRepo.setMentality(it) }
                     }
                     item {
-                        val o = listOf("Yavaş", "Normal", "Hızlı")
-                        val info = listOf("Top sizde kalır, sabırlı atak.", "Dengeli oyun temposu.", "Direkt ve hızlı hücum; daha çok yorgunluk.")
-                        InstrRow("Tempo", info[t.tempo], o[t.tempo], o) { GameRepo.setInstruction("tempo", it) }
+                        val o = listOf(L("Yavaş", "Slow"), L("Normal", "Normal"), L("Hızlı", "Fast"))
+                        val info = listOf(L("Top sizde kalır, sabırlı atak.", "Keep the ball, patient build-up."), L("Dengeli oyun temposu.", "Balanced tempo."), L("Direkt ve hızlı hücum; daha çok yorgunluk.", "Direct, fast attacks; more fatigue."))
+                        InstrRow(L("Tempo", "Tempo"), info[t.tempo], o[t.tempo], o) { GameRepo.setInstruction("tempo", it) }
                     }
                     item {
-                        val o = listOf("Daha dar", "Normal", "Daha geniş")
-                        val info = listOf("Merkezde kalabalık, orta saha güçlenir.", "Dengeli genişlik.", "Kanatlardan oyun, daha çok orta.")
-                        InstrRow("Genişlik", info[t.width], o[t.width], o) { GameRepo.setInstruction("width", it) }
+                        val o = listOf(L("Daha dar", "Narrower"), L("Normal", "Normal"), L("Daha geniş", "Wider"))
+                        val info = listOf(L("Merkezde kalabalık, orta saha güçlenir.", "Crowded centre, stronger midfield."), L("Dengeli genişlik.", "Balanced width."), L("Kanatlardan oyun, daha çok orta.", "Play down the flanks, more crosses."))
+                        InstrRow(L("Genişlik", "Width"), info[t.width], o[t.width], o) { GameRepo.setInstruction("width", it) }
                     }
                 }
                 1 -> {
                     item {
-                        val o = listOf("Kısa", "Karışık", "Uzun")
-                        val info = listOf("Kısa paslarla topa sahip ol.", "Duruma göre pas.", "Uzun toplar; yüksek savunmanın arkasına etkili.")
-                        InstrRow("Pas tarzı", info[t.passing], o[t.passing], o) { GameRepo.setInstruction("passing", it) }
+                        val o = listOf(L("Kısa", "Short"), L("Karışık", "Mixed"), L("Uzun", "Long"))
+                        val info = listOf(L("Kısa paslarla topa sahip ol.", "Keep possession with short passes."), L("Duruma göre pas.", "Pass as the situation demands."), L("Uzun toplar; yüksek savunmanın arkasına etkili.", "Long balls; effective behind a high line."))
+                        InstrRow(L("Pas tarzı", "Passing style"), info[t.passing], o[t.passing], o) { GameRepo.setInstruction("passing", it) }
                     }
                     item {
-                        InstrRow("Kontra atak", "Hücuma çıkan rakibe karşı hızlı ataklar.", yesNo[if (t.counter) 1 else 0], yesNo) { GameRepo.setInstruction("counter", it) }
+                        InstrRow(L("Kontra atak", "Counter-attack"), L("Hücuma çıkan rakibe karşı hızlı ataklar.", "Quick attacks against an opponent who commits forward."), yesNo[if (t.counter) 1 else 0], yesNo) { GameRepo.setInstruction("counter", it) }
                     }
                     item {
-                        val o = listOf("Merkezden", "Karışık", "İki kanattan")
-                        InstrRow("Hücum yönü", "Genişlik ayarıyla birlikte çalışır.", o[t.width], o) { GameRepo.setInstruction("width", it) }
+                        val o = listOf(L("Merkezden", "Through the middle"), L("Karışık", "Mixed"), L("İki kanattan", "Down both flanks"))
+                        InstrRow(L("Hücum yönü", "Attacking focus"), L("Genişlik ayarıyla birlikte çalışır.", "Works together with the width setting."), o[t.width], o) { GameRepo.setInstruction("width", it) }
                     }
                 }
                 2 -> {
                     item {
-                        val o = listOf("Düşük", "Orta", "Tüm saha")
-                        val info = listOf("Rakibi bekle, enerji sakla.", "Dengeli pres.", "Önde bas, top kap; daha çok yorgunluk.")
-                        InstrRow("Pres", info[t.pressing], o[t.pressing], o) { GameRepo.setPressing(it) }
+                        val o = listOf(L("Düşük", "Low"), L("Orta", "Medium"), L("Tüm saha", "Whole pitch"))
+                        val info = listOf(L("Rakibi bekle, enerji sakla.", "Wait for the opponent, save energy."), L("Dengeli pres.", "Balanced pressing."), L("Önde bas, top kap; daha çok yorgunluk.", "Press high, win the ball; more fatigue."))
+                        InstrRow(L("Pres", "Pressing"), info[t.pressing], o[t.pressing], o) { GameRepo.setPressing(it) }
                     }
                     item {
-                        val o = listOf("Derin", "Normal", "Yüksek")
-                        val info = listOf("Geride kal, alan verme.", "Dengeli hat.", "Rakibi sıkıştır; hızlı forvetlere açık.")
-                        InstrRow("Savunma çizgisi", info[t.defLine], o[t.defLine], o) { GameRepo.setInstruction("defLine", it) }
+                        val o = listOf(L("Derin", "Deep"), L("Normal", "Normal"), L("Yüksek", "High"))
+                        val info = listOf(L("Geride kal, alan verme.", "Sit deep, give no space."), L("Dengeli hat.", "Balanced line."), L("Rakibi sıkıştır; hızlı forvetlere açık.", "Squeeze the opponent; vulnerable to quick forwards."))
+                        InstrRow(L("Savunma çizgisi", "Defensive line"), info[t.defLine], o[t.defLine], o) { GameRepo.setInstruction("defLine", it) }
                     }
                     item {
-                        InstrRow("Ofsayt tuzağı", "Atakları keser ama bozulursa tehlikeli.", yesNo[if (t.offsideTrap) 1 else 0], yesNo) { GameRepo.setInstruction("offside", it) }
+                        InstrRow(L("Ofsayt tuzağı", "Offside trap"), L("Atakları keser ama bozulursa tehlikeli.", "Cuts out attacks, but dangerous if it breaks down."), yesNo[if (t.offsideTrap) 1 else 0], yesNo) { GameRepo.setInstruction("offside", it) }
                     }
                     item {
-                        InstrRow("Zaman geçirme", "70'den sonra öndeyken oyunu yavaşlatır.", yesNo[if (t.timeWasting) 1 else 0], yesNo) { GameRepo.setInstruction("timewaste", it) }
+                        InstrRow(L("Zaman geçirme", "Time wasting"), L("70'den sonra öndeyken oyunu yavaşlatır.", "Slows the game down when leading after 70 minutes."), yesNo[if (t.timeWasting) 1 else 0], yesNo) { GameRepo.setInstruction("timewaste", it) }
                     }
                 }
                 else -> dutiesItems(g)
@@ -763,7 +763,7 @@ private fun RolesPanel(g: Game) {
     val slots = Formations.slots(t.formation)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
         item {
-            Text("⭐ oyuncunun doğal rolü: o rolde %3 daha verimli oynar. Ayrıntı ve markaj için oyuncuya dokun.", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+            Text(L("⭐ oyuncunun doğal rolü: o rolde %3 daha verimli oynar. Ayrıntı ve markaj için oyuncuya dokun.", "⭐ the player's natural role: he plays 3% better in that role. Tap a player for details and marking."), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
         }
         items(slots.size) { i ->
             val p = g.player(t.lineup.getOrNull(i) ?: -1)
@@ -776,8 +776,8 @@ private fun RolesPanel(g: Game) {
                     Box(Modifier.width(4.dp).height(20.dp).background(posColor(slots[i].pos)))
                     Spacer(Modifier.width(8.dp))
                     Text(d.code, color = posColor(slots[i].pos), fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.width(48.dp))
-                    Text(p?.name ?: "Boş", fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    if (t.marking.getOrNull(i) == 1) Text("🎯 Adam adama", color = Gold, fontSize = 11.sp)
+                    Text(p?.name ?: L("Boş", "Empty"), fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (t.marking.getOrNull(i) == 1) Text(L("🎯 Adam adama", "🎯 Man-marking"), color = Gold, fontSize = 11.sp)
                 }
                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(roles[cur].info, color = TextMain.copy(alpha = 0.85f), fontSize = 12.sp, modifier = Modifier.weight(1f).padding(end = 8.dp), maxLines = 3)
@@ -808,8 +808,8 @@ fun TacticWizard(g: Game, onClose: () -> Unit) {
                 .background(Brush.verticalGradient(listOf(CardTop, CardBottom))).border(1.dp, CardLine, RoundedCornerShape(16.dp)).padding(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Taktik Oluştur", fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = Modifier.weight(1f))
-                Text("★ Kadrona önerilen tarz", color = Teal, fontSize = 12.sp)
+                Text(L("Taktik Oluştur", "Build Tactic"), fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = Modifier.weight(1f))
+                Text(L("★ Kadrona önerilen tarz", "★ Recommended style for your squad"), color = Teal, fontSize = 12.sp)
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.weight(1f)) {
@@ -846,7 +846,7 @@ fun TacticWizard(g: Game, onClose: () -> Unit) {
                     pros.forEach { Text("✅ $it", fontSize = 13.sp, modifier = Modifier.padding(vertical = 2.dp)) }
                     cons.forEach { Text("⛔ $it", fontSize = 13.sp, color = Color(0xFFFFB4A8), modifier = Modifier.padding(vertical = 2.dp)) }
                     Spacer(Modifier.height(10.dp))
-                    Text("ÖNERİLEN DİZİLİŞLER", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(L("ÖNERİLEN DİZİLİŞLER", "RECOMMENDED FORMATIONS"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         sel.formations.forEach { f ->
@@ -871,11 +871,11 @@ fun TacticWizard(g: Game, onClose: () -> Unit) {
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    val m = listOf("Defansif", "Dengeli", "Hücum")[sel.mentality]
-                    val lvl = listOf("Düşük", "Orta", "Yüksek")
+                    val m = listOf(L("Defansif", "Defensive"), L("Dengeli", "Balanced"), L("Hücum", "Attack"))[sel.mentality]
+                    val lvl = listOf(L("Düşük", "Low"), L("Orta", "Medium"), L("Yüksek", "High"))
                     Text(
-                        "Ayarlar: $m · Tempo ${lvl[sel.tempo]} · Genişlik ${lvl[sel.width]} · Pres ${lvl[sel.pressing]} · Savunma hattı ${lvl[sel.defLine]}" +
-                            if (sel.counter) " · Kontra atak" else "",
+                        L("Ayarlar: $m · Tempo ${lvl[sel.tempo]} · Genişlik ${lvl[sel.width]} · Pres ${lvl[sel.pressing]} · Savunma hattı ${lvl[sel.defLine]}", "Settings: $m · Tempo ${lvl[sel.tempo]} · Width ${lvl[sel.width]} · Pressing ${lvl[sel.pressing]} · Defensive line ${lvl[sel.defLine]}") +
+                            if (sel.counter) L(" · Kontra atak", " · Counter-attack") else "",
                         color = TextDim, fontSize = 12.sp,
                     )
                 }
@@ -886,12 +886,12 @@ fun TacticWizard(g: Game, onClose: () -> Unit) {
                     Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452)).border(1.dp, CardLine, RoundedCornerShape(10.dp))
                         .clickable(onClick = onClose),
                     contentAlignment = Alignment.Center,
-                ) { Text("İptal", fontWeight = FontWeight.Bold) }
+                ) { Text(L("İptal", "Cancel"), fontWeight = FontWeight.Bold) }
                 Box(
                     Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(10.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple)))
                         .clickable { S.apply(g, sel, formation); onClose() },
                     contentAlignment = Alignment.Center,
-                ) { Text("Taktiği Onayla", fontWeight = FontWeight.Black) }
+                ) { Text(L("Taktiği Onayla", "Confirm Tactic"), fontWeight = FontWeight.Black) }
             }
         }
     }
@@ -914,10 +914,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dutiesItems(g: Game) 
     val fk = Roles.freeKickTaker(g, t, xi)
     val cor = Roles.cornerTaker(g, t, xi)
     item {
-        Text("DURAN TOP KULLANICILARI", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+        Text(L("DURAN TOP KULLANICILARI", "SET-PIECE TAKERS"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Oyuncu", color = TextDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
-            listOf("Penaltı", "Frikik", "Korner").forEach { Text(it, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center) }
+            Text(L("Oyuncu", "Player"), color = TextDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            listOf(L("Penaltı", "Penalty"), L("Frikik", "Free kick"), L("Korner", "Corners")).forEach { Text(it, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center) }
         }
     }
     items(xi.size) { i ->
@@ -943,11 +943,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dutiesItems(g: Game) 
         }
     }
     item {
-        Text("Bir yıldız kutusuna dokunarak o görevi ver. Sarı kutu: şu anki kullanıcı.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(L("Bir yıldız kutusuna dokunarak o görevi ver. Sarı kutu: şu anki kullanıcı.", "Tap a star box to give that duty. Yellow box: current taker."), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(12.dp))
-        Text("KAPTANLAR", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(L("KAPTANLAR", "CAPTAINS"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Oyuncu", color = TextDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            Text(L("Oyuncu", "Player"), color = TextDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
             listOf("Durum" to 64, "Grup" to 64, "Yaş" to 34, "Lid" to 34, "" to 76).forEach { (h, w) ->
                 Text(h, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(w.dp), textAlign = TextAlign.Center)
             }
@@ -959,7 +959,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dutiesItems(g: Game) 
     val squad = g.squad(t.id).filter { !it.reserve }.sortedByDescending { leadership(it) * 10 + it.overall / 10 }
     items(squad.size) { i ->
         val p = squad[i]
-        val tier = when { tiers[0]?.contains(p) == true -> "Lider"; tiers[1]?.contains(p) == true -> "Etkili"; else -> "Normal" }
+        val tier = when { tiers[0]?.contains(p) == true -> L("Lider", "Leader"); tiers[1]?.contains(p) == true -> L("Etkili", "Influential"); else -> L("Normal", "Normal") }
         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(p.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), fontWeight = if (p.id == cap?.id || p.id == vice?.id) FontWeight.Black else FontWeight.Normal)
             Text(tier, fontSize = 11.sp, color = if (tier == "Lider") Gold else TextMain, modifier = Modifier.width(64.dp), textAlign = TextAlign.Center)
@@ -982,10 +982,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dutiesItems(g: Game) 
 
 /** Rolün önemli özellikleri (rol katsayılarından). */
 private fun keyAttrs(r: Roles.Role, pos: com.supermenajer.game.model.Pos): String {
-    if (pos == com.supermenajer.game.model.Pos.GK) return if (r.mid > 0) "Refleks / Ayakla oyun / Bire bir / Pas" else "Refleks / Bire bir / Hava hakimiyeti / İletişim"
+    if (pos == com.supermenajer.game.model.Pos.GK) return if (r.mid > 0) L("Refleks / Ayakla oyun / Bire bir / Pas", "Reflexes / Distribution / One-on-ones / Passing") else L("Refleks / Bire bir / Hava hakimiyeti / İletişim", "Reflexes / One-on-ones / Aerial ability / Communication")
     val list = listOf(
-        r.atk to "Hareketlenme / Hız", r.mid to "Pas / Karar alma", r.def to "Top kapma / Markaj / Pozisyon alma",
-        r.shot - 1.0 to "Bitiricilik / Soğukkanlılık", r.assist - 1.0 to "Yaratıcılık / Orta yapma", r.header - 1.0 to "Kafa / Güç",
+        r.atk to L("Hareketlenme / Hız", "Movement / Pace"), r.mid to L("Pas / Karar alma", "Passing / Decisions"), r.def to L("Top kapma / Markaj / Pozisyon alma", "Tackling / Marking / Positioning"),
+        r.shot - 1.0 to L("Bitiricilik / Soğukkanlılık", "Finishing / Composure"), r.assist - 1.0 to L("Yaratıcılık / Orta yapma", "Creativity / Crossing"), r.header - 1.0 to L("Kafa / Güç", "Heading / Strength"),
     )
     return list.sortedByDescending { it.first }.take(3).joinToString(" / ") { it.second }
 }
@@ -1012,8 +1012,8 @@ private fun RoleDialog(g: Game, slot: Int, onClose: () -> Unit) {
             }
             Column(Modifier.padding(14.dp)) {
                 Row {
-                    Text("Bu oyuncuyu görevlendirmek istediğin taktiksel role dokun", fontSize = 13.sp, modifier = Modifier.weight(1f))
-                    Text("★ Önerilen rol", color = Teal, fontSize = 12.sp)
+                    Text(L("Bu oyuncuyu görevlendirmek istediğin taktiksel role dokun", "Tap the tactical role you want to give this player"), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(L("★ Önerilen rol", "★ Recommended role"), color = Teal, fontSize = 12.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 roles.indices.chunked(2).forEach { pair ->
@@ -1041,8 +1041,8 @@ private fun RoleDialog(g: Game, slot: Int, onClose: () -> Unit) {
                 if (s.pos == com.supermenajer.game.model.Pos.DF || s.pos == com.supermenajer.game.model.Pos.MF) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Markaj:", fontSize = 13.sp, modifier = Modifier.width(70.dp))
-                        listOf("Alan", "Oyuncu").forEachIndexed { k, l ->
+                        Text(L("Markaj:", "Marking:"), fontSize = 13.sp, modifier = Modifier.width(70.dp))
+                        listOf(L("Alan", "Zonal"), L("Oyuncu", "Player")).forEachIndexed { k, l ->
                             Box(
                                 Modifier.weight(1f).height(32.dp).background(if (marking == k) Purple else Color.Transparent).clickable { marking = k },
                                 contentAlignment = Alignment.Center,
@@ -1050,21 +1050,21 @@ private fun RoleDialog(g: Game, slot: Int, onClose: () -> Unit) {
                         }
                     }
                     Text(
-                        if (marking == 0) "Alan savunması: oyuncu kendi bölgesini korur, dengeli oyun." else "Adam adama: en tehlikeli rakibi yakından takip eder; savunma güçlenir, oyun kurulumu biraz zayıflar.",
+                        if (marking == 0) L("Alan savunması: oyuncu kendi bölgesini korur, dengeli oyun.", "Zonal marking: the player guards his own zone, balanced play.") else L("Adam adama: en tehlikeli rakibi yakından takip eder; savunma güçlenir, oyun kurulumu biraz zayıflar.", "Man-marking: closely follows the most dangerous opponent; defence gets stronger, build-up a little weaker."),
                         color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp),
                     )
                 }
                 Spacer(Modifier.height(10.dp))
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028)).padding(10.dp)) {
                     Text(roles[sel].info, fontSize = 14.sp)
-                    Text("Önemli Özellikler: ${keyAttrs(roles[sel], s.pos)}", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text(L("Önemli Özellikler: ${keyAttrs(roles[sel], s.pos)}", "Key attributes: ${keyAttrs(roles[sel], s.pos)}"), color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 }
                 Spacer(Modifier.height(10.dp))
                 Box(
                     Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(8.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF7B4DFF), Purple)))
                         .clickable { GameRepo.setRole(slot, sel); GameRepo.setMarking(slot, marking); onClose() },
                     contentAlignment = Alignment.Center,
-                ) { Text("Onayla", fontWeight = FontWeight.Black) }
+                ) { Text(L("Onayla", "Confirm"), fontWeight = FontWeight.Black) }
             }
         }
     }

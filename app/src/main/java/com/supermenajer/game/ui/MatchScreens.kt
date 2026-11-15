@@ -95,10 +95,10 @@ import kotlin.math.roundToInt
 /** Hız modları: dakika süresi, gerilim süresi, önemli olay sonrası bekleme (ms). */
 private class Pace(val label: String, val minute: Long, val suspense: Long, val pause: Long, val scale: Float)
 
-private val paces = listOf(
+private val paces get() = listOf(
     Pace("▶ 1x", 650, 1500, 900, 1.0f),
     Pace("⏩ 3x", 220, 750, 350, 1.5f),
-    Pace("⚡ Özet", 60, 1400, 900, 1.9f),
+    Pace(L("⚡ Özet", "⚡ Summary"), 60, 1400, 900, 1.9f),
 )
 
 /** CM tarzı büyük anlatım satırı. kind: 0 normal, 1 gerilim, 2 gol */
@@ -236,7 +236,7 @@ fun MatchScreen() {
                     )
                     // Kamera seçimi: TV (2,5D) ↔ üstten 2D
                     Text(
-                        if (Fx.tvView) "🗺️ 2D" else "📺 TV",
+                        if (Fx.tvView) "🗺️ 2D" else L("📺 TV", "📺 TV"),
                         color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(10.dp))
                             .background(Color.Black.copy(alpha = 0.55f)).pressClick { Fx.changeTvView(!Fx.tvView) }
@@ -274,7 +274,7 @@ fun MatchScreen() {
                     }
                     // Devre arası ve maç sonu: sahanın ortasında SM tarzı kart
                     if (sim.minute == 45 && !running && !sim.finished) {
-                        OverlayCard("DEVRE ARASI · SOYUNMA ODASI", "$scoreH - $scoreA", halfResult?.message ?: "Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.") {
+                        OverlayCard(L("DEVRE ARASI · SOYUNMA ODASI", "HALF TIME · DRESSING ROOM"), "$scoreH - $scoreA", halfResult?.message ?: L("Takıma ne söyleyeceksin? Değişiklik ve taktik de yapabilirsin.", "What will you tell the team? You can also make changes and adjust tactics.")) {
                             halfResult?.let { r -> Text(r.reactions.joinToString(" · "), color = TextDim, fontSize = 12.sp, textAlign = TextAlign.Center) }
                             QuickStats(sim, homeC, awayC, compact = true)
                             if (!sim.talkDone && sim.userSide != null && !sim.twoPlayer) {
@@ -285,12 +285,12 @@ fun MatchScreen() {
                                 }
                             }
                             Spacer(Modifier.height(8.dp))
-                            SmActionButton("2. YARI  ▶", Modifier.fillMaxWidth()) { running = true }
+                            SmActionButton(L("2. YARI  ▶", "2ND HALF  ▶"), Modifier.fillMaxWidth()) { running = true }
                         }
                     } else if (sim.finished && shown >= sim.events.size) {
-                        OverlayCard("MAÇ BİTTİ", "$scoreH - $scoreA" + if (sim.penHome >= 0) "  (P ${sim.penHome}-${sim.penAway})" else "", null) {
+                        OverlayCard(L("MAÇ BİTTİ", "FULL TIME"), "$scoreH - $scoreA" + if (sim.penHome >= 0) "  (P ${sim.penHome}-${sim.penAway})" else "", null) {
                             QuickStats(sim, homeC, awayC)
-                            SmActionButton("🚪 SOYUNMA ODASI  ▶", Modifier.fillMaxWidth()) { GameRepo.finishMatchAsync() }
+                            SmActionButton(L("🚪 SOYUNMA ODASI  ▶", "🚪 DRESSING ROOM  ▶"), Modifier.fillMaxWidth()) { GameRepo.finishMatchAsync() }
                         }
                     }
                 }
@@ -300,7 +300,7 @@ fun MatchScreen() {
                 Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp))
                     .background(Brush.verticalGradient(listOf(CardTop, CardBottom))).border(1.dp, CardLine, RoundedCornerShape(14.dp)),
             ) {
-                SmTabBar(listOf("Olaylar", "İstatistik", "Oyuncular"), tab, Modifier.padding(horizontal = 4.dp), small = true) { tab = it }
+                SmTabBar(listOf(L("Olaylar", "Events"), L("İstatistik", "Stats"), L("Oyuncular", "Players")), tab, Modifier.padding(horizontal = 4.dp), small = true) { tab = it }
                 Box(Modifier.weight(1f)) {
                     when (tab) {
                         0 -> Commentary(sim, homeC, awayC, shown)
@@ -327,14 +327,14 @@ fun MatchScreen() {
                     Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text("2. OYUNCU · ${sim.away.team.short}", fontWeight = FontWeight.Black, fontSize = 13.sp, color = awayC.let { if (it.luminance() < 0.15f) TextMain else it }, modifier = Modifier.width(150.dp))
-                    Segmented(listOf("Defans", "Denge", "Hücum"), sim.away.team.mentality, Modifier.weight(1f)) { sim.away.team.mentality = it; tick++ }
+                    Text(L("2. OYUNCU · ${sim.away.team.short}", "PLAYER 2 · ${sim.away.team.short}"), fontWeight = FontWeight.Black, fontSize = 13.sp, color = awayC.let { if (it.luminance() < 0.15f) TextMain else it }, modifier = Modifier.width(150.dp))
+                    Segmented(listOf(L("Defans", "Defend"), L("Denge", "Balanced"), L("Hücum", "Attack")), sim.away.team.mentality, Modifier.weight(1f)) { sim.away.team.mentality = it; tick++ }
                     Box(
                         Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
                             .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
                             .clickable { running = false; subSide = 1; showSubs = true }.padding(horizontal = 12.dp),
                         contentAlignment = Alignment.Center,
-                    ) { IconLabel("🔁 Değişiklik (${sim.away.subsLeft})", TextMain, 13.sp, iconTint = Teal) }
+                    ) { IconLabel(L("🔁 Değişiklik (${sim.away.subsLeft})", "🔁 Substitution (${sim.away.subsLeft})"), TextMain, 13.sp, iconTint = Teal) }
                 }
             }
         }
@@ -367,14 +367,14 @@ private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -
                 .border(1.5.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
                 .verticalScroll(rememberScrollState()).padding(18.dp),
         ) {
-            Text("🗣 Soyunma odası", fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Text(L("🗣 Soyunma odası", "🗣 Dressing room"), fontWeight = FontWeight.Black, fontSize = 20.sp)
             Text("${sim.home.team.name} - ${sim.away.team.name}", color = TextDim, fontSize = 13.sp)
             Spacer(Modifier.height(8.dp))
             Text(Talks.contextText(sim), color = Gold, fontSize = 13.sp)
-            Text("Yardımcı antrenör: ${StaffLogic.of(sim.game, StaffLogic.ASSISTANT)?.name ?: "-"} (${StaffLogic.q(sim.game, StaffLogic.ASSISTANT)}/20)", color = TextDim, fontSize = 12.sp)
+            Text(L("Yardımcı antrenör: ${StaffLogic.of(sim.game, StaffLogic.ASSISTANT)?.name ?: "-"} (${StaffLogic.q(sim.game, StaffLogic.ASSISTANT)}/20)", "Assistant manager: ${StaffLogic.of(sim.game, StaffLogic.ASSISTANT)?.name ?: "-"} (${StaffLogic.q(sim.game, StaffLogic.ASSISTANT)}/20)"), color = TextDim, fontSize = 12.sp)
             Spacer(Modifier.height(12.dp))
             if (result == null) {
-                Text("Maçtan önce takıma ne söyleyeceksin?", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(L("Maçtan önce takıma ne söyleyeceksin?", "What will you tell the team before the match?"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(6.dp))
                 Talks.preOptions.withIndex().chunked(2).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -386,13 +386,13 @@ private fun PreMatchDialog(sim: MatchSim, result: Talks.Result?, onTalk: (Int) -
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                TextButton(onClick = onStart) { Text("Konuşmadan maça başla", color = TextDim) }
+                TextButton(onClick = onStart) { Text(L("Konuşmadan maça başla", "Start the match without a talk"), color = TextDim) }
             } else {
                 Text(result.message, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(Modifier.height(6.dp))
                 result.reactions.forEach { Text("• $it", fontSize = 13.sp, color = TextDim) }
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = onStart, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("MAÇA BAŞLA ▶", fontWeight = FontWeight.Bold) }
+                Button(onClick = onStart, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(L("MAÇA BAŞLA ▶", "KICK OFF ▶"), fontWeight = FontWeight.Bold) }
             }
         }
     }
@@ -441,7 +441,7 @@ private fun ScoreBoard(sim: MatchSim, hg: Int = sim.home.goals, ag: Int = sim.aw
     Column(Modifier.fillMaxWidth().background(Surface1).padding(horizontal = 12.dp, vertical = 6.dp)) {
         val f = sim.fixture
         Text(
-            (Talks.derbyName(sim.game, f)?.let { "🔥 ${it.uppercase()} · " } ?: "") + if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else "${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA",
+            (Talks.derbyName(sim.game, f)?.let { "🔥 ${it.uppercase()} · " } ?: "") + if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp).uppercase()} · ${Comp.roundName(f.comp, f.round).uppercase()}" else L("${Comp.name(f.comp).uppercase()} · ${sim.game.leagueWeekAt(f.week)}. HAFTA", "${Comp.name(f.comp).uppercase()} · MATCHDAY ${sim.game.leagueWeekAt(f.week)}"),
             color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
         )
@@ -454,7 +454,7 @@ private fun ScoreBoard(sim: MatchSim, hg: Int = sim.home.goals, ag: Int = sim.aw
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
                 Text("$hg - $ag", fontSize = 26.sp, fontWeight = FontWeight.Black)
                 Text(if (sim.finished && revealedAll) "MS" else "${sim.minute}'", color = Green, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                if (sim.penHome >= 0 && revealedAll) Text("Pen. ${sim.penHome}-${sim.penAway}", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                if (sim.penHome >= 0 && revealedAll) Text(L("Pen. ${sim.penHome}-${sim.penAway}", "Pen. ${sim.penHome}-${sim.penAway}"), color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
                 Text(sim.away.team.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
@@ -481,7 +481,7 @@ private fun LiveStrip(sim: MatchSim, homeC: Color, awayC: Color) {
         }
         Text("${100 - (hp * 100).roundToInt()}%", fontSize = 11.sp, color = TextDim, modifier = Modifier.width(34.dp), textAlign = TextAlign.End)
         Spacer(Modifier.width(8.dp))
-        Text("Şut ${h.shots}-${a.shots}", fontSize = 11.sp, color = TextDim)
+        Text(L("Şut ${h.shots}-${a.shots}", "Shots ${h.shots}-${a.shots}"), fontSize = 11.sp, color = TextDim)
     }
 }
 
@@ -529,14 +529,14 @@ fun Stats(sim: MatchSim) {
     val a = sim.away
     val totalPoss = (h.poss + a.poss).coerceAtLeast(1)
     val rows = listOf(
-        Triple("Topa sahip olma", "${(h.poss * 100f / totalPoss).roundToInt()}%", "${100 - (h.poss * 100f / totalPoss).roundToInt()}%") to (h.poss.toFloat() / totalPoss),
-        Triple("Şut", "${h.shots}", "${a.shots}") to ratio(h.shots, a.shots),
-        Triple("İsabetli şut", "${h.onTarget}", "${a.onTarget}") to ratio(h.onTarget, a.onTarget),
-        Triple("Gol beklentisi (xG)", "%.2f".format(h.xg), "%.2f".format(a.xg)) to ratioD(h.xg, a.xg),
-        Triple("Korner", "${h.corners}", "${a.corners}") to ratio(h.corners, a.corners),
-        Triple("Faul", "${h.fouls}", "${a.fouls}") to ratio(h.fouls, a.fouls),
-        Triple("Sarı kart", "${h.yellows}", "${a.yellows}") to ratio(h.yellows, a.yellows),
-        Triple("Kırmızı kart", "${h.reds}", "${a.reds}") to ratio(h.reds, a.reds),
+        Triple(L("Topa sahip olma", "Possession"), "${(h.poss * 100f / totalPoss).roundToInt()}%", "${100 - (h.poss * 100f / totalPoss).roundToInt()}%") to (h.poss.toFloat() / totalPoss),
+        Triple(L("Şut", "Shooting"), "${h.shots}", "${a.shots}") to ratio(h.shots, a.shots),
+        Triple(L("İsabetli şut", "Shots on target"), "${h.onTarget}", "${a.onTarget}") to ratio(h.onTarget, a.onTarget),
+        Triple(L("Gol beklentisi (xG)", "Expected goals (xG)"), "%.2f".format(h.xg), "%.2f".format(a.xg)) to ratioD(h.xg, a.xg),
+        Triple(L("Korner", "Corners"), "${h.corners}", "${a.corners}") to ratio(h.corners, a.corners),
+        Triple(L("Faul", "Fouls"), "${h.fouls}", "${a.fouls}") to ratio(h.fouls, a.fouls),
+        Triple(L("Sarı kart", "Yellow cards"), "${h.yellows}", "${a.yellows}") to ratio(h.yellows, a.yellows),
+        Triple(L("Kırmızı kart", "Red cards"), "${h.reds}", "${a.reds}") to ratio(h.reds, a.reds),
     )
     Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         rows.forEach { (t, frac) ->
@@ -606,20 +606,20 @@ private fun SubDialog(sim: MatchSim, side: Side, onClose: () -> Unit) {
             Modifier.fillMaxWidth().heightIn(max = 620.dp).clip(RoundedCornerShape(18.dp)).background(Surface1)
                 .verticalScroll(rememberScrollState()).padding(16.dp),
         ) {
-            Text("Oyuncu Değişikliği", fontWeight = FontWeight.Black, fontSize = 20.sp)
-            Text("Kalan hak: ${side.subsLeft}", color = TextDim, fontSize = 13.sp)
+            Text(L("Oyuncu Değişikliği", "Substitution"), fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Text(L("Kalan hak: ${side.subsLeft}", "Remaining: ${side.subsLeft}"), color = TextDim, fontSize = 13.sp)
             Spacer(Modifier.height(10.dp))
             val o = out
             if (side.subsLeft <= 0 || sim.finished) {
-                Text("Değişiklik hakkın kalmadı.", color = Gold)
+                Text(L("Değişiklik hakkın kalmadı.", "No substitutions left."), color = Gold)
             } else if (o == null) {
-                Text("ÇIKACAK OYUNCU", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(L("ÇIKACAK OYUNCU", "PLAYER COMING OFF"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 side.onPitch.forEach { m -> PimRow(m, true) { out = m } }
             } else {
-                Text("${o.p.name} yerine girecek oyuncu (${o.slot.pos.label}):", color = Gold, fontSize = 13.sp)
+                Text(L("${o.p.name} yerine girecek oyuncu (${o.slot.pos.label}):", "Player replacing ${o.p.name} (${o.slot.pos.label}):"), color = Gold, fontSize = 13.sp)
                 Spacer(Modifier.height(6.dp))
                 val bench = side.bench.sortedWith(compareByDescending<Player> { it.pos == o.slot.pos || com.supermenajer.game.game.Positions.canPlay(it, com.supermenajer.game.game.Positions.slotDet(o.slot)) }.thenByDescending { com.supermenajer.game.game.Positions.rating(it, o.slot) })
-                if (bench.isEmpty()) Text("Yedek oyuncu kalmadı.", color = TextDim)
+                if (bench.isEmpty()) Text(L("Yedek oyuncu kalmadı.", "No substitutes left."), color = TextDim)
                 bench.forEach { p ->
                     Row(
                         Modifier.fillMaxWidth().clickable {
@@ -630,14 +630,14 @@ private fun SubDialog(sim: MatchSim, side: Side, onClose: () -> Unit) {
                         DetChip(p)
                         Spacer(Modifier.width(8.dp))
                         Text(p.name, modifier = Modifier.weight(1f), fontSize = 14.sp)
-                        Text("Bu mevkide ", color = TextDim, fontSize = 12.sp)
+                        Text(L("Bu mevkide ", "In this position "), color = TextDim, fontSize = 12.sp)
                         OvrBadge(com.supermenajer.game.game.Positions.rating(p, o.slot), 30.dp)
                     }
                 }
-                TextButton(onClick = { out = null }) { Text("← Geri") }
+                TextButton(onClick = { out = null }) { Text(L("← Geri", "← Back")) }
             }
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Tamam") }
+            Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(L("Tamam", "OK")) }
         }
     }
 }
@@ -663,13 +663,13 @@ fun SummaryScreen() {
                 com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
                     item {
                         val us = sim.home.team.id == g.userTeamId
-                        val income = if (us) " · Bilet geliri ${com.supermenajer.game.game.money(com.supermenajer.game.game.Facilities.ticketIncome(g, sim.fixture))}" else ""
+                        val income = if (us) L(" · Bilet geliri ${com.supermenajer.game.game.money(com.supermenajer.game.game.Facilities.ticketIncome(g, sim.fixture))}", " · Ticket income ${com.supermenajer.game.game.money(com.supermenajer.game.game.Facilities.ticketIncome(g, sim.fixture))}") else ""
                         Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
                     }
                 }
                 sim.userSide?.let { us ->
                     item {
-                        DashCard("Oyuncu Puanları", Modifier.fillMaxWidth()) {
+                        DashCard(L("Oyuncu Puanları", "Player Ratings"), Modifier.fillMaxWidth()) {
                             us.used.sortedByDescending { it.rating }.forEach { PimRow(it, onPitch = true) }
                         }
                     }
@@ -677,10 +677,10 @@ fun SummaryScreen() {
             }
             LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
-                    DashCard("Maç İstatistikleri", Modifier.fillMaxWidth()) { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
+                    DashCard(L("Maç İstatistikleri", "Match Stats"), Modifier.fillMaxWidth()) { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
                 }
                 if (sim.nat == null && !sim.twoPlayer) item {
-                    DashCard("Diğer Sonuçlar · ${Comp.name(sim.fixture.comp)}", Modifier.fillMaxWidth()) {
+                    DashCard(L("Diğer Sonuçlar · ${Comp.name(sim.fixture.comp)}", "Other Results · ${Comp.name(sim.fixture.comp)}"), Modifier.fillMaxWidth()) {
                         g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->
                             if (i > 0) HorizontalDivider(color = CardLine)
                             ResultRow(g, f)
@@ -690,7 +690,7 @@ fun SummaryScreen() {
             }
         }
         Box(Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 6.dp)) {
-            SmActionButton("DEVAM  ▶", Modifier.fillMaxWidth()) { GameRepo.closeSummary() }
+            SmActionButton(L("DEVAM  ▶", "CONTINUE  ▶"), Modifier.fillMaxWidth()) { GameRepo.closeSummary() }
         }
     }
 }
@@ -698,10 +698,10 @@ fun SummaryScreen() {
 @Composable
 private fun PostTalkCard(sim: MatchSim) {
     var result by remember { mutableStateOf<Talks.Result?>(null) }
-    DashCard("🗣 Maç Sonu Konuşması", Modifier.fillMaxWidth()) {
+    DashCard(L("🗣 Maç Sonu Konuşması", "🗣 Post-match Talk"), Modifier.fillMaxWidth()) {
         val r = result
         if (r == null && !sim.talksDone[Talks.POST]) {
-            Text("Soyunma odasında oyunculara ne diyeceksin?", fontSize = 13.sp, color = TextDim)
+            Text(L("Soyunma odasında oyunculara ne diyeceksin?", "What will you say to the players in the dressing room?"), fontSize = 13.sp, color = TextDim)
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Talks.postOptions.forEachIndexed { i, o -> Chip(o, false, Modifier.weight(1f)) { result = Talks.talk(sim, Talks.POST, i); GameRepo.bump() } }
@@ -710,7 +710,7 @@ private fun PostTalkCard(sim: MatchSim) {
             Text(r.message, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             r.reactions.forEach { Text("• $it", fontSize = 12.sp, color = TextDim) }
         } else {
-            Text("Konuşma yapıldı.", color = TextDim, fontSize = 13.sp)
+            Text(L("Konuşma yapıldı.", "Talk given."), color = TextDim, fontSize = 13.sp)
         }
     }
 }
@@ -754,11 +754,11 @@ private fun GoalCard(sim: MatchSim, e: MatchEvent, c: Color) {
         }
         Column(Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
             Text(
-                (pim?.p?.number?.takeIf { it > 0 }?.let { "$it " } ?: "") + (pim?.p?.name ?: "GOL!"),
+                (pim?.p?.number?.takeIf { it > 0 }?.let { "$it " } ?: "") + (pim?.p?.name ?: L("GOL!", "GOAL!")),
                 color = Color(0xFF1A1A2E), fontWeight = FontWeight.Black, fontSize = 17.sp,
             )
             val n = (pim?.p?.goals ?: 0) + (pim?.goals ?: 0)
-            Text(if (pim != null) "Sezonun $n. golü" else "", color = Color(0xFF5A5A70), fontSize = 13.sp)
+            Text(if (pim != null) L("Sezonun $n. golü", "Goal no. $n of the season") else "", color = Color(0xFF5A5A70), fontSize = 13.sp)
         }
     }
 }
@@ -779,7 +779,7 @@ private fun ScorersStrip(sim: MatchSim, motm: PIM?) {
         }
         if (motm != null) {
             Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Text("⭐ Maçın oyuncusu: ", color = TextDim, fontSize = 12.sp)
+                Text(L("⭐ Maçın oyuncusu: ", "⭐ Player of the match: "), color = TextDim, fontSize = 12.sp)
                 Text(motm.p.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text("  %.1f".format(motm.rating), color = ratingColor(motm.rating), fontWeight = FontWeight.Black, fontSize = 13.sp)
             }
@@ -809,7 +809,7 @@ private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEven
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 10.dp)) {
                     Text(
                         sim.title ?: (Talks.derbyName(sim.game, f)?.let { "🔥 ${it.uppercase()} · " } ?: "") +
-                            if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}" else "${Comp.name(f.comp)} · ${sim.game.leagueWeekAt(f.week)}. hafta",
+                            if (Comp.isCup(f.comp) || f.comp == Comp.EURO) "${Comp.name(f.comp)} · ${Comp.roundName(f.comp, f.round)}" else L("${Comp.name(f.comp)} · ${sim.game.leagueWeekAt(f.week)}. hafta", "${Comp.name(f.comp)} · matchday ${sim.game.leagueWeekAt(f.week)}"),
                         color = TextDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -818,7 +818,7 @@ private fun SmScoreboard(sim: MatchSim, hg: Int, ag: Int, events: List<MatchEven
                             Modifier.padding(horizontal = 6.dp).clip(RoundedCornerShape(8.dp)).background(Teal).padding(horizontal = 8.dp, vertical = 3.dp),
                         ) {
                             Text(
-                                if (sim.finished && revealedAll) "MS" else if (sim.minute == 45 && !sim.finished) "İY" else "${sim.minute}'",
+                                if (sim.finished && revealedAll) "MS" else if (sim.minute == 45 && !sim.finished) L("İY", "HT") else "${sim.minute}'",
                                 color = Color(0xFF06231A), fontWeight = FontWeight.Black, fontSize = 14.sp,
                             )
                         }
@@ -944,7 +944,7 @@ private fun MatchControls(
         Segmented(listOf("1x", "3x", "⚡"), speed, Modifier.width(150.dp), onSpeed)
         val us = sim.userSide
         if (us != null) {
-            Segmented(listOf("Defans", "Denge", "Hücum"), us.team.mentality, Modifier.weight(1f), onMentality)
+            Segmented(listOf(L("Defans", "Defend"), L("Denge", "Balanced"), L("Hücum", "Attack")), us.team.mentality, Modifier.weight(1f), onMentality)
             var open by remember { mutableStateOf(false) }
             Box {
                 Box(
@@ -953,10 +953,10 @@ private fun MatchControls(
                         .clickable(enabled = sim.canShout) { open = true }.padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    IconLabel(if (sim.canShout) "📣 Bağır" else "📣 ${10 - (sim.minute - sim.lastShout)}'", if (sim.canShout) Gold else TextDim, 13.sp)
+                    IconLabel(if (sim.canShout) L("📣 Bağır", "📣 Shout") else "📣 ${10 - (sim.minute - sim.lastShout)}'", if (sim.canShout) Gold else TextDim, 13.sp)
                 }
                 androidx.compose.material3.DropdownMenu(open, onDismissRequest = { open = false }, modifier = Modifier.background(Color(0xFF141A36))) {
-                    listOf("📣 Coş", "😠 Bas!", "🎯 Odaklan", "🧘 Sakin ol").forEachIndexed { i, s ->
+                    listOf(L("📣 Coş", "📣 Fire up"), L("😠 Bas!", "😠 Push!"), L("🎯 Odaklan", "🎯 Focus"), L("🧘 Sakin ol", "🧘 Calm down")).forEachIndexed { i, s ->
                         androidx.compose.material3.DropdownMenuItem(text = { Text(s) }, onClick = { open = false; onShout(i) })
                     }
                 }
@@ -965,12 +965,12 @@ private fun MatchControls(
                 Modifier.height(40.dp).pressClick(0.95f, onClick = onTactics).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
                     .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { IconLabel("📋 Taktik", TextMain, 13.sp, iconTint = Teal) }
+            ) { IconLabel(L("📋 Taktik", "📋 Tactics"), TextMain, 13.sp, iconTint = Teal) }
             Box(
                 Modifier.height(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF1B2452))
                     .border(1.dp, Teal.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable(onClick = onSubs).padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { IconLabel("🔁 Değişiklik (${us.subsLeft})", TextMain, 13.sp, iconTint = Teal) }
+            ) { IconLabel(L("🔁 Değişiklik (${us.subsLeft})", "🔁 Substitution (${us.subsLeft})"), TextMain, 13.sp, iconTint = Teal) }
         } else {
             Spacer(Modifier.weight(1f))
         }
@@ -986,10 +986,10 @@ private fun QuickStats(sim: MatchSim, homeC: Color, awayC: Color, compact: Boole
     val tp = (h.poss + a.poss).coerceAtLeast(1)
     val hp = (h.poss * 100f / tp).roundToInt()
     val rows = listOf(
-        Triple("Topa sahip olma", "%$hp", "%${100 - hp}") to h.poss.toFloat() / tp,
-        Triple("Şut (isabetli)", "${h.shots} (${h.onTarget})", "${a.shots} (${a.onTarget})") to ratio(h.shots, a.shots),
-        Triple("Gol beklentisi", "%.1f".format(h.xg), "%.1f".format(a.xg)) to ratioD(h.xg, a.xg),
-        Triple("Korner", "${h.corners}", "${a.corners}") to ratio(h.corners, a.corners),
+        Triple(L("Topa sahip olma", "Possession"), "%$hp", "%${100 - hp}") to h.poss.toFloat() / tp,
+        Triple(L("Şut (isabetli)", "Shots (on target)"), "${h.shots} (${h.onTarget})", "${a.shots} (${a.onTarget})") to ratio(h.shots, a.shots),
+        Triple(L("Gol beklentisi", "Expected goals"), "%.1f".format(h.xg), "%.1f".format(a.xg)) to ratioD(h.xg, a.xg),
+        Triple(L("Korner", "Corners"), "${h.corners}", "${a.corners}") to ratio(h.corners, a.corners),
     )
     Column(Modifier.fillMaxWidth().padding(vertical = if (compact) 3.dp else 6.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 5.dp)) {
         for ((t, frac) in if (compact) rows.take(3) else rows) {
@@ -1026,14 +1026,14 @@ private fun MotmCard(sim: MatchSim, motm: PIM) {
         PlayerCard(motm.p, motm.p.overall, Positions.det(motm.p).code, 74.dp, c1, c2)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("⭐ MAÇIN OYUNCUSU", color = Gold, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 1.5.sp)
+            Text(L("⭐ MAÇIN OYUNCUSU", "⭐ PLAYER OF THE MATCH"), color = Gold, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 1.5.sp)
             Text(motm.p.name, fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(t?.name ?: "", color = TextDim, fontSize = 12.sp)
             Spacer(Modifier.height(4.dp))
             val bits = buildList {
-                if (motm.goals > 0) add("⚽ ${motm.goals} gol")
-                if (motm.assists > 0) add("🅰️ ${motm.assists} asist")
-                if (isEmpty()) add(if (motm.slot.pos == com.supermenajer.game.model.Pos.GK) "🧤 Kalesini kapattı" else "💪 Sahanın her yerindeydi")
+                if (motm.goals > 0) add(L("⚽ ${motm.goals} gol", "⚽ ${motm.goals} goals"))
+                if (motm.assists > 0) add(L("🅰️ ${motm.assists} asist", "🅰️ ${motm.assists} assists"))
+                if (isEmpty()) add(if (motm.slot.pos == com.supermenajer.game.model.Pos.GK) L("🧤 Kalesini kapattı", "🧤 Kept a clean sheet") else L("💪 Sahanın her yerindeydi", "💪 Was everywhere on the pitch"))
             }
             Text(bits.joinToString("  ·  "), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
@@ -1057,7 +1057,7 @@ internal fun AdviceBanner(tip: com.supermenajer.game.engine.MatchAdvice.Tip, mod
         Text("🧑‍💼", fontSize = 18.sp)
         Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f, fill = false)) {
-            Text("YARDIMCI ANTRENÖR", color = Gold, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp)
+            Text(L("YARDIMCI ANTRENÖR", "ASSISTANT MANAGER"), color = Gold, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp)
             Text(tip.text, fontSize = 12.sp, lineHeight = 15.sp)
         }
         Spacer(Modifier.width(8.dp))
@@ -1081,11 +1081,11 @@ internal fun MatchTacticsDialog(sim: MatchSim, us: com.supermenajer.game.engine.
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("📋 Maç İçi Taktik · ${sim.minute}'", fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text(L("📋 Maç İçi Taktik · ${sim.minute}'", "📋 In-match Tactics · ${sim.minute}'"), fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
                 Text("✕", fontSize = 18.sp, color = TextDim, modifier = Modifier.clip(CircleShape).clickable(onClick = onClose).padding(6.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Diziliş", color = TextDim, fontSize = 13.sp, modifier = Modifier.width(110.dp))
+                Text(L("Diziliş", "Formation"), color = TextDim, fontSize = 13.sp, modifier = Modifier.width(110.dp))
                 val forms = Formations.map.keys.toList()
                 SmDropdown(t.formation, forms, Modifier.weight(1f)) { i -> if (sim.changeFormation(us, forms[i])) v++ }
             }
@@ -1096,14 +1096,14 @@ internal fun MatchTacticsDialog(sim: MatchSim, us: com.supermenajer.game.engine.
                     Segmented(opts, sel, Modifier.weight(1f)) { set(it); v++ }
                 }
             }
-            row("Mentalite", listOf("Defans", "Denge", "Hücum"), t.mentality) { t.mentality = it }
-            row("Pres", listOf("Düşük", "Orta", "Yüksek"), t.pressing) { t.pressing = it }
-            row("Tempo", listOf("Yavaş", "Normal", "Hızlı"), t.tempo) { t.tempo = it }
-            row("Genişlik", listOf("Dar", "Normal", "Geniş"), t.width) { t.width = it }
-            row("Pas", listOf("Kısa", "Karışık", "Uzun"), t.passing) { t.passing = it }
-            row("Savunma hattı", listOf("Geride", "Normal", "Önde"), t.defLine) { t.defLine = it }
-            Text("Değişiklikler hemen maça yansır. Yüksek pres ve hızlı tempo oyuncuları daha çabuk yorar.", color = TextDim, fontSize = 11.sp)
-            SmActionButton("MAÇA DÖN  ▶", Modifier.fillMaxWidth(), onClose)
+            row(L("Mentalite", "Mentality"), listOf(L("Defans", "Defend"), L("Denge", "Balanced"), L("Hücum", "Attack")), t.mentality) { t.mentality = it }
+            row(L("Pres", "Pressing"), listOf(L("Düşük", "Low"), L("Orta", "Medium"), L("Yüksek", "High")), t.pressing) { t.pressing = it }
+            row(L("Tempo", "Tempo"), listOf(L("Yavaş", "Slow"), L("Normal", "Normal"), L("Hızlı", "Fast")), t.tempo) { t.tempo = it }
+            row(L("Genişlik", "Width"), listOf(L("Dar", "Narrow"), L("Normal", "Normal"), L("Geniş", "Wide")), t.width) { t.width = it }
+            row(L("Pas", "Passing"), listOf(L("Kısa", "Short"), L("Karışık", "Mixed"), L("Uzun", "Long")), t.passing) { t.passing = it }
+            row(L("Savunma hattı", "Defensive line"), listOf(L("Geride", "Deep"), L("Normal", "Normal"), L("Önde", "High")), t.defLine) { t.defLine = it }
+            Text(L("Değişiklikler hemen maça yansır. Yüksek pres ve hızlı tempo oyuncuları daha çabuk yorar.", "Changes take effect immediately. High pressing and a fast tempo tire players out sooner."), color = TextDim, fontSize = 11.sp)
+            SmActionButton(L("MAÇA DÖN  ▶", "BACK TO MATCH  ▶"), Modifier.fillMaxWidth(), onClose)
         }
     }
 }
@@ -1145,7 +1145,7 @@ internal fun androidx.compose.foundation.layout.BoxScope.TifoOverlay(home: com.s
     Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp).graphicsLayer { alpha = enter.value }, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("🔥 ${derby.uppercase()}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 2.sp)
         Text(
-            if (derby.endsWith("Derbisi")) "BU ŞEHİR BİZİM!" else "BU GECE BİZİM!", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp, letterSpacing = 3.sp,
+            if (derby.endsWith("Derbisi")) L("BU ŞEHİR BİZİM!", "THIS CITY IS OURS!") else L("BU GECE BİZİM!", "TONIGHT IS OURS!"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp, letterSpacing = 3.sp,
             style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black, androidx.compose.ui.geometry.Offset(0f, 4f), 10f)),
         )
     }

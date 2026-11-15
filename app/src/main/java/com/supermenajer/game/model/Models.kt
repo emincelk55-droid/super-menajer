@@ -1,5 +1,6 @@
 package com.supermenajer.game.model
 
+import com.supermenajer.game.game.L
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.math.pow
@@ -7,11 +8,14 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 @Serializable
-enum class Pos(val short: String, val label: String) {
-    GK("KL", "Kaleci"),
-    DF("DF", "Defans"),
-    MF("OS", "Orta Saha"),
-    FW("FV", "Forvet"),
+enum class Pos(private val shortTr: String, private val shortEn: String, private val labelTr: String, private val labelEn: String) {
+    GK("KL", "GK", "Kaleci", "Goalkeeper"),
+    DF("DF", "DF", "Defans", "Defence"),
+    MF("OS", "MF", "Orta Saha", "Midfield"),
+    FW("FV", "FW", "Forvet", "Forward");
+
+    val short: String get() = com.supermenajer.game.game.L(shortTr, shortEn)
+    val label: String get() = com.supermenajer.game.game.L(labelTr, labelEn)
 }
 
 @Serializable
@@ -233,15 +237,15 @@ object Comp {
     fun isLeague(c: Int) = c == SUPER || c == FIRST || c in 10..29
     fun isCup(c: Int) = c == CUP || c >= 30
     fun name(c: Int) = when {
-        c == EURO -> "Avrupa Kupası"
-        c == FRIENDLY -> "Hazırlık maçı"
-        c == NATIONAL -> "Milli Maç"
+        c == EURO -> L("Avrupa Kupası", "European Cup")
+        c == FRIENDLY -> L("Hazırlık maçı", "Friendly")
+        c == NATIONAL -> L("Milli Maç", "International")
         isCup(c) -> Leagues.cupName(c)
-        else -> Leagues.of(c)?.name ?: "Lig"
+        else -> Leagues.of(c)?.name ?: L("Lig", "League")
     }
-    val cupRounds = listOf("Son 32", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
+    val cupRounds get() = listOf(L("Son 32", "Round of 32"), L("Son 16", "Round of 16"), L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final"))
     /** 0-5 grup maçları, 6 son 16, 7 çeyrek final, 8 yarı final, 9 final */
-    val euroRounds = listOf("Grup 1. maç", "Grup 2. maç", "Grup 3. maç", "Grup 4. maç", "Grup 5. maç", "Grup 6. maç", "Son 16", "Çeyrek Final", "Yarı Final", "Final")
+    val euroRounds get() = listOf(L("Grup 1. maç", "Group matchday 1"), L("Grup 2. maç", "Group matchday 2"), L("Grup 3. maç", "Group matchday 3"), L("Grup 4. maç", "Group matchday 4"), L("Grup 5. maç", "Group matchday 5"), L("Grup 6. maç", "Group matchday 6"), L("Son 16", "Round of 16"), L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final"))
     const val EURO_KO = 6
     fun roundName(comp: Int, round: Int) = if (comp == EURO) euroRounds[round] else cupRounds[round]
 
@@ -296,7 +300,7 @@ object Inbox {
     const val MATCH = 1
     const val TRANSFER = 2
     const val CLUB = 3
-    val names = listOf("Tümü", "Maç", "Transfer", "Kulüp")
+    val names get() = listOf(L("Tümü", "All"), L("Maç", "Match"), L("Transfer", "Transfer"), L("Kulüp", "Club"))
     private val clubWords = listOf("sponsor", "inşaat", "taraftar", "yönetim", "bütçe", "teknik ekip", "altyapı", "güncelleme", "kovul", "kariyer", "görev", "stad", "yardımcı antrenör", "hoş geldin", "avrupa'dayız", "ödül", "tesis")
     private val transferWords = listOf("transfer", "satış", "teklif", "kiralık", "gözlemci", "sözleşme", "serbest", "jübile", "ayrıl")
     fun categorize(title: String): Int {
@@ -320,7 +324,7 @@ class SeasonRecord(
     val firstChampion: String = "",
     val userDivision: Int = 0,
     val euroWinner: String = "",
-    val leagueName: String = "Süper Lig",
+    val leagueName: String = L("Süper Lig", "Super League"),
     val awards: String = "",
 )
 
@@ -621,9 +625,9 @@ class Game(
     fun dayLabel(day: Int): String {
         val d = calendar.getOrNull(day - 1) ?: return ""
         return when (d.type) {
-            0 -> "${d.number}. Hafta"
-            1 -> "Kupa · ${Comp.cupRounds[d.number]}"
-            else -> "Avrupa · ${Comp.euroRounds[d.number]}"
+            0 -> L("${d.number}. Hafta", "Week ${d.number}")
+            1 -> L("Kupa · ${Comp.cupRounds[d.number]}", "Cup · ${Comp.cupRounds[d.number]}")
+            else -> L("Avrupa · ${Comp.euroRounds[d.number]}", "Europe · ${Comp.euroRounds[d.number]}")
         }
     }
 

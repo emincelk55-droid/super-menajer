@@ -58,15 +58,15 @@ import com.supermenajer.game.model.Leagues
 import com.supermenajer.game.model.Team
 
 /** Menajer uyrukları: bayrak kodu → ad. */
-private val nations = listOf(
-    "TR" to "Türk", "GB" to "İngiliz", "ES" to "İspanyol", "DE" to "Alman", "IT" to "İtalyan", "FR" to "Fransız",
-    "PT" to "Portekizli", "NL" to "Hollandalı", "BR" to "Brezilyalı", "AR" to "Arjantinli", "AZ" to "Azerbaycanlı", "US" to "Amerikalı",
+private val nations get() = listOf(
+    "TR" to L("Türk", "Turkish"), "GB" to L("İngiliz", "English"), "ES" to L("İspanyol", "Spanish"), "DE" to L("Alman", "German"), "IT" to L("İtalyan", "Italian"), "FR" to L("Fransız", "French"),
+    "PT" to L("Portekizli", "Portuguese"), "NL" to L("Hollandalı", "Dutch"), "BR" to L("Brezilyalı", "Brazilian"), "AR" to L("Arjantinli", "Argentine"), "AZ" to L("Azerbaycanlı", "Azerbaijani"), "US" to L("Amerikalı", "American"),
 )
 
-private val reps = listOf(
-    "Amatör" to "Hiç profesyonel deneyimin yok. Yönetim seni yakından izler.",
-    "Eski futbolcu" to "Futbol camiası seni tanıyor. Dengeli bir başlangıç.",
-    "Ünlü" to "Tanınmış bir isimsin. Yönetim sana daha fazla güvenir.",
+private val reps get() = listOf(
+    "Amatör" to L("Hiç profesyonel deneyimin yok. Yönetim seni yakından izler.", "You have no professional experience. The board will watch you closely."),
+    "Eski futbolcu" to L("Futbol camiası seni tanıyor. Dengeli bir başlangıç.", "The football world knows you. A balanced start."),
+    "Ünlü" to L("Tanınmış bir isimsin. Yönetim sana daha fazla güvenir.", "You're a well-known name. The board trusts you more."),
 )
 
 /** Kulübün mali durumu (bütçeye göre). */
@@ -120,7 +120,7 @@ fun NewGameScreen() {
     if (starting && w != null) {
         // Kurulum ekranı: FM'deki gibi kısa adımlar, sonra kariyer başlar
         var msg by remember { mutableIntStateOf(0) }
-        val msgs = listOf("Menajer ekleniyor", "Turnuvalar kuruluyor", "Fikstür çekiliyor", "Basın toplantısı hazırlanıyor")
+        val msgs = listOf(L("Menajer ekleniyor", "Adding manager"), L("Turnuvalar kuruluyor", "Setting up competitions"), L("Fikstür çekiliyor", "Drawing fixtures"), L("Basın toplantısı hazırlanıyor", "Preparing the press conference"))
         LaunchedEffect(Unit) {
             for (i in msgs.indices) { msg = i; kotlinx.coroutines.delay(450) }
             GameRepo.newCareer(w, name, selected, difficulty, noFiring, nation, rep, intro = true, national = national)
@@ -134,7 +134,7 @@ fun NewGameScreen() {
                 GameCrest(54.dp)
                 Spacer(Modifier.width(18.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Yeni Oyun Kurulumu", color = TextDim, fontSize = 12.sp)
+                    Text(L("Yeni Oyun Kurulumu", "New Game Setup"), color = TextDim, fontSize = 12.sp)
                     Text(msgs[msg], fontWeight = FontWeight.Black, fontSize = 20.sp)
                 }
                 CircularProgressIndicator(color = Teal, modifier = Modifier.size(30.dp))
@@ -149,20 +149,20 @@ fun NewGameScreen() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        listOf("Takım Seç", "Menajer Profili", "Ek Seçenekler", "Özet")[step - 1],
+                        listOf(L("Takım Seç", "Choose Team"), L("Menajer Profili", "Manager Profile"), L("Ek Seçenekler", "Extra Options"), L("Özet", "Summary"))[step - 1],
                         fontWeight = FontWeight.Black, fontSize = 20.sp,
                     )
                     Text(
                         listOf(
-                            "Menajerlik yapacağın kulübü seç",
-                            "Yeni profil oluştur",
-                            "Oyun dünyası ve zorluk",
-                            "Yeni kariyer · Yuva ${GameRepo.slot}" + if (hasSave) " (eski kayıt silinir)" else "",
+                            L("Menajerlik yapacağın kulübü seç", "Choose the club you will manage"),
+                            L("Yeni profil oluştur", "Create a new profile"),
+                            L("Oyun dünyası ve zorluk", "Game world and difficulty"),
+                            L("Yeni kariyer · Yuva ${GameRepo.slot}", "New career · Slot ${GameRepo.slot}") + if (hasSave) L(" (eski kayıt silinir)", " (old save will be deleted)") else "",
                         )[step - 1],
                         color = TextDim, fontSize = 12.sp,
                     )
                 }
-                Text("ADIM $step/4", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextDim)
+                Text(L("ADIM $step/4", "STEP $step/4"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextDim)
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.width(160.dp).height(8.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))) {
                     Box(Modifier.fillMaxWidth(step / 4f).fillMaxHeight().background(Brush.horizontalGradient(listOf(Purple, Teal))))
@@ -183,10 +183,10 @@ fun NewGameScreen() {
             Spacer(Modifier.height(8.dp))
             // Alt düğmeler
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                WizardButton(if (step == 1) "Ana Menü" else "‹ Geri", false, Modifier.width(150.dp)) { if (step == 1) GameRepo.screen = Screen.TITLE else step-- }
+                WizardButton(if (step == 1) L("Ana Menü", "Main Menu") else L("‹ Geri", "‹ Back"), false, Modifier.width(150.dp)) { if (step == 1) GameRepo.screen = Screen.TITLE else step-- }
                 Spacer(Modifier.weight(1f))
                 if (step == 1 && w != null) {
-                    WizardButton("🎲 Rastgele Takım", false, Modifier.width(180.dp)) {
+                    WizardButton(L("🎲 Rastgele Takım", "🎲 Random Team"), false, Modifier.width(180.dp)) {
                         val all = w.teams.filter { Leagues.of(it.division) != null }
                         all.randomOrNull()?.let { t ->
                             country = Leagues.of(t.division)!!.country; div = t.division; selected = t.id
@@ -198,7 +198,7 @@ fun NewGameScreen() {
                     2 -> first.isNotBlank()
                     else -> w != null
                 }
-                WizardButton(if (step == 4) "Oyuna Başla ▶" else "Sonraki ›", true, Modifier.width(190.dp), enabled = can) {
+                WizardButton(if (step == 4) L("Oyuna Başla ▶", "Start Game ▶") else L("Sonraki ›", "Next ›"), true, Modifier.width(190.dp), enabled = can) {
                     if (step < 4) step++ else starting = true
                 }
             }
@@ -243,12 +243,12 @@ private fun TeamStep(
         // Sol: ülke ve lig
         Column(Modifier.width(250.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
             ToggleRow(
-                "🎭 Kurgusal isimler",
-                if (fictional) "Kulüp ve oyuncu adları uydurma; güçler ve kadrolar gerçek veriden." else "Gerçeğe benzer adlar (bir iki harf değişik).",
+                L("🎭 Kurgusal isimler", "🎭 Fictional names"),
+                if (fictional) L("Kulüp ve oyuncu adları uydurma; güçler ve kadrolar gerçek veriden.", "Club and player names are made up; strengths and squads come from real data.") else L("Gerçeğe benzer adlar (bir iki harf değişik).", "Real-sounding names (a letter or two changed)."),
                 fictional,
             ) { onFictional(!fictional) }
             Spacer(Modifier.height(6.dp))
-            Text("ÜLKE", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("ÜLKE", "COUNTRY"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Leagues.countries.forEach { c ->
@@ -261,11 +261,11 @@ private fun TeamStep(
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Text("LİG", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("LİG", "LEAGUE"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             Leagues.ofCountry(country).forEach { lg ->
                 Tile(div == lg.id, Modifier.fillMaxWidth().height(40.dp).padding(bottom = 6.dp), onClick = { onDiv(lg.id) }) {
-                    Text(lg.name + if (lg.tier == 2) " · zor mod" else "", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(lg.name + if (lg.tier == 2) L(" · zor mod", " · hard mode") else "", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -274,7 +274,7 @@ private fun TeamStep(
             Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 CircularProgressIndicator(color = Teal)
                 Spacer(Modifier.height(12.dp))
-                Text("Seçilebilir kulüpler yükleniyor...", color = TextDim)
+                Text(L("Seçilebilir kulüpler yükleniyor...", "Loading selectable clubs..."), color = TextDim)
             }
             return@Row
         }
@@ -300,7 +300,7 @@ private fun TeamStep(
         ) {
             val t = w.teamOrNull(selected)
             if (t == null) {
-                Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { Text("BİR TAKIM SEÇ", color = TextDim, fontWeight = FontWeight.Bold) }
+                Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { Text(L("BİR TAKIM SEÇ", "PICK A TEAM"), color = TextDim, fontWeight = FontWeight.Bold) }
                 return@Column
             }
             Box(Modifier.fillMaxWidth().background(Color(t.color1)).padding(8.dp), contentAlignment = Alignment.Center) {
@@ -309,14 +309,14 @@ private fun TeamStep(
             Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 TeamBadge(t, 54.dp)
                 Spacer(Modifier.height(6.dp))
-                InfoPair("İTİBAR", "★".repeat(repStars(t.reputation)) + "☆".repeat(5 - repStars(t.reputation)), Gold)
+                InfoPair(L("İTİBAR", "REPUTATION"), "★".repeat(repStars(t.reputation)) + "☆".repeat(5 - repStars(t.reputation)), Gold)
                 val (fin, fc) = financeText(t)
-                InfoPair("MALİ DURUM", "$fin · ${money(t.budget)}", fc)
-                w.squad(t.id).maxByOrNull { it.overall }?.let { InfoPair("YILDIZ OYUNCU", "${it.name} (${it.overall})") }
-                InfoPair("STADYUM", "${t.stadiumName.ifBlank { t.name + " Stadı" }} · ${"%,d".format(t.stadium).replace(',', '.')}")
-                InfoPair("TAKIM GÜCÜ", "${Lineups.strength(w, t).toInt()}")
-                InfoPair("YÖNETİMİN HEDEFİ", Season.objectiveText(t), Teal)
-                w.managers[t.id]?.let { InfoPair("ESKİ HOCA", it) }
+                InfoPair(L("MALİ DURUM", "FINANCES"), "$fin · ${money(t.budget)}", fc)
+                w.squad(t.id).maxByOrNull { it.overall }?.let { InfoPair(L("YILDIZ OYUNCU", "STAR PLAYER"), "${it.name} (${it.overall})") }
+                InfoPair(L("STADYUM", "STADIUM"), "${t.stadiumName.ifBlank { t.name + " Stadı" }} · ${"%,d".format(t.stadium).replace(',', '.')}")
+                InfoPair(L("TAKIM GÜCÜ", "TEAM STRENGTH"), "${Lineups.strength(w, t).toInt()}")
+                InfoPair(L("YÖNETİMİN HEDEFİ", "BOARD OBJECTIVE"), Season.objectiveText(t), Teal)
+                w.managers[t.id]?.let { InfoPair(L("ESKİ HOCA", "PREVIOUS MANAGER"), it) }
             }
         }
     }
@@ -339,12 +339,12 @@ private fun ProfileStep(
             Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(Color(0xE60E1431))
                 .border(1.dp, CardLine, RoundedCornerShape(12.dp)).padding(14.dp).verticalScroll(rememberScrollState()),
         ) {
-            Text("Profil oluştur", fontWeight = FontWeight.Black, fontSize = 16.sp)
+            Text(L("Profil oluştur", "Create profile"), fontWeight = FontWeight.Black, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(first, onFirst, label = { Text("Adı") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(last, onLast, label = { Text("Soyadı") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(first, onFirst, label = { Text(L("Adı", "First name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(last, onLast, label = { Text(L("Soyadı", "Last name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
-            Text("UYRUK", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("UYRUK", "NATIONALITY"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 nations.forEach { (code, n) -> Chip("${Generator.flag(code)} $n", nation == code) { onNation(code) } }
@@ -355,7 +355,7 @@ private fun ProfileStep(
                 .border(1.dp, CardLine, RoundedCornerShape(12.dp)).padding(14.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("İtibar", fontWeight = FontWeight.Black, fontSize = 16.sp)
+            Text(L("İtibar", "Reputation"), fontWeight = FontWeight.Black, fontSize = 16.sp)
             reps.forEachIndexed { i, (n, d) ->
                 Tile(rep == i, Modifier.fillMaxWidth(), onClick = { onRep(i) }) {
                     Column(Modifier.fillMaxWidth().padding(10.dp)) {
@@ -380,7 +380,7 @@ private fun OptionsStep(
                 .border(1.dp, CardLine, RoundedCornerShape(12.dp)).padding(14.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("ZORLUK", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("ZORLUK", "DIFFICULTY"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Difficulty.names.forEachIndexed { i, n ->
                 Tile(difficulty == i, Modifier.fillMaxWidth(), onClick = { onDifficulty(i) }) {
                     Column(Modifier.fillMaxWidth().padding(10.dp)) {
@@ -395,9 +395,9 @@ private fun OptionsStep(
                 .border(1.dp, CardLine, RoundedCornerShape(12.dp)).padding(14.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("AYRICALIKLAR", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            ToggleRow("🛡 Kovulamaz ol", "Yönetim seni asla kovmaz (serbest mod).", noFiring) { onNoFiring(!noFiring) }
-            ToggleRow("🌍 Kulüp ve milli takım", "Kulübünle birlikte bir milli takımı da çalıştır.", national.isNotEmpty()) {
+            Text(L("AYRICALIKLAR", "PRIVILEGES"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            ToggleRow(L("🛡 Kovulamaz ol", "🛡 Can't be sacked"), L("Yönetim seni asla kovmaz (serbest mod).", "The board will never sack you (sandbox mode)."), noFiring) { onNoFiring(!noFiring) }
+            ToggleRow(L("🌍 Kulüp ve milli takım", "🌍 Club and national team"), L("Kulübünle birlikte bir milli takımı da çalıştır.", "Manage a national team alongside your club."), national.isNotEmpty()) {
                 onNational(if (national.isNotEmpty()) "" else (w?.let { com.supermenajer.game.game.National.nations(it).firstOrNull { c -> c == "TR" } } ?: "TR"))
             }
             if (national.isNotEmpty() && w != null) {
@@ -406,8 +406,8 @@ private fun OptionsStep(
                     list.take(16).forEach { c -> Chip("${Generator.flag(c)} ${com.supermenajer.game.game.National.name(c)}", national == c) { onNational(c) } }
                 }
             }
-            ToggleRow("🔍 Özellik maskeleme", "Gözlemci raporu olmayan oyuncuların değerleri tahmini görünür.", true, enabled = false) {}
-            ToggleRow("🌍 17 lig aktif", "Türkiye, İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz, Hollanda, Belçika, İskoçya, Brezilya ve Arjantin.", true, enabled = false) {}
+            ToggleRow(L("🔍 Özellik maskeleme", "🔍 Attribute masking"), L("Gözlemci raporu olmayan oyuncuların değerleri tahmini görünür.", "Players without a scout report show estimated values."), true, enabled = false) {}
+            ToggleRow(L("🌍 17 lig aktif", "🌍 17 leagues active"), L("Türkiye, İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz, Hollanda, Belçika, İskoçya, Brezilya ve Arjantin.", "Turkey, England, Spain, Germany, Italy, France, Portugal, the Netherlands, Belgium, Scotland, Brazil and Argentina."), true, enabled = false) {}
         }
     }
 }
@@ -437,7 +437,7 @@ private fun SummaryStep(w: Game, t: Team, name: String, nation: String, rep: Int
             Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(Color(0xE60E1431))
                 .border(1.dp, CardLine, RoundedCornerShape(12.dp)).padding(14.dp).verticalScroll(rememberScrollState()),
         ) {
-            Text("YÖNETİLEN TAKIM", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("YÖNETİLEN TAKIM", "MANAGED TEAM"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TeamBadge(t, 60.dp)
@@ -449,16 +449,16 @@ private fun SummaryStep(w: Game, t: Team, name: String, nation: String, rep: Int
                 }
             }
             Spacer(Modifier.height(10.dp))
-            InfoLineW("Yönetimin hedefi", Season.objectiveText(t))
-            InfoLineW("Transfer bütçesi", money((t.budget * Difficulty.budgetFactor(difficulty)).toLong()))
-            InfoLineW("Stadyum", "${t.stadiumName.ifBlank { t.name + " Stadı" }} (${"%,d".format(t.stadium).replace(',', '.')})")
-            InfoLineW("Başlangıç", "Hazırlık dönemi · ${w.season}-${(w.season + 1) % 100} sezonu")
+            InfoLineW(L("Yönetimin hedefi", "Board objective"), Season.objectiveText(t))
+            InfoLineW(L("Transfer bütçesi", "Transfer budget"), money((t.budget * Difficulty.budgetFactor(difficulty)).toLong()))
+            InfoLineW(L("Stadyum", "Stadium"), "${t.stadiumName.ifBlank { t.name + " Stadı" }} (${"%,d".format(t.stadium).replace(',', '.')})")
+            InfoLineW(L("Başlangıç", "Start"), L("Hazırlık dönemi · ${w.season}-${(w.season + 1) % 100} sezonu", "Pre-season · ${w.season}-${(w.season + 1) % 100} season"))
         }
         Column(
             Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(Color(0xE60E1431))
                 .border(1.dp, CardLine, RoundedCornerShape(12.dp)).padding(14.dp).verticalScroll(rememberScrollState()),
         ) {
-            Text("MENAJER AYRINTILARI", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("MENAJER AYRINTILARI", "MANAGER DETAILS"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(56.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(Color(0xFF3A4580), Color(0xFF1A2050)))), contentAlignment = Alignment.Center) {
@@ -467,14 +467,14 @@ private fun SummaryStep(w: Game, t: Team, name: String, nation: String, rep: Int
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(name.uppercase(), fontWeight = FontWeight.Black, fontSize = 17.sp)
-                    Text("${Generator.flag(nation)} ${nations.firstOrNull { it.first == nation }?.second ?: ""} · ${reps[rep].first}", color = TextDim, fontSize = 13.sp)
+                    Text(L("${Generator.flag(nation)} ${nations.firstOrNull { it.first == nation }?.second ?: ""} · ${reps[rep].first}", "${Generator.flag(nation)} ${nations.firstOrNull { it.first == nation }?.second ?: ""} · ${reps[rep].first}"), color = TextDim, fontSize = 13.sp)
                 }
             }
             Spacer(Modifier.height(10.dp))
-            InfoLineW("Zorluk", Difficulty.names[difficulty])
-            InfoLineW("Kovulma", if (noFiring) "Kapalı (serbest mod)" else "Açık")
-            if (national.isNotEmpty()) InfoLineW("Milli takım", "${Generator.flag(national)} ${com.supermenajer.game.game.National.name(national)}")
-            InfoLineW("Menajerlik unvanları", "Unvansız başlıyor")
+            InfoLineW(L("Zorluk", "Difficulty"), Difficulty.names[difficulty])
+            InfoLineW(L("Kovulma", "Sacking"), if (noFiring) L("Kapalı (serbest mod)", "Off (sandbox mode)") else L("Açık", "On"))
+            if (national.isNotEmpty()) InfoLineW(L("Milli takım", "National team"), "${Generator.flag(national)} ${com.supermenajer.game.game.National.name(national)}")
+            InfoLineW(L("Menajerlik unvanları", "Manager titles"), L("Unvansız başlıyor", "Starting without titles"))
         }
     }
 }

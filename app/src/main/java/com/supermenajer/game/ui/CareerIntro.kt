@@ -49,12 +49,12 @@ import com.supermenajer.game.model.Game
 private class TourPage(val icon: String, val title: String, val text: String)
 
 private fun tour(g: Game) = listOf(
-    TourPage("👋", "Hoş geldin hocam!", "Menajerlik kariyerine başlamaya hazırsın. ${g.userTeam.name} yönetimi senden bu sezon şunu bekliyor: ${Season.objectiveText(g.userTeam)}."),
-    TourPage("▶", "Devam Et", "Sağ üstteki yeşil DEVAM ET düğmesi günleri ilerletir. Transfer teklifi, basın toplantısı, sakatlık gibi önemli bir olay olunca kendiliğinden durur; maç günü seni maça götürür."),
-    TourPage("☰", "Menü ve kartlar", "Sol üstteki ☰ menüden Kadro, Taktik, Transfer, Lig ve Kulüp bölümlerine gidersin. Ana sayfadaki kartlara dokunmak da seni ilgili bölüme götürür."),
-    TourPage("📋", "Taktik", "Taktik ekranında oyuncuları sahaya sürükle, dizilişini seç, talimatları ve rolleri belirle. Taktik Oluştur ile kadrona uygun bir oyun tarzı seçebilirsin."),
-    TourPage("🔁", "Transfer", "Transfer döneminde oyuncu ara, gözlemci gönder, ⭐ kısa listene ekle ve ⚖ ile kendi oyuncularınla karşılaştır. Bütçen: ${money(g.userTeam.budget)}."),
-    TourPage("🏛", "Yönetimin güveni", "Üst çubuktaki 🏛 göstergesi yönetimin sana güvenidir. Sıfıra inerse kovulursun. Hedefe ulaş, taraftarı ve soyunma odasını mutlu tut. Bol şans!"),
+    TourPage("👋", L("Hoş geldin hocam!", "Welcome, boss!"), L("Menajerlik kariyerine başlamaya hazırsın. ${g.userTeam.name} yönetimi senden bu sezon şunu bekliyor: ${Season.objectiveText(g.userTeam)}.", "You're ready to start your managerial career. The ${g.userTeam.name} board expects this from you this season: ${Season.objectiveText(g.userTeam)}.")),
+    TourPage("▶", L("Devam Et", "Continue"), L("Sağ üstteki yeşil DEVAM ET düğmesi günleri ilerletir. Transfer teklifi, basın toplantısı, sakatlık gibi önemli bir olay olunca kendiliğinden durur; maç günü seni maça götürür.", "The green CONTINUE button at the top right moves the days forward. It stops by itself when something important happens, like a transfer offer, press conference or injury; on match day it takes you to the match.")),
+    TourPage("☰", L("Menü ve kartlar", "Menu and cards"), L("Sol üstteki ☰ menüden Kadro, Taktik, Transfer, Lig ve Kulüp bölümlerine gidersin. Ana sayfadaki kartlara dokunmak da seni ilgili bölüme götürür.", "Use the ☰ menu at the top left to reach Squad, Tactics, Transfers, League and Club. Tapping the cards on the home screen also takes you to the related section.")),
+    TourPage("📋", L("Taktik", "Tactics"), L("Taktik ekranında oyuncuları sahaya sürükle, dizilişini seç, talimatları ve rolleri belirle. Taktik Oluştur ile kadrona uygun bir oyun tarzı seçebilirsin.", "On the tactics screen drag players onto the pitch, pick your formation and set instructions and roles. With Build Tactic you can choose a playing style that suits your squad.")),
+    TourPage("🔁", L("Transfer", "Transfers"), L("Transfer döneminde oyuncu ara, gözlemci gönder, ⭐ kısa listene ekle ve ⚖ ile kendi oyuncularınla karşılaştır. Bütçen: ${money(g.userTeam.budget)}.", "During the transfer window search for players, send scouts, add them to your ⭐ shortlist and compare them with your own players using ⚖. Budget: ${money(g.userTeam.budget)}.")),
+    TourPage("🏛", L("Yönetimin güveni", "Board confidence"), L("Üst çubuktaki 🏛 göstergesi yönetimin sana güvenidir. Sıfıra inerse kovulursun. Hedefe ulaş, taraftarı ve soyunma odasını mutlu tut. Bol şans!", "The 🏛 indicator on the top bar is the board's confidence in you. If it hits zero you're sacked. Reach your objective and keep the fans and the dressing room happy. Good luck!")),
 )
 
 /** Kariyerin ilk açılışı: "göreve getirildi" haberi ve 6 sayfalık kısa rehber. */
@@ -85,10 +85,10 @@ fun CareerIntro(g: Game) {
                 Text(p.text, fontSize = 15.sp, lineHeight = 21.sp)
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Rehberi geç", color = TextDim, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { finish() }.padding(8.dp))
+                    Text(L("Rehberi geç", "Skip guide"), color = TextDim, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { finish() }.padding(8.dp))
                     Spacer(Modifier.weight(1f))
-                    if (page > 1) IntroButton("‹ Önceki", false) { page-- }
-                    IntroButton(if (page == pages.size) "Başla ▶" else "Sonraki ›", true) { if (page == pages.size) finish() else page++ }
+                    if (page > 1) IntroButton(L("‹ Önceki", "‹ Previous"), false) { page-- }
+                    IntroButton(if (page == pages.size) L("Başla ▶", "Start ▶") else L("Sonraki ›", "Next ›"), true) { if (page == pages.size) finish() else page++ }
                 }
             }
         }
@@ -144,14 +144,14 @@ private fun NewsFlash(g: Game, onNext: () -> Unit) {
                 }
             }
             Box(Modifier.align(Alignment.TopEnd).padding(10.dp).background(Gold).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text("SON DAKİKA", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.alpha(blink))
+                Text(L("SON DAKİKA", "BREAKING NEWS"), color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.alpha(blink))
             }
             Box(Modifier.align(Alignment.TopStart).padding(10.dp)) { TeamBadge(t, 48.dp) }
         }
         // Alt bant
         Box(Modifier.fillMaxWidth().background(Gold).padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(
-                "${t.name.uppercase()} MENAJER OLARAK ${g.managerName.uppercase()}'İ GÖREVE GETİRDİ",
+                L("${t.name.uppercase()} MENAJER OLARAK ${g.managerName.uppercase()}'İ GÖREVE GETİRDİ", "${t.name.uppercase()} APPOINT ${g.managerName.uppercase()} AS MANAGER"),
                 color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1,
                 modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
             )
@@ -159,8 +159,8 @@ private fun NewsFlash(g: Game, onNext: () -> Unit) {
         Row(Modifier.fillMaxWidth().background(Color(0xFF0B1028)).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             GameCrest(26.dp)
             Spacer(Modifier.width(8.dp))
-            Text("Yönetimin hedefi: ${Season.objectiveText(t)} · Bütçe ${money(t.budget)}", color = TextDim, fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1)
-            Text("Devam ›", color = Teal, fontWeight = FontWeight.Black, textAlign = TextAlign.End)
+            Text(L("Yönetimin hedefi: ${Season.objectiveText(t)} · Bütçe ${money(t.budget)}", "Board objective: ${Season.objectiveText(t)} · Budget ${money(t.budget)}"), color = TextDim, fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(L("Devam ›", "Continue ›"), color = Teal, fontWeight = FontWeight.Black, textAlign = TextAlign.End)
         }
     }
 }

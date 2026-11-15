@@ -35,16 +35,16 @@ import com.supermenajer.game.model.Game
 fun AnalysisView(g: Game) {
     val ms = Analysis.season(g)
     if (ms.isEmpty()) {
-        Text("Bu sezon henüz maç oynanmadı. İlk maçtan sonra analiz burada.", color = TextDim, modifier = Modifier.padding(16.dp))
+        Text(L("Bu sezon henüz maç oynanmadı. İlk maçtan sonra analiz burada.", "No matches played this season yet. Analysis appears here after the first match."), color = TextDim, modifier = Modifier.padding(16.dp))
         return
     }
     LazyVerticalGrid(GridCells.Adaptive(420.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item(span = { GridItemSpan(maxLineSpan) }) { SummaryRow(ms) }
-        item { DashCard("Maç maç gol beklentisi (xG)", Modifier.fillMaxWidth()) { XgBars(ms.takeLast(14)) } }
-        item { DashCard("Puan çizgisi", Modifier.fillMaxWidth()) { PointsLine(ms) } }
-        item { DashCard("Gollerin dakikası", Modifier.fillMaxWidth()) { PeriodBars(g.goalsByPeriod) } }
-        item { DashCard("Yorum", Modifier.fillMaxWidth()) { Insights(ms, g.goalsByPeriod) } }
+        item { DashCard(L("Maç maç gol beklentisi (xG)", "Expected goals (xG) match by match"), Modifier.fillMaxWidth()) { XgBars(ms.takeLast(14)) } }
+        item { DashCard(L("Puan çizgisi", "Points line"), Modifier.fillMaxWidth()) { PointsLine(ms) } }
+        item { DashCard(L("Gollerin dakikası", "Minute of goals"), Modifier.fillMaxWidth()) { PeriodBars(g.goalsByPeriod) } }
+        item { DashCard(L("Yorum", "Comment"), Modifier.fillMaxWidth()) { Insights(ms, g.goalsByPeriod) } }
     }
 }
 
@@ -91,7 +91,7 @@ private fun XgBars(ms: List<Analysis.Match>) {
         for (m in ms) Text(m.opp, color = if (m.gf > m.ga) Green else if (m.gf == m.ga) Gold else Red, fontSize = 10.sp,
             modifier = Modifier.weight(1f), textAlign = TextAlign.Center, maxLines = 1)
     }
-    Text("Üstte bizim, altta rakibin gol beklentisi; noktalar atılan goller.", color = TextDim, fontSize = 10.sp)
+    Text(L("Üstte bizim, altta rakibin gol beklentisi; noktalar atılan goller.", "Top: our expected goals, bottom: the opponent's; dots are goals scored."), color = TextDim, fontSize = 10.sp)
 }
 
 @Composable
@@ -114,9 +114,9 @@ private fun PointsLine(ms: List<Analysis.Match>) {
         line(pts.map { it.toFloat() }, Teal, 5f)
     }
     Row {
-        Text("━ Puan ${pts.last()}", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(L("━ Puan ${pts.last()}", "━ Points ${pts.last()}"), color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.width(12.dp))
-        Text("━ Oyuna göre beklenen %.0f".format(xpts.last()), color = Gold, fontSize = 11.sp)
+        Text(L("━ Oyuna göre beklenen %.0f", "━ Expected by performance %.0f").format(xpts.last()), color = Gold, fontSize = 11.sp)
     }
 }
 
@@ -135,7 +135,7 @@ private fun PeriodBars(p: List<Int>) {
         }
     }
     Row(Modifier.fillMaxWidth()) { for (l in labels) Text(l, color = TextDim, fontSize = 10.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center) }
-    Text("Turkuaz attığımız, kırmızı yediğimiz goller.", color = TextDim, fontSize = 10.sp)
+    Text(L("Turkuaz attığımız, kırmızı yediğimiz goller.", "Teal: goals scored, red: goals conceded."), color = TextDim, fontSize = 10.sp)
 }
 
 @Composable
@@ -143,18 +143,18 @@ private fun Insights(ms: List<Analysis.Match>, p: List<Int>) {
     val notes = buildList {
         val xgf = ms.sumOf { it.xgf }; val gf = ms.sumOf { it.gf }
         val xga = ms.sumOf { it.xga }; val ga = ms.sumOf { it.ga }
-        if (gf > xgf + 3) add("🎯 Beklenenden ${"%.0f".format(gf - xgf)} gol fazla attık: bitiricilik çok iyi (ya da şanslıyız).")
-        if (gf < xgf - 3) add("😬 Pozisyon üretiyoruz ama ${"%.0f".format(xgf - gf)} gol kaçırdık. Bitiricilik antrenmanı düşün.")
-        if (ga > xga + 3) add("🧤 Beklenenden fazla gol yiyoruz: kaleci ya da savunma hata yapıyor.")
-        if (ga < xga - 3) add("🛡️ Savunma ve kaleci beklenenin üstünde: ${"%.0f".format(xga - ga)} golü önledi.")
+        if (gf > xgf + 3) add(L("🎯 Beklenenden ${"%.0f".format(gf - xgf)} gol fazla attık: bitiricilik çok iyi (ya da şanslıyız).", "🎯 We scored ${"%.0f".format(gf - xgf)} more goals than expected: finishing is excellent (or we're lucky)."))
+        if (gf < xgf - 3) add(L("😬 Pozisyon üretiyoruz ama ${"%.0f".format(xgf - gf)} gol kaçırdık. Bitiricilik antrenmanı düşün.", "😬 We create chances but missed ${"%.0f".format(xgf - gf)} goals. Consider finishing training."))
+        if (ga > xga + 3) add(L("🧤 Beklenenden fazla gol yiyoruz: kaleci ya da savunma hata yapıyor.", "🧤 We concede more than expected: the keeper or the defence is making mistakes."))
+        if (ga < xga - 3) add(L("🛡️ Savunma ve kaleci beklenenin üstünde: ${"%.0f".format(xga - ga)} golü önledi.", "🛡️ Defence and keeper are above expectation: they prevented ${"%.0f".format(xga - ga)} goals."))
         val lateFor = p.getOrElse(5) { 0 }; val lateAg = p.getOrElse(11) { 0 }
-        if (lateAg >= 3 && lateAg > lateFor) add("⏱️ Son 15 dakikada $lateAg gol yedik: kondisyon ya da oyuncu değişikliği zamanlaması.")
-        if (lateFor >= 3 && lateFor > lateAg) add("💪 Son dakikalarda $lateFor gol attık: takım fiziksel olarak güçlü.")
+        if (lateAg >= 3 && lateAg > lateFor) add(L("⏱️ Son 15 dakikada $lateAg gol yedik: kondisyon ya da oyuncu değişikliği zamanlaması.", "⏱️ We conceded $lateAg goals in the last 15 minutes: fitness or substitution timing."))
+        if (lateFor >= 3 && lateFor > lateAg) add(L("💪 Son dakikalarda $lateFor gol attık: takım fiziksel olarak güçlü.", "💪 We scored $lateFor goals in the final minutes: the team is physically strong."))
         val poss = ms.map { it.poss }.average()
-        if (poss < 42) add("⚽ Topa az sahip oluyoruz (%${poss.toInt()}). Kısa pas ve düşük tempo kontrolü artırır.")
-        if (poss > 58 && gf < xgf) add("🔁 Topa sahibiz ama etkisiz kalıyoruz. Tempo ve genişliği artırmayı dene.")
+        if (poss < 42) add(L("⚽ Topa az sahip oluyoruz (%${poss.toInt()}). Kısa pas ve düşük tempo kontrolü artırır.", "⚽ We have little of the ball (%${poss.toInt()}). Short passing and a lower tempo increase control."))
+        if (poss > 58 && gf < xgf) add(L("🔁 Topa sahibiz ama etkisiz kalıyoruz. Tempo ve genişliği artırmayı dene.", "🔁 We have the ball but lack bite. Try increasing tempo and width."))
         val last5 = ms.takeLast(5).sumOf { it.points }
-        add("📈 Son ${minOf(5, ms.size)} maçta $last5 puan.")
+        add(L("📈 Son ${minOf(5, ms.size)} maçta $last5 puan.", "📈 $last5 points in the last ${minOf(5, ms.size)} matches."))
     }
     for (n in notes) Text(n, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(vertical = 2.dp))
 }

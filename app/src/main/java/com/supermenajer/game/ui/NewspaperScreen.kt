@@ -67,9 +67,9 @@ fun NewspaperTeaser(g: Game, modifier: Modifier = Modifier) {
             // Alt satır manşetin kendi haberi (manşetle alakasız söylenti görünmesin); söylentiler sayı olarak
             Text(ed.main.body, color = InkDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val rumors = ed.side.count { it.tag == "SÖYLENTİ" }
-            if (rumors > 0) Text("+ $rumors transfer söylentisi", color = PaperRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            if (rumors > 0) Text(L("+ $rumors transfer söylentisi", "+ $rumors transfer rumours"), color = PaperRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
-        Text("Oku ›", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text(L("Oku ›", "Read ›"), color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 
@@ -86,7 +86,7 @@ fun NewspaperDialog(g: Game) {
         ) {
             // Künye
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Sayı ${ed.number}", color = InkDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text(L("Sayı ${ed.number}", "Issue ${ed.number}"), color = InkDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
                 Text("✕", color = Ink, fontSize = 20.sp, modifier = Modifier.clip(RoundedCornerShape(50)).clickable { close() }.padding(4.dp))
             }
             Text(
@@ -94,7 +94,7 @@ fun NewspaperDialog(g: Game) {
                 letterSpacing = 4.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
             Rule(2.dp)
-            Text(ed.date.uppercase() + "  ·  FUTBOLUN SESİ", color = InkDim, fontSize = 11.sp, letterSpacing = 2.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp))
+            Text(ed.date.uppercase() + L("  ·  FUTBOLUN SESİ", "  ·  THE VOICE OF FOOTBALL"), color = InkDim, fontSize = 11.sp, letterSpacing = 2.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp))
             Rule(1.dp)
             Spacer(Modifier.height(10.dp))
             // Manşet
@@ -120,7 +120,7 @@ fun NewspaperDialog(g: Game) {
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Text("Söylentiler basına sızan iddialardır; her zaman gerçekleşmez.", color = InkDim, fontSize = 10.sp, fontFamily = FontFamily.Serif)
+            Text(L("Söylentiler basına sızan iddialardır; her zaman gerçekleşmez.", "Rumours are claims leaked to the press; they don't always come true."), color = InkDim, fontSize = 10.sp, fontFamily = FontFamily.Serif)
         }
     }
 }

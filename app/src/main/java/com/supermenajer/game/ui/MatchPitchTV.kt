@@ -394,7 +394,7 @@ private fun DrawScope.drawReplayBands(progress: Float, measurer: TextMeasurer) {
     val band = size.height * 0.07f
     drawRect(Color.Black.copy(alpha = 0.75f), size = Size(size.width, band))
     drawRect(Color.Black.copy(alpha = 0.75f), Offset(0f, size.height - band), Size(size.width, band))
-    val label = measurer.measure("⟲ TEKRAR · dokun: geç", TextStyle(color = Color(0xFFFFE14D), fontSize = (band * 0.42f / density / fontScale).sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp))
+    val label = measurer.measure(L("⟲ TEKRAR · dokun: geç", "⟲ REPLAY · tap: skip"), TextStyle(color = Color(0xFFFFE14D), fontSize = (band * 0.42f / density / fontScale).sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp))
     drawText(label, topLeft = Offset(size.width * 0.03f, (band - label.size.height) / 2f))
     drawRect(Color(0xFFFFE14D), Offset(0f, size.height - band * 0.2f), Size(size.width * progress, band * 0.12f))
 }

@@ -99,7 +99,7 @@ fun DrawScope.drawPitch(vertical: Boolean) {
 fun TacticsTab(g: Game) {
     if (GameRepo.tacticsMode == 0) { TacticsBoard(g); return }
     Column(Modifier.fillMaxSize()) {
-        SmTabBar(listOf("Taktik", "Antrenman"), 1, Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) { if (it == 0) GameRepo.tacticsMode = 0 }
+        SmTabBar(listOf(L("Taktik", "Tactics"), L("Antrenman", "Training")), 1, Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) { if (it == 0) GameRepo.tacticsMode = 0 }
         TrainingContent(g)
     }
 }
@@ -109,20 +109,20 @@ private fun TrainingContent(g: Game) {
     val t = g.userTeam
     val squad = g.squad(t.id)
     val focusInfo = listOf(
-        "Tüm özellikler mevkiye göre dengeli gelişir.",
-        "Şut, teknik ve pas çalışılır.",
-        "Savunma ve fizik çalışılır.",
-        "Hız ve fizik çalışılır. Kondisyon artar.",
-        "21 yaş altı oyuncular çok daha hızlı gelişir, diğerleri yavaşlar.",
+        L("Tüm özellikler mevkiye göre dengeli gelişir.", "All attributes develop evenly according to position."),
+        L("Şut, teknik ve pas çalışılır.", "Shooting, technique and passing are trained."),
+        L("Savunma ve fizik çalışılır.", "Defending and physical are trained."),
+        L("Hız ve fizik çalışılır. Kondisyon artar.", "Pace and physical are trained. Fitness improves."),
+        L("21 yaş altı oyuncular çok daha hızlı gelişir, diğerleri yavaşlar.", "Under-21s develop much faster, the others slower."),
     )
     val intensityInfo = listOf(
-        "Gelişim yavaş, oyuncular maçlar arasında daha iyi dinlenir, sakatlık riski düşük.",
-        "Dengeli gelişim ve dinlenme.",
-        "Gelişim hızlı, ama oyuncular daha yorgun kalır ve antrenmanda sakatlanma riski artar.",
+        L("Gelişim yavaş, oyuncular maçlar arasında daha iyi dinlenir, sakatlık riski düşük.", "Slow development, players rest better between matches, low injury risk."),
+        L("Dengeli gelişim ve dinlenme.", "Balanced development and rest."),
+        L("Gelişim hızlı, ama oyuncular daha yorgun kalır ve antrenmanda sakatlanma riski artar.", "Fast development, but players stay more tired and the risk of training injuries rises."),
     )
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            SectionCard("Haftalık antrenman odağı") {
+            SectionCard(L("Haftalık antrenman odağı", "Weekly training focus")) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     com.supermenajer.game.game.Season.trainingNames.forEachIndexed { i, n -> Chip(n, t.training == i) { GameRepo.setTraining(i) } }
                 }
@@ -131,7 +131,7 @@ private fun TrainingContent(g: Game) {
             }
         }
         item {
-            SectionCard("Yoğunluk") {
+            SectionCard(L("Yoğunluk", "Intensity")) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     com.supermenajer.game.game.Season.intensityNames.forEachIndexed { i, n -> Chip(n, t.intensity == i, Modifier.weight(1f)) { GameRepo.setIntensity(i) } }
                 }
@@ -142,25 +142,25 @@ private fun TrainingContent(g: Game) {
         item {
             var msg by remember { mutableStateOf<String?>(null) }
             val md = com.supermenajer.game.game.Matchday
-            SectionCard("🏕️ Antrenman kampı") {
+            SectionCard(L("🏕️ Antrenman kampı", "🏕️ Training camp")) {
                 Text(
-                    if (md.campActive(g)) "Takım kampta! ${com.supermenajer.game.game.GameCalendar.format(g.campUntil, false)} tarihine kadar gelişim %40 daha hızlı."
-                    else "7 gün sürer: moral +8, kondisyon tam, gelişim %40 hızlı. Sezonda en fazla 2 kez (${g.campUses}/2).",
+                    if (md.campActive(g)) L("Takım kampta! ${com.supermenajer.game.game.GameCalendar.format(g.campUntil, false)} tarihine kadar gelişim %40 daha hızlı.", "The team is at camp! Development is 40% faster until ${com.supermenajer.game.game.GameCalendar.format(g.campUntil, false)}.")
+                    else L("7 gün sürer: moral +8, kondisyon tam, gelişim %40 hızlı. Sezonda en fazla 2 kez (${g.campUses}/2).", "Lasts 7 days: morale +8, full fitness, 40% faster development. At most twice a season (${g.campUses}/2)."),
                     color = TextDim, fontSize = 12.sp,
                 )
                 Spacer(Modifier.height(6.dp))
                 Button(onClick = { msg = GameRepo.camp() }, enabled = !md.campActive(g) && g.campUses < 2, modifier = Modifier.fillMaxWidth()) {
-                    Text("Kampa gir · ${com.supermenajer.game.game.money(md.campCost(g))}")
+                    Text(L("Kampa gir · ${com.supermenajer.game.game.money(md.campCost(g))}", "Go to camp · ${com.supermenajer.game.game.money(md.campCost(g))}"))
                 }
                 msg?.let { Text(it, color = Gold, fontSize = 12.sp) }
             }
         }
-        item { Text("BU SEZON GELİŞENLER", color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        item { Text(L("BU SEZON GELİŞENLER", "IMPROVED THIS SEASON"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         val devs = squad.filter { it.startOvr > 0 && it.overall != it.startOvr }.sortedByDescending { it.overall - it.startOvr }
-        if (devs.isEmpty()) item { Text("Henüz değişim yok. Gençler maç oynadıkça ve antrenmanla gelişir.", color = TextDim, fontSize = 13.sp) }
+        if (devs.isEmpty()) item { Text(L("Henüz değişim yok. Gençler maç oynadıkça ve antrenmanla gelişir.", "No changes yet. Youngsters develop through matches and training."), color = TextDim, fontSize = 13.sp) }
         items(devs, key = { it.id }) { p ->
             val d = p.overall - p.startOvr
-            PlayerRow(g, p, p.id in t.lineup, extra = "${p.startOvr} → ${p.overall} (${if (d > 0) "+" else ""}$d) · Pot. ${p.potential}")
+            PlayerRow(g, p, p.id in t.lineup, extra = L("${p.startOvr} → ${p.overall} (${if (d > 0) "+" else ""}$d) · Pot. ${p.potential}", "${p.startOvr} → ${p.overall} (${if (d > 0) "+" else ""}$d) · Pot. ${p.potential}"))
         }
     }
 }
@@ -183,7 +183,7 @@ fun LeagueTab(g: Game) {
     val sel = GameRepo.leagueSel
     var day by remember { mutableIntStateOf(g.week.coerceIn(1, g.totalDays)) }
     Column(Modifier.fillMaxSize()) {
-        FmTabs(listOf("Puan Durumu", "Kupa", "Avrupa", "Fikstür", "İstatistik", "Geçmiş", "Takvim", "📈 Analiz"), view) { GameRepo.leagueTab = it }
+        FmTabs(listOf(L("Puan Durumu", "Table"), L("Kupa", "Cup"), L("Avrupa", "Europe"), L("Fikstür", "Fixtures"), L("İstatistik", "Stats"), L("Geçmiş", "History"), L("Takvim", "Calendar"), L("📈 Analiz", "📈 Analysis")), view) { GameRepo.leagueTab = it }
         if (view == 0 || view == 4) {
             // Lig seçici: önce ülke, sonra lig
             val country = Leagues.of(sel)?.country ?: g.userCountry
@@ -226,7 +226,7 @@ fun LeagueTab(g: Game) {
                             HorizontalDivider(color = Line)
                         }
                     }
-                    if (list.none { it.comp in comps }) item { Text("Bu gün ${country} için maç yok ya da kura henüz çekilmedi.", color = TextDim) }
+                    if (list.none { it.comp in comps }) item { Text(L("Bu gün ${country} için maç yok ya da kura henüz çekilmedi.", "No matches for ${country} on this day, or the draw hasn't been made yet."), color = TextDim) }
                 }
             }
             4 -> Scorers(g, sel)
@@ -245,7 +245,7 @@ private fun HistoryView(g: Game) {
             val titles = g.history.count { it.userPos == 1 && it.champion == it.userTeam }
             val cups = g.history.count { it.cupWinner == it.userTeam }
             val euros = g.history.count { it.euroWinner == it.userTeam }
-            SectionCard("Kariyer · ${g.managerName}") {
+            SectionCard(L("Kariyer · ${g.managerName}", "Career · ${g.managerName}")) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                     listOf("Sezon" to g.history.size, "Lig 🏆" to titles, "Kupa 🥇" to cups, "Avrupa 🌍" to euros).forEach { (l, v) ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -256,14 +256,14 @@ private fun HistoryView(g: Game) {
                 }
             }
         }
-        if (h.isEmpty()) item { Text("İlk sezonun bitince kariyer geçmişin burada görünecek.", color = TextDim) }
+        if (h.isEmpty()) item { Text(L("İlk sezonun bitince kariyer geçmişin burada görünecek.", "Your career history will appear here once your first season ends."), color = TextDim) }
         items(h) { r ->
             SectionCard("${r.season}-${(r.season + 1) % 100} · ${r.userTeam}") {
-                Text("${r.leagueName.ifEmpty { "Lig" }}: ${r.userPos}. sıra" + if (r.userPos == 1) " 🏆" else "", fontWeight = FontWeight.Bold)
-                Text("Şampiyon: ${r.champion}", color = TextDim, fontSize = 13.sp)
-                if (r.cupWinner.isNotEmpty()) Text("Kupa: ${r.cupWinner}", color = TextDim, fontSize = 13.sp)
-                if (r.euroWinner.isNotEmpty()) Text("Avrupa: ${r.euroWinner}", color = TextDim, fontSize = 13.sp)
-                Text("Gol kralı: ${r.topScorer}", color = TextDim, fontSize = 13.sp)
+                Text(L("${r.leagueName.ifEmpty { "Lig" }}: ${r.userPos}. sıra", "${r.leagueName.ifEmpty { "Lig" }}: ${r.userPos}. place") + if (r.userPos == 1) " 🏆" else "", fontWeight = FontWeight.Bold)
+                Text(L("Şampiyon: ${r.champion}", "Champions: ${r.champion}"), color = TextDim, fontSize = 13.sp)
+                if (r.cupWinner.isNotEmpty()) Text(L("Kupa: ${r.cupWinner}", "Cup: ${r.cupWinner}"), color = TextDim, fontSize = 13.sp)
+                if (r.euroWinner.isNotEmpty()) Text(L("Avrupa: ${r.euroWinner}", "Europe: ${r.euroWinner}"), color = TextDim, fontSize = 13.sp)
+                Text(L("Gol kralı: ${r.topScorer}", "Top scorer: ${r.topScorer}"), color = TextDim, fontSize = 13.sp)
                 if (r.awards.isNotEmpty()) Text("🏅 ${r.awards}", color = Gold, fontSize = 12.sp)
             }
         }
@@ -276,7 +276,7 @@ private fun EuroView(g: Game) {
     val ko = g.fixtures.filter { it.comp == Comp.EURO && it.round >= Comp.EURO_KO }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (g.euroWinner >= 0) item {
-            SectionCard("Avrupa'nın en büyüğü") {
+            SectionCard(L("Avrupa'nın en büyüğü", "The biggest in Europe")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("🏆", fontSize = 30.sp)
                     Spacer(Modifier.width(10.dp))
@@ -288,10 +288,10 @@ private fun EuroView(g: Game) {
         }
         if (g.euroTeams.isEmpty()) {
             item {
-                SectionCard("Avrupa Kupası") {
-                    Text("Bu sezon Avrupa Kupası oynanmıyor.", fontWeight = FontWeight.Bold)
+                SectionCard(L("Avrupa Kupası", "European Cup")) {
+                    Text(L("Bu sezon Avrupa Kupası oynanmıyor.", "There's no European Cup this season."), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
-                    Text("Süper Lig'i ilk 4'te bitiren takımlar gelecek sezon Avrupa'nın 28 dev kulübüyle yarışır: 8 grup, ardından son 16'dan finale tek maç eleme.", color = TextDim, fontSize = 13.sp)
+                    Text(L("Süper Lig'i ilk 4'te bitiren takımlar gelecek sezon Avrupa'nın 28 dev kulübüyle yarışır: 8 grup, ardından son 16'dan finale tek maç eleme.", "Teams finishing in the top 4 of their league face Europe's giants next season: 8 groups, then single-leg knockouts from the last 16 to the final."), color = TextDim, fontSize = 13.sp)
                 }
             }
             return@LazyColumn
@@ -328,7 +328,7 @@ private fun CupView(g: Game, comp: Int) {
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text(com.supermenajer.game.model.Comp.name(comp), fontWeight = FontWeight.Black, fontSize = 18.sp) }
         if (winner >= 0) item {
-            SectionCard("Kupa sahibi") {
+            SectionCard(L("Kupa sahibi", "Cup holders")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("🏆", fontSize = 30.sp)
                     Spacer(Modifier.width(10.dp))
@@ -338,12 +338,12 @@ private fun CupView(g: Game, comp: Int) {
                 }
             }
         }
-        if (cup.isEmpty()) item { Text("Kupa yeni sezonda başlayacak.", color = TextDim) }
+        if (cup.isEmpty()) item { Text(L("Kupa yeni sezonda başlayacak.", "The cup starts in the new season."), color = TextDim) }
         for (r in com.supermenajer.game.model.Comp.cupRounds.indices.reversed()) {
             val fs = cup.filter { it.round == r }.sortedByDescending { it.involves(g.userTeamId) }
             if (fs.isEmpty()) continue
             item {
-                SectionCard("${com.supermenajer.game.model.Comp.cupRounds[r]} · ${g.leagueWeekAt(fs.first().week)}. hafta sonrası") {
+                SectionCard(L("${com.supermenajer.game.model.Comp.cupRounds[r]} · ${g.leagueWeekAt(fs.first().week)}. hafta sonrası", "${com.supermenajer.game.model.Comp.cupRounds[r]} · after matchday ${g.leagueWeekAt(fs.first().week)}")) {
                     fs.forEachIndexed { i, f ->
                         if (i > 0) HorizontalDivider(color = Line)
                         ResultRow(g, f, g.userTeamId)
@@ -370,7 +370,7 @@ private fun LeagueTable(g: Game, div: Int) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("#", Modifier.width(34.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                Text("TAKIM", Modifier.weight(1f).padding(start = 32.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(L("TAKIM", "TEAM"), Modifier.weight(1f).padding(start = 32.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 cols.forEach { Text(it, Modifier.width(34.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
                 Text("P", Modifier.width(40.dp), color = TextMain, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                 Text("FORM", Modifier.width(118.dp), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -427,10 +427,10 @@ private fun LeagueTable(g: Game, div: Int) {
         item {
             Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (lgDef?.tier != 2) {
-                    Legend(Gold, "Şampiyon"); Legend(Blue, "Avrupa")
-                    if (relegation) Legend(Red, "Küme düşme")
-                } else Legend(Green, "Yükselme")
-                Text("A: atılan · Y: yenilen · AV: averaj", fontSize = 11.sp, color = TextDim)
+                    Legend(Gold, L("Şampiyon", "Champions")); Legend(Blue, L("Avrupa", "Europe"))
+                    if (relegation) Legend(Red, L("Küme düşme", "Relegation"))
+                } else Legend(Green, L("Yükselme", "Promotion"))
+                Text(L("A: atılan · Y: yenilen · AV: averaj", "F: scored · A: conceded · GD: goal difference"), fontSize = 11.sp, color = TextDim)
             }
         }
     }
@@ -451,17 +451,17 @@ private fun Scorers(g: Game, div: Int) {
     val assists = active.filter { it.assists > 0 }.sortedByDescending { it.assists }.take(10)
     val rating = active.filter { it.apps >= 5 }.sortedByDescending { it.avgRating }.take(10)
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Text("${com.supermenajer.game.model.Comp.name(div)} · tüm kulvarlar", color = TextDim, fontSize = 12.sp) }
-        item { RankCard(g, "Gol Krallığı", goals) { "${it.goals}" } }
-        item { RankCard(g, "Asist", assists) { "${it.assists}" } }
-        item { RankCard(g, "En Yüksek Ortalama (min. 5 maç)", rating) { "%.2f".format(it.avgRating) } }
+        item { Text(L("${com.supermenajer.game.model.Comp.name(div)} · tüm kulvarlar", "${com.supermenajer.game.model.Comp.name(div)} · all competitions"), color = TextDim, fontSize = 12.sp) }
+        item { RankCard(g, L("Gol Krallığı", "Top Scorers"), goals) { "${it.goals}" } }
+        item { RankCard(g, L("Asist", "Assists"), assists) { "${it.assists}" } }
+        item { RankCard(g, L("En Yüksek Ortalama (min. 5 maç)", "Best Average Rating (min. 5 apps)"), rating) { "%.2f".format(it.avgRating) } }
     }
 }
 
 @Composable
 private fun RankCard(g: Game, title: String, list: List<com.supermenajer.game.model.Player>, value: (com.supermenajer.game.model.Player) -> String) {
     SectionCard(title) {
-        if (list.isEmpty()) Text("Henüz veri yok.", color = TextDim)
+        if (list.isEmpty()) Text(L("Henüz veri yok.", "No data yet."), color = TextDim)
         list.forEachIndexed { i, p ->
             val t = g.team(p.teamId)
             Row(
@@ -491,7 +491,7 @@ private fun CalendarView(g: Game) {
     val mine = remember(GameRepo.version) {
         g.fixtures.filter { it.involves(g.userTeamId) }.associateBy { cal.dateOf(g, it.week) }
     }
-    val months = listOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
+    val months = listOf(L("Ocak", "January"), L("Şubat", "February"), L("Mart", "March"), L("Nisan", "April"), L("Mayıs", "May"), L("Haziran", "June"), L("Temmuz", "July"), L("Ağustos", "August"), L("Eylül", "September"), L("Ekim", "October"), L("Kasım", "November"), L("Aralık", "December"))
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { month = month.minusMonths(1) }) { Text("◀", fontSize = 18.sp) }
@@ -499,7 +499,7 @@ private fun CalendarView(g: Game) {
             TextButton(onClick = { month = month.plusMonths(1) }) { Text("▶", fontSize = 18.sp) }
         }
         Row(Modifier.fillMaxWidth()) {
-            listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz").forEach {
+            listOf(L("Pzt", "Mon"), L("Sal", "Tue"), L("Çar", "Wed"), L("Per", "Thu"), L("Cum", "Fri"), L("Cmt", "Sat"), L("Paz", "Sun")).forEach {
                 Text(it, color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
             }
         }
@@ -535,7 +535,7 @@ private fun CalendarView(g: Game) {
                                             Text(opp.short, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                             Spacer(Modifier.weight(1f))
                                             Text(
-                                                if (f.played) "${f.hg}-${f.ag}" else if (f.home == g.userTeamId) "İÇ" else "DIŞ",
+                                                if (f.played) "${f.hg}-${f.ag}" else if (f.home == g.userTeamId) L("İÇ", "H") else L("DIŞ", "A"),
                                                 fontSize = 10.sp, color = if (f.played) TextMain else if (f.home == g.userTeamId) Green else Gold, fontWeight = FontWeight.Bold, maxLines = 1,
                                             )
                                         }
@@ -548,9 +548,9 @@ private fun CalendarView(g: Game) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp)) {
-            Legend(Color(0xFF1B2B5A), "Lig maçı")
-            Legend(Color(0xFF3A2160), "Kupa / Avrupa")
-            Legend(Teal, "Bugün")
+            Legend(Color(0xFF1B2B5A), L("Lig maçı", "League match"))
+            Legend(Color(0xFF3A2160), L("Kupa / Avrupa", "Cup / Europe"))
+            Legend(Teal, L("Bugün", "Today"))
         }
     }
 }

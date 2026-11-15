@@ -57,28 +57,28 @@ fun CompareDialog(g: Game, a: Player, b: Player) {
         return CmpRow(label, at, av, bt, bv, 99.0)
     }
     val rows = buildList {
-        add(row("Güç") { it.overall })
+        add(row(L("Güç", "Overall")) { it.overall })
         add(
             CmpRow(
-                "Potansiyel", Scouting.potText(g, a), if (Scouting.known(g, a)) a.potential.toDouble() else 0.0,
+                L("Potansiyel", "Potential"), Scouting.potText(g, a), if (Scouting.known(g, a)) a.potential.toDouble() else 0.0,
                 Scouting.potText(g, b), if (Scouting.known(g, b)) b.potential.toDouble() else 0.0, 99.0,
             ),
         )
-        if (a.pos == Pos.GK || b.pos == Pos.GK) add(row("Kalecilik") { it.goalkeeping })
-        add(row("Hız") { it.pace })
-        add(row("Şut") { it.shooting })
-        add(row("Pas") { it.passing })
-        add(row("Teknik") { it.dribbling })
-        add(row("Savunma") { it.defending })
-        add(row("Fizik") { it.physical })
-        add(CmpRow("Yaş", "${a.age}", a.age.toDouble(), "${b.age}", b.age.toDouble(), 40.0, lowerBetter = true))
-        add(CmpRow("Değer", money(a.value), a.value.toDouble(), money(b.value), b.value.toDouble(), maxOf(a.value, b.value, 1).toDouble()))
-        add(CmpRow("Maaş talebi", money(a.demandWage), a.demandWage.toDouble(), money(b.demandWage), b.demandWage.toDouble(), maxOf(a.demandWage, b.demandWage, 1).toDouble(), lowerBetter = true))
-        add(CmpRow("Bu sezon maç", "${a.apps}", a.apps.toDouble(), "${b.apps}", b.apps.toDouble(), maxOf(a.apps, b.apps, 1).toDouble()))
-        add(CmpRow("Gol + asist", "${a.goals}+${a.assists}", (a.goals + a.assists).toDouble(), "${b.goals}+${b.assists}", (b.goals + b.assists).toDouble(), maxOf(a.goals + a.assists, b.goals + b.assists, 1).toDouble()))
+        if (a.pos == Pos.GK || b.pos == Pos.GK) add(row(L("Kalecilik", "Goalkeeping")) { it.goalkeeping })
+        add(row(L("Hız", "Pace")) { it.pace })
+        add(row(L("Şut", "Shooting")) { it.shooting })
+        add(row(L("Pas", "Passing")) { it.passing })
+        add(row(L("Teknik", "Technique")) { it.dribbling })
+        add(row(L("Savunma", "Defending")) { it.defending })
+        add(row(L("Fizik", "Physical")) { it.physical })
+        add(CmpRow(L("Yaş", "Age"), "${a.age}", a.age.toDouble(), "${b.age}", b.age.toDouble(), 40.0, lowerBetter = true))
+        add(CmpRow(L("Değer", "Value"), money(a.value), a.value.toDouble(), money(b.value), b.value.toDouble(), maxOf(a.value, b.value, 1).toDouble()))
+        add(CmpRow(L("Maaş talebi", "Wage demand"), money(a.demandWage), a.demandWage.toDouble(), money(b.demandWage), b.demandWage.toDouble(), maxOf(a.demandWage, b.demandWage, 1).toDouble(), lowerBetter = true))
+        add(CmpRow(L("Bu sezon maç", "Apps this season"), "${a.apps}", a.apps.toDouble(), "${b.apps}", b.apps.toDouble(), maxOf(a.apps, b.apps, 1).toDouble()))
+        add(CmpRow(L("Gol + asist", "Goals + assists"), "${a.goals}+${a.assists}", (a.goals + a.assists).toDouble(), "${b.goals}+${b.assists}", (b.goals + b.assists).toDouble(), maxOf(a.goals + a.assists, b.goals + b.assists, 1).toDouble()))
         add(
             CmpRow(
-                "Ort. puan", if (a.apps > 0) "%.2f".format(a.avgRating) else "-", a.avgRating,
+                L("Ort. puan", "Avg. rating"), if (a.apps > 0) "%.2f".format(a.avgRating) else "-", a.avgRating,
                 if (b.apps > 0) "%.2f".format(b.avgRating) else "-", b.avgRating, 10.0,
             ),
         )
@@ -90,7 +90,7 @@ fun CompareDialog(g: Game, a: Player, b: Player) {
                 .padding(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("⚖ Oyuncu Karşılaştırma", fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text(L("⚖ Oyuncu Karşılaştırma", "⚖ Player Comparison"), fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
                 Text("✕", fontSize = 20.sp, color = TextDim, modifier = Modifier.clip(CircleShape).clickable { GameRepo.compare = null }.padding(8.dp))
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -105,7 +105,7 @@ fun CompareDialog(g: Game, a: Player, b: Player) {
             Spacer(Modifier.height(6.dp))
             val pin = GameRepo.comparePin?.let { g.player(it) }
             Text(
-                "Başka bir oyuncuyla karşılaştırmak için onun profilinde ⚖'ye bas" + (pin?.let { " · Sabitlenen: ${it.name}" } ?: ""),
+                L("Başka bir oyuncuyla karşılaştırmak için onun profilinde ⚖'ye bas", "To compare with another player, tap ⚖ on their profile") + (pin?.let { L(" · Sabitlenen: ${it.name}", " · Pinned: ${it.name}") } ?: ""),
                 color = TextDim, fontSize = 11.sp,
             )
         }
@@ -123,8 +123,8 @@ private fun CompareHead(g: Game, p: Player, modifier: Modifier, align: Alignment
         if (align == Alignment.Start) PlayerFace(p, 52.dp, t?.let { Color(it.color1) } ?: Color(0xFF455A64), t?.let { Color(it.color2) } ?: Color.White)
         Column(Modifier.weight(1f).padding(horizontal = 8.dp), horizontalAlignment = align) {
             Text(p.name, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${Positions.det(p).code} · ${p.age} yaş · ${Generator.flag(p.nation)}", color = TextDim, fontSize = 12.sp, maxLines = 1)
-            Text(t?.name ?: "Serbest", color = Teal, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(L("${Positions.det(p).code} · ${p.age} yaş · ${Generator.flag(p.nation)}", "${Positions.det(p).code} · ${p.age} yrs · ${Generator.flag(p.nation)}"), color = TextDim, fontSize = 12.sp, maxLines = 1)
+            Text(t?.name ?: L("Serbest", "Free agent"), color = Teal, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (align == Alignment.End) PlayerFace(p, 52.dp, t?.let { Color(it.color1) } ?: Color(0xFF455A64), t?.let { Color(it.color2) } ?: Color.White)
     }

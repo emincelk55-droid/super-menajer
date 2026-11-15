@@ -74,7 +74,7 @@ fun NationalTab(g: Game) {
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(National.name(code).uppercase(), fontWeight = FontWeight.Black, fontSize = 22.sp)
-                            Text("Milli takım · Teknik direktör ${g.managerName}", color = TextDim, fontSize = 12.sp)
+                            Text(L("Milli takım · Teknik direktör ${g.managerName}", "National team · Manager ${g.managerName}"), color = TextDim, fontSize = 12.sp)
                         }
                         RingGauge((National.strengthOf(g, code, squad) / 100).toFloat(), 58.dp, Teal) {
                             Text("${National.strengthOf(g, code, squad).toInt()}", fontWeight = FontWeight.Black, fontSize = 16.sp)
@@ -82,34 +82,34 @@ fun NationalTab(g: Game) {
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        NatStat("Bu sezon", "$w G · $d B · $l M")
-                        NatStat("Puan", "${g.natPoints}")
+                        NatStat(L("Bu sezon", "This season"), L("$w G · $d B · $l M", "$w W · $d D · $l L"))
+                        NatStat(L("Puan", "Points"), "${g.natPoints}")
                         NatStat(
-                            if (com.supermenajer.game.game.Tournament.active(g)) "Turnuva" else "Sıradaki pencere",
-                            if (com.supermenajer.game.game.Tournament.active(g)) com.supermenajer.game.game.Tournament.stageText(g).substringBefore(" ·") else next?.let { "$it. hafta" } ?: "Yaz turnuvası",
+                            if (com.supermenajer.game.game.Tournament.active(g)) L("Turnuva", "Tournament") else L("Sıradaki pencere", "Next window"),
+                            if (com.supermenajer.game.game.Tournament.active(g)) com.supermenajer.game.game.Tournament.stageText(g).substringBefore(" ·") else next?.let { L("$it. hafta", "Week $it") } ?: L("Yaz turnuvası", "Summer tournament"),
                         )
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Milli maçlar lig takviminin ${National.windows.sorted().joinToString(", ")}. haftalarında oynanır. Sezon sonunda ${if (g.season % 2 == 0) "Avrupa Şampiyonası" else "Dünya Kupası"} var.",
+                        L("Milli maçlar lig takviminin ${National.windows.sorted().joinToString(", ")}. haftalarında oynanır. Sezon sonunda ${if (g.season % 2 == 0) "Avrupa Şampiyonası" else "Dünya Kupası"} var.", "International matches are played in weeks ${National.windows.sorted().joinToString(", ")} of the league calendar. At the end of the season there's ${if (g.season % 2 == 0) "the European Championship" else "the World Cup"}."),
                         color = TextDim, fontSize = 12.sp,
                     )
                 }
             }
             if (g.natPending.isNotEmpty()) item { NationalMatchCard(g) }
             item {
-                DashCard("Diziliş", Modifier.fillMaxWidth()) {
+                DashCard(L("Diziliş", "Formation"), Modifier.fillMaxWidth()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         com.supermenajer.game.model.Formations.names.forEach { f ->
                             SmallChip(f, g.natFormation == f, Modifier.weight(1f)) { g.natFormation = f; GameRepo.changed() }
                         }
                     }
-                    Text("Milli maçlarda en iyi 11 bu dizilişe göre otomatik seçilir; maç sırasında değişiklik ve mentaliteyi sen yönetirsin.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text(L("Milli maçlarda en iyi 11 bu dizilişe göre otomatik seçilir; maç sırasında değişiklik ve mentaliteyi sen yönetirsin.", "In international matches the best XI is picked automatically for this formation; you manage substitutions and mentality during the match."), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
             item {
-                DashCard("Sonuçlar", Modifier.fillMaxWidth()) {
-                    if (g.natResults.isEmpty()) Text("Henüz milli maç oynanmadı.", color = TextDim, fontSize = 13.sp)
+                DashCard(L("Sonuçlar", "Results"), Modifier.fillMaxWidth()) {
+                    if (g.natResults.isEmpty()) Text(L("Henüz milli maç oynanmadı.", "No international matches played yet."), color = TextDim, fontSize = 13.sp)
                     g.natResults.take(10).forEachIndexed { i, r ->
                         val c = r.split("|")
                         if (c.size < 4) return@forEachIndexed
@@ -130,25 +130,25 @@ fun NationalTab(g: Game) {
                     Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(10.dp)).border(1.dp, Red.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
                         .clickable { GameRepo.resignNational() },
                     contentAlignment = Alignment.Center,
-                ) { Text("Milli takım görevini bırak", color = Red, fontWeight = FontWeight.Bold) }
+                ) { Text(L("Milli takım görevini bırak", "Resign as national team manager"), color = Red, fontWeight = FontWeight.Bold) }
             }
         }
         LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
-                DashCard("Milli Takım Kadrosu (${squad.size})", Modifier.fillMaxWidth()) {
-                    Text("Kadro boşsa en iyi oyuncular otomatik çağrılır. Çıkar / çağır ile kendi kadronu kur (en fazla 26).", color = TextDim, fontSize = 12.sp)
+                DashCard(L("Milli Takım Kadrosu (${squad.size})", "National Team Squad (${squad.size})"), Modifier.fillMaxWidth()) {
+                    Text(L("Kadro boşsa en iyi oyuncular otomatik çağrılır. Çıkar / çağır ile kendi kadronu kur (en fazla 26).", "If the squad is empty the best players are called up automatically. Drop / call up to build your own squad (max 26)."), color = TextDim, fontSize = 12.sp)
                     for (pos in Pos.entries) {
                         val list = squad.filter { it.pos == pos }.sortedByDescending { it.overall }
                         if (list.isEmpty()) continue
                         Text(pos.label.uppercase(), color = posColor(pos), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 6.dp))
-                        list.forEach { p -> CallRow(g, p, "Çıkar", Red) }
+                        list.forEach { p -> CallRow(g, p, L("Çıkar", "Drop"), Red) }
                     }
                 }
             }
             item {
-                DashCard("Çağrılabilecek oyuncular", Modifier.fillMaxWidth()) {
-                    if (cand.isEmpty()) Text("Başka aday yok.", color = TextDim, fontSize = 13.sp)
-                    cand.forEach { p -> CallRow(g, p, "Çağır", Green) }
+                DashCard(L("Çağrılabilecek oyuncular", "Players available for call-up"), Modifier.fillMaxWidth()) {
+                    if (cand.isEmpty()) Text(L("Başka aday yok.", "No other candidates."), color = TextDim, fontSize = 13.sp)
+                    cand.forEach { p -> CallRow(g, p, L("Çağır", "Call up"), Green) }
                 }
             }
         }
@@ -170,7 +170,7 @@ private fun CallRow(g: Game, p: Player, action: String, c: Color) {
         Text(Positions.det(p).code, color = posColor(p.pos), fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.width(36.dp))
         Column(Modifier.weight(1f).clickable { GameRepo.selectedPlayer = p }) {
             Text(p.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${p.age} yaş · ${t?.name ?: ""}", color = TextDim, fontSize = 11.sp, maxLines = 1)
+            Text(L("${p.age} yaş · ${t?.name ?: ""}", "${p.age} yrs · ${t?.name ?: ""}"), color = TextDim, fontSize = 11.sp, maxLines = 1)
         }
         OvrBadge(p.overall, 26.dp)
         Spacer(Modifier.width(6.dp))
@@ -190,9 +190,9 @@ private fun NationalOffers(g: Game) {
     val str = remember { nations.associateWith { National.strengthOf(g, it).toInt() } }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 10.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 10.dp)) {
         item {
-            DashCard("🌍 Milli Takım Görevi", Modifier.fillMaxWidth()) {
+            DashCard(L("🌍 Milli Takım Görevi", "🌍 National Team Job"), Modifier.fillMaxWidth()) {
                 Text(
-                    "Kulübünle birlikte bir milli takımı da çalıştırabilirsin. Güçlü uluslar daha yüksek menajer itibarı ister. Senin itibarın: ${g.managerRep}.",
+                    L("Kulübünle birlikte bir milli takımı da çalıştırabilirsin. Güçlü uluslar daha yüksek menajer itibarı ister. Senin itibarın: ${g.managerRep}.", "You can manage a national team alongside your club. Stronger nations require a higher manager reputation. Your reputation: ${g.managerRep}."),
                     color = TextDim, fontSize = 13.sp,
                 )
                 msg?.let { Text(it, color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
@@ -211,14 +211,14 @@ private fun NationalOffers(g: Game) {
                 Text(Generator.flag(code), fontSize = 22.sp)
                 Spacer(Modifier.width(10.dp))
                 Text(National.name(code), fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                Text("Güç ${str[code]}", fontSize = 12.sp, color = TextDim, modifier = Modifier.width(70.dp))
-                Text("İtibar $need+", fontSize = 12.sp, color = if (ok) Green else Red, modifier = Modifier.width(80.dp), textAlign = TextAlign.Center)
+                Text(L("Güç ${str[code]}", "Strength ${str[code]}"), fontSize = 12.sp, color = TextDim, modifier = Modifier.width(70.dp))
+                Text(L("İtibar $need+", "Reputation $need+"), fontSize = 12.sp, color = if (ok) Green else Red, modifier = Modifier.width(80.dp), textAlign = TextAlign.Center)
                 Box(
                     Modifier.width(96.dp).height(32.dp).clip(RoundedCornerShape(8.dp))
                         .background(if (ok) Teal else Color.Transparent).border(1.dp, if (ok) Teal else CardLine, RoundedCornerShape(8.dp))
                         .clickable(enabled = ok) { msg = GameRepo.takeNationalJob(code) },
                     contentAlignment = Alignment.Center,
-                ) { Text("Görevi al", color = if (ok) Color(0xFF06231A) else TextDim, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                ) { Text(L("Görevi al", "Take the job"), color = if (ok) Color(0xFF06231A) else TextDim, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             }
         }
     }
@@ -237,7 +237,7 @@ fun TournamentCard(g: Game) {
                     val gi = row * 2 + col
                     Column(Modifier.weight(1f).padding(vertical = 4.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028)).padding(6.dp)) {
                         Row {
-                            Text("${T.groupNames[gi]} Grubu", fontWeight = FontWeight.Black, fontSize = 12.sp, color = Teal, modifier = Modifier.weight(1f))
+                            Text(L("${T.groupNames[gi]} Grubu", "Group ${T.groupNames[gi]}"), fontWeight = FontWeight.Black, fontSize = 12.sp, color = Teal, modifier = Modifier.weight(1f))
                             Text("AV", color = TextDim, fontSize = 10.sp, modifier = Modifier.width(26.dp), textAlign = TextAlign.End)
                             Text("P", color = TextDim, fontSize = 10.sp, modifier = Modifier.width(22.dp), textAlign = TextAlign.End)
                         }
@@ -262,8 +262,8 @@ fun TournamentCard(g: Game) {
         val ko = g.tourLog.map { it.split("|") }.filter { it.size >= 2 && (it[0].toIntOrNull() ?: 0) >= 3 }
         if (ko.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            Text("ELEME TURLARI", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            val names = listOf("Çeyrek Final", "Yarı Final", "Final")
+            Text(L("ELEME TURLARI", "KNOCKOUT ROUNDS"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            val names = listOf(L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final"))
             ko.forEach { (st, line) ->
                 Row(Modifier.padding(vertical = 2.dp)) {
                     Text(names.getOrElse(st.toInt() - 3) { "" }, color = TextDim, fontSize = 11.sp, modifier = Modifier.width(84.dp))

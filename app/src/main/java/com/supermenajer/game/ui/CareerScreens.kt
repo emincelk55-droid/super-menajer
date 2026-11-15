@@ -59,10 +59,10 @@ fun EventCard(g: Game) {
     var result by remember { mutableStateOf<String?>(null) }
     if (e == null) {
         result?.let { r ->
-            SectionCard("📌 Karar verildi") {
+            SectionCard(L("📌 Karar verildi", "📌 Decision made")) {
                 Text(r, fontSize = 13.sp)
                 Spacer(Modifier.height(6.dp))
-                OutlinedButton(onClick = { result = null }, modifier = Modifier.fillMaxWidth()) { Text("Tamam") }
+                OutlinedButton(onClick = { result = null }, modifier = Modifier.fillMaxWidth()) { Text(L("Tamam", "OK")) }
             }
         }
         return
@@ -71,7 +71,7 @@ fun EventCard(g: Game) {
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Surface1)
             .border(1.5.dp, Gold, RoundedCornerShape(14.dp)).padding(14.dp),
     ) {
-        Text("⚡ BEKLENMEDİK OLAY", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Text(L("⚡ BEKLENMEDİK OLAY", "⚡ UNEXPECTED EVENT"), color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             g.player(e.playerId)?.let { p ->
@@ -93,7 +93,7 @@ fun EventCard(g: Game) {
             }
             Spacer(Modifier.height(4.dp))
         }
-        Text("Karar verene kadar takvim ilerlemez.", color = TextDim, fontSize = 11.sp)
+        Text(L("Karar verene kadar takvim ilerlemez.", "The calendar won't move until you decide."), color = TextDim, fontSize = 11.sp)
     }
 }
 
@@ -103,7 +103,7 @@ fun PerksView(g: Game) {
     var msg by remember { mutableStateOf<String?>(null) }
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(0.8f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionCard("⭐ Menajer seviyesi") {
+            SectionCard(L("⭐ Menajer seviyesi", "⭐ Manager level")) {
                 val lv = Perks.level(g.managerXp)
                 val (cur, need) = Perks.xpToNext(g.managerXp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -113,21 +113,21 @@ fun PerksView(g: Game) {
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(g.managerName, fontWeight = FontWeight.Black, fontSize = 17.sp)
-                        Text("Seviye $lv · toplam ${g.managerXp} XP", color = TextDim, fontSize = 12.sp)
+                        Text(L("Seviye $lv · toplam ${g.managerXp} XP", "Level $lv · ${g.managerXp} XP total"), color = TextDim, fontSize = 12.sp)
                         Spacer(Modifier.height(4.dp))
                         Bar(cur.toFloat() / need, Gold, Modifier.fillMaxWidth(), 8.dp)
-                        Text("Sonraki seviye: $cur / $need XP", color = TextDim, fontSize = 11.sp)
+                        Text(L("Sonraki seviye: $cur / $need XP", "Next level: $cur / $need XP"), color = TextDim, fontSize = 11.sp)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
                 val pts = Perks.points(g)
                 Text(
-                    if (pts > 0) "🎁 Harcanabilir $pts yetenek puanın var!" else "Yetenek puanın yok.",
+                    if (pts > 0) L("🎁 Harcanabilir $pts yetenek puanın var!", "🎁 You have $pts skill points to spend!") else L("Yetenek puanın yok.", "No skill points."),
                     color = if (pts > 0) Green else TextDim, fontWeight = FontWeight.Bold, fontSize = 14.sp,
                 )
                 msg?.let { Text(it, color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
             }
-            SectionCard("Nasıl XP kazanılır?") {
+            SectionCard(L("Nasıl XP kazanılır?", "How do you earn XP?")) {
                 listOf(
                     "Galibiyet" to "+6", "Beraberlik" to "+2", "Başarım açmak" to "+25",
                     "Sezon hedefini tutturmak" to "+60", "Kupa" to "+80", "Lig şampiyonluğu" to "+120", "Avrupa kupası" to "+150",
@@ -144,7 +144,7 @@ fun PerksView(g: Game) {
             horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text("🎖️ MENAJER ÖZELLİKLERİ · oyun tarzına göre kendiliğinden kazanılır", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(L("🎖️ MENAJER ÖZELLİKLERİ · oyun tarzına göre kendiliğinden kazanılır", "🎖️ MANAGER TRAITS · earned automatically by your style of play"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
             items(com.supermenajer.game.game.ManagerTraits.all.size) { i ->
                 val t = com.supermenajer.game.game.ManagerTraits.all[i]
@@ -159,16 +159,16 @@ fun PerksView(g: Game) {
                         Text(t.icon, fontSize = 22.sp, modifier = Modifier.alpha(if (earned) 1f else 0.45f))
                         Spacer(Modifier.width(8.dp))
                         Text(t.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = if (earned) Gold else Color.White, modifier = Modifier.weight(1f))
-                        Text(if (earned) "✓ Kazanıldı" else "$pr/${t.need}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (earned) Gold else TextDim)
+                        Text(if (earned) L("✓ Kazanıldı", "✓ Earned") else "$pr/${t.need}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (earned) Gold else TextDim)
                     }
                     Text(t.how, color = TextDim, fontSize = 11.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 4.dp))
                     Spacer(Modifier.height(4.dp))
                     Bar(pr.toFloat() / t.need, if (earned) Gold else Teal, Modifier.fillMaxWidth(), 5.dp)
-                    Text("Etkisi: ${t.effect}", color = if (earned) Green else TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+                    Text(L("Etkisi: ${t.effect}", "Effect: ${t.effect}"), color = if (earned) Green else TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text("⭐ YETENEK AĞACI · seviye atladıkça kazanılan puanla geliştir", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(L("⭐ YETENEK AĞACI · seviye atladıkça kazanılan puanla geliştir", "⭐ SKILL TREE · upgrade with points earned by levelling up"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 6.dp))
             }
             items(Perks.all.size) { i ->
                 val p = Perks.all[i]
@@ -191,7 +191,7 @@ fun PerksView(g: Game) {
                         onClick = { msg = GameRepo.upgradePerk(p.id) }, enabled = can,
                         modifier = Modifier.fillMaxWidth().height(36.dp), contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Color.Black),
-                    ) { Text(if (lv >= p.max) "En üst seviye" else "Geliştir (${lv + 1}/${p.max})", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(if (lv >= p.max) L("En üst seviye", "Max level") else L("Geliştir (${lv + 1}/${p.max})", "Upgrade (${lv + 1}/${p.max})"), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -204,10 +204,10 @@ fun ManagerMarketView(g: Game) {
     var msg by remember { mutableStateOf<String?>(null) }
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionCard("📋 Boş koltuklar") {
+            SectionCard(L("📋 Boş koltuklar", "📋 Vacant jobs")) {
                 msg?.let { Text(it, color = Gold, fontSize = 13.sp); Spacer(Modifier.height(6.dp)) }
                 if (g.vacancies.isEmpty()) {
-                    Text("Şu an boş teknik direktörlük koltuğu yok. Kötü giden kulüplerin hocaları kovulduğunda burada görünür.", color = TextDim, fontSize = 12.sp)
+                    Text(L("Şu an boş teknik direktörlük koltuğu yok. Kötü giden kulüplerin hocaları kovulduğunda burada görünür.", "There are no vacant manager jobs right now. They appear here when managers of struggling clubs are sacked."), color = TextDim, fontSize = 12.sp)
                 }
                 g.vacancies.forEach { v ->
                     val t = g.teamOrNull(v.teamId) ?: return@forEach
@@ -217,21 +217,21 @@ fun ManagerMarketView(g: Game) {
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
                             Text(t.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · itibar ${t.reputation} · $days gün", color = TextDim, fontSize = 11.sp)
+                            Text(L("${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · itibar ${t.reputation} · $days gün", "${Generator.flag(g.flagOf(t))} ${g.leagueName(t)} · reputation ${t.reputation} · $days days"), color = TextDim, fontSize = 11.sp)
                         }
                         Button(
                             onClick = { msg = GameRepo.applyJob(t.id) }, enabled = !v.applied,
                             contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.height(36.dp),
-                        ) { Text(if (v.applied) "Başvuruldu" else "Başvur", fontSize = 12.sp) }
+                        ) { Text(if (v.applied) L("Başvuruldu", "Applied") else L("Başvur", "Apply"), fontSize = 12.sp) }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("Kabul edilme şansı itibarına (${g.managerRep}) ve kulübün büyüklüğüne bağlı.", color = TextDim, fontSize = 11.sp)
+                Text(L("Kabul edilme şansı itibarına (${g.managerRep}) ve kulübün büyüklüğüne bağlı.", "Your chance depends on your reputation (${g.managerRep}) and the size of the club."), color = TextDim, fontSize = 11.sp)
             }
         }
         val table = g.table(g.userTeam.division)
         Column(Modifier.weight(1.2f).fillMaxHeight()) {
-            Text("LİGDEKİ HOCALAR · KOLTUK GÜVENCESİ", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(L("LİGDEKİ HOCALAR · KOLTUK GÜVENCESİ", "MANAGERS IN THE LEAGUE · JOB SECURITY"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             LazyColumn(Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(Surface1)) {
                 items(table, key = { it.id }) { t ->
@@ -247,11 +247,11 @@ fun ManagerMarketView(g: Game) {
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
                             Text(t.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (me) "${g.managerName} (sen)" else g.managers[t.id] ?: "–", color = TextDim, fontSize = 11.sp, maxLines = 1)
+                            Text(if (me) L("${g.managerName} (sen)", "${g.managerName} (you)") else g.managers[t.id] ?: "–", color = TextDim, fontSize = 11.sp, maxLines = 1)
                         }
                         Column(Modifier.width(120.dp), horizontalAlignment = Alignment.End) {
                             Bar((s / 100).toFloat(), col, Modifier.fillMaxWidth(), 6.dp)
-                            Text(if (g.vacancies.any { it.teamId == t.id }) "Koltuk boş!" else ManagerMarket.securityText(s), color = col, fontSize = 11.sp)
+                            Text(if (g.vacancies.any { it.teamId == t.id }) L("Koltuk boş!", "Job vacant!") else ManagerMarket.securityText(s), color = col, fontSize = 11.sp)
                         }
                     }
                 }
@@ -267,7 +267,7 @@ fun DynamicsView(g: Game) {
     val tiers = Dynamics.tiers(g, t)
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionCard("🤝 Takım uyumu") {
+            SectionCard(L("🤝 Takım uyumu", "🤝 Team chemistry")) {
                 val c = g.cohesion
                 val col = when { c >= 65 -> Green; c >= 40 -> Gold; else -> Red }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -280,12 +280,12 @@ fun DynamicsView(g: Game) {
                 }
                 Spacer(Modifier.height(6.dp))
                 val pct = ((Dynamics.matchFactor(g) - 1.0) * 100)
-                Text("Maç etkisi: ${if (pct >= 0) "+" else ""}${"%.1f".format(pct)}% güç", color = TextDim, fontSize = 12.sp)
-                Text("Yüksek moral uyumu artırır. Çok sayıda yeni transfer ve önemli oyuncu satışları uyumu düşürür.", color = TextDim, fontSize = 11.sp)
+                Text(L("Maç etkisi: ${if (pct >= 0) "+" else ""}${"%.1f".format(pct)}% güç", "Match effect: ${if (pct >= 0) "+" else ""}${"%.1f".format(pct)}% strength"), color = TextDim, fontSize = 12.sp)
+                Text(L("Yüksek moral uyumu artırır. Çok sayıda yeni transfer ve önemli oyuncu satışları uyumu düşürür.", "High morale raises chemistry. Many new signings and selling key players lower it."), color = TextDim, fontSize = 11.sp)
             }
-            SectionCard("👥 Soyunma odası grupları") {
+            SectionCard(L("👥 Soyunma odası grupları", "👥 Dressing room groups")) {
                 val groups = Dynamics.groups(g, t)
-                if (groups.isEmpty()) Text("Belirgin bir grup yok.", color = TextDim, fontSize = 12.sp)
+                if (groups.isEmpty()) Text(L("Belirgin bir grup yok.", "No clear groups."), color = TextDim, fontSize = 12.sp)
                 groups.entries.sortedByDescending { it.value.size }.forEach { (name, list) ->
                     val avg = list.sumOf { it.morale } / list.size
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -299,7 +299,7 @@ fun DynamicsView(g: Game) {
                         }
                     }
                 }
-                Text("Etkili oyuncuların morali kendi grubuna yayılır.", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(L("Etkili oyuncuların morali kendi grubuna yayılır.", "Influential players spread their morale to their group."), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
         LazyColumn(Modifier.weight(1.2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -326,7 +326,7 @@ private fun HierarchyRow(g: Game, p: Player, tier: Int) {
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text((if (p.id == t.captain) "©️ " else "") + p.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${Generator.flag(p.nation)} ${p.age} yaş · ${Dynamics.groupOf(g, t, p)}", color = TextDim, fontSize = 11.sp, maxLines = 1)
+            Text(L("${Generator.flag(p.nation)} ${p.age} yaş · ${Dynamics.groupOf(g, t, p)}", "${Generator.flag(p.nation)} ${p.age} yrs · ${Dynamics.groupOf(g, t, p)}"), color = TextDim, fontSize = 11.sp, maxLines = 1)
         }
         Text(moraleText(p.morale), color = if (p.morale >= 60) Green else if (p.morale >= 40) Gold else Red, fontSize = 11.sp)
         Spacer(Modifier.width(6.dp))
