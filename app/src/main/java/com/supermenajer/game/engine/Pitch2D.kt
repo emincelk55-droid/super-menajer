@@ -43,6 +43,8 @@ object Pose {
     const val TACKLE = 4
     const val CELEB = 5
     const val SLIDE = 6
+    /** Hakem kart gösteriyor (kol havada). */
+    const val CARD = 7
 
     /** Pozun süresi (sn); sevinç pozları mod değişince biter. */
     fun duration(p: Int): Float = when (p) { KICK -> 0.38f; HEADER -> 0.55f; DIVE -> 1.4f; TACKLE -> 0.75f; else -> Float.MAX_VALUE }
@@ -194,6 +196,12 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
     private var stepWait = 0f
     private var celebrator: Agent? = null
 
+    private var cardColor = 0
+    private var cardAt = -10f
+
+    /** Hakemin şu an gösterdiği kart: 0 yok, 1 sarı, 2 kırmızı. */
+    val card: Int get() = if (time - cardAt < 2.8f) cardColor else 0
+
     /** Gol sevinci / tekrarı sürüyorsa golü atan taraf (0 ev, 1 deplasman), yoksa -1. */
     val scoringSide: Int get() = if (celebrating) celebrator?.side ?: -1 else -1
     private var kickoffSide = 0
@@ -270,7 +278,10 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         if (mode == Mode.WALKOFF && e.type != Ev.HALF && e.type != Ev.FULL) secondHalf(instant = true)
         when (e.type) {
             Ev.GOAL, Ev.SAVE, Ev.MISS, Ev.POST, Ev.CORNER -> queue.addLast(e)
-            Ev.YELLOW, Ev.RED, Ev.INJURY -> if (!busy) stoppage(e.side)
+            Ev.YELLOW, Ev.RED, Ev.INJURY -> {
+                if (e.type != Ev.INJURY) { cardColor = if (e.type == Ev.RED) 2 else 1; cardAt = time }
+                if (!busy) stoppage(e.side)
+            }
             Ev.HALF, Ev.FULL -> walkOff()
             Ev.SUB -> sync()
             else -> {}

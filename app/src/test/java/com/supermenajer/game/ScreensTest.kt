@@ -160,6 +160,10 @@ class ScreensTest {
         n = 0
         while (n++ < 30 * 3) anim.update(1f / 30f)
         paparazzi.snapshot("25c_corner_tv") { tvShot() }
+        // Hakem sarı kart gösterir; yan hakemler bayraklarıyla çizgide
+        anim.play(com.supermenajer.game.engine.MatchEvent(31, com.supermenajer.game.engine.Ev.YELLOW, 1, "Sarı kart", sim.away.onPitch.first().p.id, "", -1, 0))
+        repeat(20) { anim.update(1f / 30f) }
+        paparazzi.snapshot("25f_referee_card") { tvShot() }
         // Hava ve ışık: aynı sahne farklı koşullarda
         val C = com.supermenajer.game.engine.Conditions
         for ((name, sky) in listOf(

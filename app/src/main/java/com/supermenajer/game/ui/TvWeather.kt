@@ -100,13 +100,15 @@ fun DrawScope.drawFloodlights(s: TvSky, roofY: Float, camX: Float, t: Float) {
 }
 
 /** Gökten düşen / esen parçacıklar (oyuncuların üstüne çizilir). */
-fun DrawScope.drawWeatherParticles(s: TvSky, t: Float, still: Boolean) {
+fun DrawScope.drawWeatherParticles(s: TvSky, t: Float, still: Boolean, quality: Int = 2) {
     val w = size.width
+    // Düşük kalitede parçacık yok (yalnız ton), ortada yarısı
+    val q = if (quality <= 0) 0f else if (quality == 1) 0.5f else 1f
     val h = size.height
     val time = if (still) 1.3f else t
     when {
         s.rain -> {
-            val n = 170
+            val n = (170 * q).toInt()
             val d = density
             val col = Color(0xFFDDE8F5).copy(alpha = 0.5f)
             for (i in 0 until n) {
@@ -123,7 +125,7 @@ fun DrawScope.drawWeatherParticles(s: TvSky, t: Float, still: Boolean) {
         s.snow -> {
             val pts = ArrayList<Offset>(160)
             val big = ArrayList<Offset>(60)
-            for (i in 0 until 200) {
+            for (i in 0 until (200 * q).toInt()) {
                 val sp = 40f + hash(i, 2) * 50f
                 val y = ((hash(i, 3) * h + time * sp) % (h + 20f)) - 10f
                 val x = (hash(i, 1) * w + sin(time * 1.2f + i) * 14f + w) % w
@@ -135,7 +137,7 @@ fun DrawScope.drawWeatherParticles(s: TvSky, t: Float, still: Boolean) {
         }
         s.wind -> {
             val col = Color.White.copy(alpha = 0.16f)
-            for (i in 0 until 26) {
+            for (i in 0 until (26 * q).toInt()) {
                 val sp = 260f + hash(i, 2) * 180f
                 val x = ((hash(i, 1) * w + time * sp) % (w + 300f)) - 150f
                 val y = hash(i, 3) * h

@@ -247,6 +247,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - ⚽ Top: beşgen desenli, ışık gölgelendirmeli ve yuvarlandıkça dönen top; havadaki topun gölgesi yerde kalır, yükseldikçe büyüyüp soluklaşır; sert şut ve uzun toplarda arkasında solan iz.
 - 🌧️ Hava ve ışık 2,5D görünümde: yağmur damlaları ve ıslak parlayan çim, kar yağışı ve beyazlayan zemin, rüzgârda uçuşan çizgiler, sıcakta güneş parlaması, bulutlu havada mat ton; ağır zeminde çamurlu orta saha. Akşam maçları (kışın ve Avrupa gecelerinde daha sık): karanlık gökyüzü, tribün çatısında projektörler, seyirci flaşları, projektörlerden dört yöne düşen oyuncu gölgeleri. Maç hazırlığında 'akşam (ışıklar)' bilgisi.
 - 🏟️ Stadyum: iki katlı tribün, kulüp renginde kat arası balkon, merdiven boşlukları ve çatı saçağı; taraftarlar takım renklerinde, deplasman taraftarı ayrı blokta; ön sırada sallanan bayraklar. Golde gol atan tarafın taraftarı ayağa kalkıp zıplar. Kayan yazılı LED reklam panoları (kurgusal sponsorlar), golde 'GOOOL!' yanıp söner. Top ağlara girince file esner ve titreyerek durulur. Kamera, top kalabalıktan uzaksa (yakın köşeden korner gibi) otomatik geri çekilir. Penaltı ve santra noktası artık topla karışmıyor.
+- 🟨 Hakemler: orta hakem oyunu çapraz izler, iki yan hakem bayraklarıyla taç çizgilerinde koşar; sarı/kırmızı kartta hakem kartı havaya kaldırır. Kamera ceza sahası yakınında hafifçe yakınlaşır. Ayarlar → 🎨 Maç grafikleri: Düşük (parçacık, bayrak ve şut izi yok — eski telefonlar için), Orta (yarı yoğunluk), Yüksek.
 
 
 ### v2.15

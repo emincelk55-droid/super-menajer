@@ -916,6 +916,12 @@ fun SoundSettings() {
             androidx.compose.material3.Switch(Fx.replays, { Fx.changeReplays(it) })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(L("🎨 Maç grafikleri", "🎨 Match graphics"), fontSize = 14.sp, modifier = Modifier.weight(1f))
+            listOf(L("Düşük", "Low"), L("Orta", "Medium"), L("Yüksek", "High")).forEachIndexed { i, l ->
+                SmallChip(l, Fx.gfx == i, Modifier.width(92.dp).padding(start = 6.dp)) { Fx.changeGfx(i) }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(L("🔋 Pil tasarrufu", "🔋 Battery saver"), fontSize = 14.sp, modifier = Modifier.weight(1f))
             Text(L("sürekli dönen efektleri durdurur", "stops continuously animated effects"), color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
             androidx.compose.material3.Switch(Fx.lowPower, { Fx.changeLowPower(it) })

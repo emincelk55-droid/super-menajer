@@ -129,6 +129,11 @@ fun DrawScope.drawTvPlayer(
                 lean = 0f
             }
         }
+        Pose.CARD -> {
+            frontThigh = 0.05f; backThigh = -0.05f; frontBend = 0.05f; backBend = 0.05f
+            frontArm = 3.1f; frontElbow = 0f; backArm = 0.15f; backElbow = 0.2f
+            lean = -3f; lift = 0f
+        }
         Pose.CELEB, Pose.SLIDE -> {
             val sliding = m.pose == Pose.SLIDE && pu < 1.4f
             if (sliding) {

@@ -89,6 +89,7 @@ object Fx {
     fun init(context: android.content.Context) {
         prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also {
             lowPower = it.getBoolean("lowPower", false)
+            gfx = it.getInt("gfx", 2)
             replays = it.getBoolean("replays", true)
             textSize = it.getInt("textSize", 0)
             homeSimple = it.getBoolean("homeSimple", true)
@@ -100,6 +101,15 @@ object Fx {
     fun changeReplays(on: Boolean) {
         replays = on
         prefs?.edit()?.putBoolean("replays", on)?.apply()
+    }
+
+    /** Maç grafik kalitesi: 0 düşük (parçacık, bayrak, iz yok), 1 orta, 2 yüksek. */
+    var gfx by androidx.compose.runtime.mutableIntStateOf(2)
+        private set
+
+    fun changeGfx(v: Int) {
+        gfx = v.coerceIn(0, 2)
+        prefs?.edit()?.putInt("gfx", gfx)?.apply()
     }
 
     fun changeLowPower(on: Boolean) {

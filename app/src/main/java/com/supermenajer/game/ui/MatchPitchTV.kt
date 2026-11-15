@@ -96,6 +96,35 @@ private class TvCam(val camX: Float, w: Float, h: Float, focusY: Float, ballY: F
 /** Kamera durumu: kareler arası yumuşak takip. */
 private class CamState { var x = Float.NaN; var y = Float.NaN; var span = 44f }
 
+/** Hakem üçlüsünün konumu (görünümde yumuşakça topu izler; motoru etkilemez). */
+private class RefState {
+    val x = floatArrayOf(Float.NaN, Float.NaN, Float.NaN)
+    val y = floatArrayOf(0f, 0f, 0f)
+    val vx = FloatArray(3)
+    var lastT = 0L
+
+    /** 0 orta hakem (oyunu çapraz izler), 1 uzak yan hakem (sağ yarı), 2 yakın yan hakem (sol yarı). */
+    fun update(ballX: Float, ballY: Float, offX: Float?, t: Long, live: Boolean) {
+        val dt = if (lastT == 0L || !live) 1f else ((t - lastT) / 1e9f).coerceIn(0f, 0.1f)
+        lastT = t
+        val side = if (ballX > L / 2) 1f else -1f
+        val tx = floatArrayOf(
+            (ballX - side * 9f).coerceIn(14f, L - 14f),
+            ((offX ?: ballX) + 2f).coerceIn(L / 2, L - 1f),
+            ((offX ?: ballX) - 2f).coerceIn(1f, L / 2),
+        )
+        val ty = floatArrayOf((ballY + (if (ballY < W / 2) 11f else -11f)).coerceIn(6f, W - 6f), -0.9f, W + 0.9f)
+        for (i in 0..2) {
+            if (x[i].isNaN() || !live) { x[i] = tx[i]; y[i] = ty[i]; vx[i] = 0f; continue }
+            val maxStep = (if (i == 0) 7.5f else 6.5f) * dt
+            val dx = (tx[i] - x[i]).coerceIn(-maxStep, maxStep)
+            val dy = (ty[i] - y[i]).coerceIn(-maxStep, maxStep) * (if (i == 0) 1f else 0f)
+            x[i] += dx; y[i] += dy
+            vx[i] = if (dt > 0f) dx / dt else 0f
+        }
+    }
+}
+
 /** Topun son konumları (iz efekti) ve dönüş açısı. */
 private class BallTrail {
     val xs = FloatArray(N); val ys = FloatArray(N); val zs = FloatArray(N)
@@ -150,6 +179,7 @@ fun MatchPitchTV(
     val cam = remember(anim) { CamState() }
     val trail = remember(anim) { BallTrail() }
     val nets = remember(anim) { FloatArray(2) }
+    val refs = remember(anim) { RefState() }
     val ledCache = remember { HashMap<String, TextLayoutResult>() }
     LaunchedEffect(anim) {
         var last = 0L
@@ -186,7 +216,9 @@ fun MatchPitchTV(
         cam.y = if (cam.y.isNaN()) ty else cam.y + (ty - cam.y) * 0.05f
         // Yakınlık: top kalabalıktan uzaksa (yakın köşeden korner, uzun top) kamera geri çekilir
         val spread = abs(ballY - crowdY)
-        val wantSpan = 44f + ((spread - 12f) * 1.3f).coerceIn(0f, 24f)
+        // Ceza sahası yakınında hafif yakınlaşma (heyecan); top kalabalıktan uzaksa geri çekilme
+        val nearBox = rv == null && (ballX < 22f || ballX > L - 22f) && spread < 12f
+        val wantSpan = (if (nearBox) 39f else 44f) + ((spread - 12f) * 1.3f).coerceIn(0f, 24f)
         cam.span = if (Fx.enabled) cam.span + (wantSpan - cam.span) * 0.04f else wantSpan
         // Top yatayda da kadrajda kalsın (kale çizgisi ve köşe bayrağı dahil)
         val hw = TvCam(cam.x, size.width, size.height, cam.y, ballY, cam.span).halfWidthAt(ballY) * 0.8f
@@ -218,12 +250,21 @@ fun MatchPitchTV(
         else anim.agents.filter { it.alpha > 0f }.map { a ->
             TvMan(a.id, a.side, a.gk, a.number, a.x, a.y, a.alpha, hypot(a.vx, a.vy), a === focus, a.name, a.vx, a.pose, a.poseT, a.poseDir)
         }
+        // Hakem üçlüsü (tekrarda gizli)
+        val allMen = if (rv != null) men else {
+            refs.update(ballX, ballY, anim.offsideLineX, t, Fx.enabled)
+            val card = anim.card
+            men + (0..2).map { i ->
+                TvMan(-1 - i, 2, false, 0, refs.x[i], refs.y[i], 1f, kotlin.math.abs(refs.vx[i]), false, "", refs.vx[i],
+                    if (i == 0 && card > 0) com.supermenajer.game.engine.Pose.CARD else 0, 0f, if (ballX < refs.x[i]) -1f else 1f)
+            }
+        }
         // Gölgeler önce, sonra uzaktan yakına oyuncular (yakındakiler öndekini örter)
         val shA = sky.shadowAlpha
-        for (m in men) {
+        for (m in allMen) {
             val k = c.meter(m.y)
             val foot = c.p(m.x, m.y)
-            if (sky.night) {
+            if (sky.night && Fx.gfx > 0) {
                 // Dört köşe projektöründen dört soluk gölge
                 for ((dx, dy) in listOf(0.55f to -0.05f, -0.55f to -0.05f, 0.4f to 0.08f, -0.4f to 0.08f)) {
                     drawOval(Color.Black.copy(alpha = shA * m.alpha), Offset(foot.x - k * 0.5f + k * dx, foot.y - k * 0.12f + k * dy), Size(k * 1.0f, k * 0.24f))
@@ -245,7 +286,7 @@ fun MatchPitchTV(
             val b = c.p(ballX, ballY, ballZ + 0.11f)
             val br = (bk * 0.2f).coerceAtLeast(2.6f)
             // Sert şut / uzun top: arkasında solan iz
-            if (trail.speed > 15f && trail.count >= 3) {
+            if (Fx.gfx > 0 && trail.speed > 15f && trail.count >= 3) {
                 val pts = (0 until trail.count).map { i -> val j = trail.at(i); c.p(trail.xs[j], trail.ys[j], trail.zs[j] + 0.11f) }
                 val strength = ((trail.speed - 15f) / 12f).coerceIn(0.25f, 1f)
                 for (i in 0 until pts.size - 1) {
@@ -256,15 +297,17 @@ fun MatchPitchTV(
             drawSoccerBall(b, br, trail.spin)
             ballDrawn[0] = true
         }
-        for (m in men.sortedBy { it.y }) {
+        val cardNow = if (rv == null) anim.card else 0
+        for (m in allMen.sortedBy { it.y }) {
             if (!ballDrawn[0] && ballY < m.y) drawBall()
+            if (m.side == 2) { drawRef(c, m, t, cardNow, ballX); continue }
             val fill = if (m.gk) (if (m.side == 0) homeGk else awayGk) else if (m.side == 0) homeC else awayC
             val kit = if (m.gk) 0 else if (m.side == 0) homeKit else awayKit
             drawMan(c, m, fill, if (m.side == 0) homeAlt else awayAlt, kit, t, measurer, numCache, ballX)
         }
         if (!ballDrawn[0]) drawBall()
         for (left in listOf(true, false)) drawGoal(c, left, back = false)
-        drawWeatherParticles(sky, sec, !Fx.enabled || Fx.lowPower)
+        drawWeatherParticles(sky, sec, !Fx.enabled || Fx.lowPower, Fx.gfx)
 
         // Topu süren oyuncunun adı (başının üstünde)
         men.firstOrNull { it.focus }?.let { m ->
@@ -452,7 +495,7 @@ private fun DrawScope.drawStands(
         ax += AISLE
     }
     // Seyirciler: ev sahibi renkleri çoğunlukta, deplasman bloğu sağ uçta
-    val still = !Fx.enabled || Fx.lowPower
+    val still = !Fx.enabled || Fx.lowPower || Fx.gfx == 0
     val time = t / 1e9f
     val awayFrom = L * 0.74f
     val awayTo = L * 0.96f
@@ -485,9 +528,9 @@ private fun DrawScope.drawStands(
         drawRect(Brush.verticalGradient(listOf(lerp(st.home, Color.Black, 0.25f), lerp(st.home, Color.Black, 0.55f)), b.y, a.y), Offset(0f, b.y), Size(size.width, (a.y - b.y).coerceAtLeast(2f)))
         drawLine(Color.White.copy(alpha = 0.25f), Offset(0f, b.y), Offset(size.width, b.y), 1f)
     }
-    // Ön sırada sallanan bayraklar
+    // Ön sırada sallanan bayraklar (düşük grafikte yok)
     var fx = Math.floorDiv(x0.toInt(), 23) * 23f + 7f
-    while (fx < x1) {
+    while (fx < x1 && Fx.gfx > 0) {
         val awayFlag = fx in awayFrom..awayTo
         val fc = if (awayFlag) st.away else st.home
         val fc2 = if (awayFlag) st.awayAlt else st.homeAlt
@@ -549,6 +592,39 @@ private fun DrawScope.drawStands(
         }
         drawLine(Color.Black.copy(alpha = 0.6f), Offset(a.x, b.y), Offset(a.x, a.y), 1.2f)
         x += 12f
+    }
+}
+
+private val RefShirt = Color(0xFFF2D21B)
+private val RefShort = Color(0xFF15171C)
+
+/** Hakem / yan hakem: sarı forma, siyah şort; yan hakemde bayrak, orta hakemde gerekirse kart. */
+private fun DrawScope.drawRef(c: TvCam, m: TvMan, t: Long, card: Int, ballX: Float) {
+    val foot = c.p(m.x, m.y)
+    val k = c.meter(m.y)
+    val still = !Fx.enabled
+    val sec = t / 1e9f
+    val face = if (kotlin.math.abs(m.vx) > 0.6f) (if (m.vx < 0f) -1f else 1f) else (if (ballX < m.x) -1f else 1f)
+    val run = if (still) 0.3f else (m.speed / 6.5f).coerceIn(0f, 1f)
+    val motion = Motion(face, run, if (still) 1.1f else runPhase(sec, m.id, m.speed), m.pose, 0f, face, 1f, sec)
+    val look = Look.of(m.id + 1000, 2, false)
+    drawTvPlayer(foot, k, look, motion, RefShirt, RefShort, RefShort)
+    val h = 1.85f * k * look.height
+    if (m.id != -1) {
+        // Yan hakem bayrağı: elde aşağıda tutulur
+        val hx = foot.x + face * h * 0.18f
+        val hy = foot.y - h * 0.42f
+        drawLine(Color(0xFFDDDDDD), Offset(hx, hy), Offset(hx, hy + h * 0.22f), (k * 0.05f).coerceAtLeast(1f))
+        drawRect(Color(0xFFFF6F00), Offset(hx, hy + h * 0.02f), Size(face * h * 0.12f, h * 0.08f))
+        drawRect(Color(0xFFFFEB3B), Offset(hx, hy + h * 0.02f), Size(face * h * 0.06f, h * 0.04f))
+    } else if (card > 0) {
+        // Kart: havaya kaldırılan elde
+        val cw = h * 0.09f
+        val ch = h * 0.13f
+        val cx = foot.x + face * h * 0.1f
+        val cy = foot.y - h * 1.2f
+        drawRect(if (card == 2) Color(0xFFE53935) else Color(0xFFFFEB3B), Offset(cx - cw / 2, cy - ch), Size(cw, ch))
+        drawRect(Color.Black.copy(alpha = 0.4f), Offset(cx - cw / 2, cy - ch), Size(cw, ch), style = androidx.compose.ui.graphics.drawscope.Stroke(1f))
     }
 }
 
