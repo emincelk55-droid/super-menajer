@@ -12,7 +12,7 @@ import kotlin.random.Random
  * Maç günü koşulları: hava, zemin ve hakem. Maçtan önce bellidir (fikstür ve tarihten türetilir),
  * maç hazırlığında görünür ve maç motorunu etkiler.
  */
-class MatchConditions(val weather: Int, val heavyPitch: Boolean, val refName: String, val refStrict: Double) {
+class MatchConditions(val weather: Int, val heavyPitch: Boolean, val refName: String, val refStrict: Double, val night: Boolean = false) {
     /** Şut üretimi: yağmur ve kar oyunu bozar. */
     val shotFactor: Double get() = when (weather) { Conditions.RAIN -> 0.96; Conditions.SNOW -> 0.9; Conditions.WIND -> 0.97; else -> 1.0 }
 
@@ -31,7 +31,7 @@ class MatchConditions(val weather: Int, val heavyPitch: Boolean, val refName: St
     }
 
     /** Kısa özet: "🌧 Yağmurlu · ağır zemin · Hakem Ali Kaya (sert)". */
-    fun summary(): String = "$weatherIcon $weatherName · " + (if (heavyPitch) L("ağır zemin", "heavy pitch") else L("iyi zemin", "good pitch")) +
+    fun summary(): String = "$weatherIcon $weatherName" + (if (night) L(" · akşam (ışıklar)", " · evening (floodlights)") else "") + " · " + (if (heavyPitch) L("ağır zemin", "heavy pitch") else L("iyi zemin", "good pitch")) +
         " · " + L("Hakem", "Referee") + " $refName ($refText)"
 
     /** Yardımcı antrenörün koşullara dair tavsiyesi (yoksa null). */
@@ -71,6 +71,9 @@ object Conditions {
         val heavy = (weather == RAIN || weather == SNOW) && rnd.nextDouble() < 0.6
         val strict = (1.0 + (rnd.nextDouble() + rnd.nextDouble() - 1.0) * 0.4).coerceIn(0.75, 1.35)
         val name = refFirst[rnd.nextInt(refFirst.size)] + " " + refLast[rnd.nextInt(refLast.size)]
-        return MatchConditions(weather, heavy, name, strict)
+        // Akşam maçı (projektör ışığı): kışın ve Avrupa gecelerinde daha sık. Önceki değerleri bozmamak için en son çekilir.
+        val nightP = (if (month in listOf(11, 12, 1, 2)) 0.55 else 0.35) + (if (f.comp == com.supermenajer.game.model.Comp.EURO) 0.35 else if (com.supermenajer.game.model.Comp.isCup(f.comp)) 0.2 else 0.0)
+        val night = rnd.nextDouble() < nightP
+        return MatchConditions(weather, heavy, name, strict, night)
     }
 }

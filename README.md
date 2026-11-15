@@ -245,6 +245,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - 🎁 Günlük ödül ve maç görevleri: her gün oyuna girince günlük ödül (para, XP, moral; 7. gün büyük ödül), seri bir gün atlanırsa sıfırlanır. Her maçtan önce 3 maç görevi (kazan, gol yeme, 12 şut, %55 topa sahip olma, iki farklı golcü...) maç hazırlığında görünür; maç sonunda sonuçları özet ekranında, her başarılan görev XP ve yönetim primi, üçü birden +30 XP bonus. 5 yeni başarım: 7 ve 30 günlük seri, 25 maç görevi, 5 kusursuz maç, hat-trick.
 - 🏃 2,5D maçta yeni oyuncu figürleri: dizden ve dirsekten bükülen uzuvlar, koşu döngüsü, saç modelleri ve renkleri, boy farkı (kaleciler uzun). Hareket pozları: şut, kafa vuruşu (zıplama), kayarak müdahale, kalecinin hazır duruşu ve topa uçuşu, gol sevinci (atan oyuncu dizüstü kayar, takım arkadaşları kollar havada zıplar). Pozlar gol tekrarına da kaydedilir.
 - ⚽ Top: beşgen desenli, ışık gölgelendirmeli ve yuvarlandıkça dönen top; havadaki topun gölgesi yerde kalır, yükseldikçe büyüyüp soluklaşır; sert şut ve uzun toplarda arkasında solan iz.
+- 🌧️ Hava ve ışık 2,5D görünümde: yağmur damlaları ve ıslak parlayan çim, kar yağışı ve beyazlayan zemin, rüzgârda uçuşan çizgiler, sıcakta güneş parlaması, bulutlu havada mat ton; ağır zeminde çamurlu orta saha. Akşam maçları (kışın ve Avrupa gecelerinde daha sık): karanlık gökyüzü, tribün çatısında projektörler, seyirci flaşları, projektörlerden dört yöne düşen oyuncu gölgeleri. Maç hazırlığında 'akşam (ışıklar)' bilgisi.
 
 
 ### v2.15

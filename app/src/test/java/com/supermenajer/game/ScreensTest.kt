@@ -137,7 +137,7 @@ class ScreensTest {
             AppTheme {
                 com.supermenajer.game.ui.MatchPitchTV(
                     anim, c1, androidx.compose.ui.graphics.Color(0xFFF2F2F2), androidx.compose.ui.graphics.Color(0xFF26C6DA), androidx.compose.ui.graphics.Color(0xFFFF7043), false, 1f,
-                    Modifier.fillMaxSize(),
+                    Modifier.fillMaxSize(), skyOverride = com.supermenajer.game.ui.TvSky.CLEAR,
                 )
             }
         }
@@ -156,6 +156,25 @@ class ScreensTest {
         n = 0
         while (n++ < 30 * 3) anim.update(1f / 30f)
         paparazzi.snapshot("25c_corner_tv") { tvShot() }
+        // Hava ve ışık: aynı sahne farklı koşullarda
+        val C = com.supermenajer.game.engine.Conditions
+        for ((name, sky) in listOf(
+            "rain" to com.supermenajer.game.ui.TvSky(C.RAIN, night = false, heavy = true),
+            "snow" to com.supermenajer.game.ui.TvSky(C.SNOW, night = false, heavy = false),
+            "night" to com.supermenajer.game.ui.TvSky(C.CLEAR, night = true, heavy = false),
+            "night_rain" to com.supermenajer.game.ui.TvSky(C.RAIN, night = true, heavy = false),
+            "heat" to com.supermenajer.game.ui.TvSky(C.HEAT, night = false, heavy = false),
+            "wind" to com.supermenajer.game.ui.TvSky(C.WIND, night = false, heavy = false),
+        )) {
+            paparazzi.snapshot("25d_weather_$name") {
+                AppTheme {
+                    com.supermenajer.game.ui.MatchPitchTV(
+                        anim, c1, androidx.compose.ui.graphics.Color(0xFFF2F2F2), androidx.compose.ui.graphics.Color(0xFF26C6DA), androidx.compose.ui.graphics.Color(0xFFFF7043), false, 1f,
+                        Modifier.fillMaxSize(), skyOverride = sky,
+                    )
+                }
+            }
+        }
     }
 
     /** İngilizce arayüz: ana menü, ana sayfa, kadro, taktik, lig, transfer, kulüp ve ayarlar. */

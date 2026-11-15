@@ -138,7 +138,12 @@ fun MatchPitchTV(
     anim: Pitch2D, homeC: Color, awayC: Color, homeGk: Color, awayGk: Color,
     running: Boolean, timeScale: Float, modifier: Modifier = Modifier,
     homeAlt: Color = Color.White, awayAlt: Color = Color.White, homeKit: Int = 0, awayKit: Int = 0,
+    skyOverride: TvSky? = null,
 ) {
+    // Maç günü koşulları: hava ve akşam ışıkları
+    val sky = skyOverride ?: remember(anim) {
+        TvSky.of(runCatching { if (anim.sim.nat != null) null else com.supermenajer.game.engine.Conditions.of(anim.sim.game, anim.sim.fixture) }.getOrNull())
+    }
     var frame by remember { mutableLongStateOf(0L) }
     val run by rememberUpdatedState(running)
     val scale by rememberUpdatedState(timeScale)
@@ -182,9 +187,12 @@ fun MatchPitchTV(
         cam.x = cam.x.coerceIn(ballX - hw, ballX + hw)
         val c = TvCam(cam.x, size.width, size.height, cam.y, ballY)
 
-        drawStands(c, crowd, t)
-        drawGrass(c)
+        val sec = t / 1e9f
+        drawStands(c, crowd, t, sky)
+        drawFloodlights(sky, c.p(c.camX, -25f, 25f).y, c.camX, sec)
+        drawGrass(c, sky)
         drawTvLines(c)
+        drawGroundFx(sky, c.p(c.camX, -5f).y)
         for (left in listOf(true, false)) drawGoal(c, left, back = true)
 
         anim.offsideLineX?.takeIf { rv == null }?.let { ox ->
@@ -197,10 +205,19 @@ fun MatchPitchTV(
             TvMan(a.id, a.side, a.gk, a.number, a.x, a.y, a.alpha, hypot(a.vx, a.vy), a === focus, a.name, a.vx, a.pose, a.poseT, a.poseDir)
         }
         // Gölgeler önce, sonra uzaktan yakına oyuncular (yakındakiler öndekini örter)
+        val shA = sky.shadowAlpha
         for (m in men) {
             val k = c.meter(m.y)
             val foot = c.p(m.x, m.y)
-            drawOval(Color.Black.copy(alpha = 0.28f * m.alpha), Offset(foot.x - k * 0.45f + k * 0.35f, foot.y - k * 0.14f), Size(k * 1.2f, k * 0.3f))
+            if (sky.night) {
+                // Dört köşe projektöründen dört soluk gölge
+                for ((dx, dy) in listOf(0.55f to -0.05f, -0.55f to -0.05f, 0.4f to 0.08f, -0.4f to 0.08f)) {
+                    drawOval(Color.Black.copy(alpha = shA * m.alpha), Offset(foot.x - k * 0.5f + k * dx, foot.y - k * 0.12f + k * dy), Size(k * 1.0f, k * 0.24f))
+                }
+            } else {
+                val len = if (sky.heat) 1.5f else 1.2f
+                drawOval(Color.Black.copy(alpha = shA * m.alpha), Offset(foot.x - k * 0.45f + k * 0.35f, foot.y - k * 0.14f), Size(k * len, k * 0.3f))
+            }
         }
         // Topun gölgesi: yükseldikçe büyür ve soluklaşır
         val bk = c.meter(ballY)
@@ -233,6 +250,7 @@ fun MatchPitchTV(
         }
         if (!ballDrawn[0]) drawBall()
         for (left in listOf(true, false)) drawGoal(c, left, back = false)
+        drawWeatherParticles(sky, sec, !Fx.enabled || Fx.lowPower)
 
         // Topu süren oyuncunun adı (başının üstünde)
         men.firstOrNull { it.focus }?.let { m ->
@@ -262,14 +280,16 @@ private fun DrawScope.quad(c: TvCam, x0: Float, y0: Float, x1: Float, y1: Float,
     drawPath(path, color)
 }
 
-private fun DrawScope.drawGrass(c: TvCam) {
+private fun DrawScope.drawGrass(c: TvCam, sky: TvSky) {
     // Çim: sahanın dışında da devam eder (kenar payları), şeritler 7,5 m
     val x0 = c.camX - 90f
     val x1 = c.camX + 90f
-    quad(c, x0, -6f, x1, W + 10f, GrassA)
+    val ga = grassTint(GrassA, sky)
+    val gb = grassTint(GrassB, sky)
+    quad(c, x0, -6f, x1, W + 10f, ga)
     var x = Math.floorDiv(x0.toInt(), 15) * 15f
     while (x < x1) {
-        quad(c, x, -6f, x + 7.5f, W + 10f, GrassB)
+        quad(c, x, -6f, x + 7.5f, W + 10f, gb)
         x += 15f
     }
     // Uzaktaki çim biraz sisli: derinlik hissi
@@ -352,13 +372,14 @@ private val CrowdColors = listOf(
     Color(0xFFE6E6E6), Color(0xFF2B2F45), Color(0xFFC9473E), Color(0xFF3D5BA8), Color(0xFFE2C24A), Color(0xFF7A7F95),
 )
 
-private fun DrawScope.drawStands(c: TvCam, seats: List<Seat>, t: Long) {
-    // Gökyüzü/çatı: stadyumun karanlık üst kısmı ve projektör ışığı
-    drawRect(Brush.verticalGradient(listOf(Color(0xFF0A0F24), Color(0xFF1B2448))), size = size)
+private fun DrawScope.drawStands(c: TvCam, seats: List<Seat>, t: Long, sky: TvSky) {
+    // Gökyüzü: havaya ve saate göre (akşam koyu, güneşte mavi)
+    drawRect(skyBrush(sky, size.height), size = size)
     val baseY = -9f
     val top = c.p(c.camX, baseY - 16f, 25f).y
     val bottom = c.p(c.camX, -5f, 0f).y
-    drawRect(Brush.verticalGradient(listOf(Color(0xFF20263D), Color(0xFF2F3550)), top, bottom), Offset(0f, top), Size(size.width, bottom - top))
+    val standCols = if (sky.night) listOf(Color(0xFF0D1122), Color(0xFF1A1F35)) else listOf(Color(0xFF20263D), Color(0xFF2F3550))
+    drawRect(Brush.verticalGradient(standCols, top, bottom), Offset(0f, top), Size(size.width, bottom - top))
     // Seyirciler: sıra sıra, uzaklaştıkça küçülür; her biri hafifçe sallanır
     val still = !Fx.enabled || Fx.lowPower
     val time = t / 1e9f
