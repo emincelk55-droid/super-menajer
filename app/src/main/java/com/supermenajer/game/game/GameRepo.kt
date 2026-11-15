@@ -1006,6 +1006,7 @@ object GameRepo {
         return L("Kaydedildi: $n ($s)", "Saved: $n ($s)")
     }
 
+    fun takeLoan(amount: Long): String { val g = game ?: return ""; val m = Finance.takeLoan(g, amount); changed(); return m ?: L("Kredi kasaya girdi.", "The loan has been credited.") }
     fun boardRequest(kind: Int): String { val g = game ?: return ""; val m = Career.request(g, kind); changed(); return m }
 
     fun setPressing(v: Int) {

@@ -57,7 +57,7 @@ fun ClubTab(g: Game) {
             0 -> StaffView(g)
             1 -> FacilitiesView(g)
             2 -> SponsorsView(g)
-            3 -> TwoCards({ FinanceCard(g) }, { BudgetShiftCard(g); Spacer(Modifier.height(10.dp)); BoardRequestCard(g); Spacer(Modifier.height(10.dp)); BoardCard(g) })
+            3 -> TwoCards({ FinanceCard(g); Spacer(Modifier.height(10.dp)); MonthlyFinanceCard(g); Spacer(Modifier.height(10.dp)); LoanCard(g) }, { BudgetShiftCard(g); Spacer(Modifier.height(10.dp)); BoardRequestCard(g); Spacer(Modifier.height(10.dp)); BoardCard(g) })
             4 -> TwoCards({ FansCard(g) }, { FanInfoCard() })
             5 -> CareerView(g)
             6 -> PerksView(g)

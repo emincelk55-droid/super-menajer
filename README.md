@@ -238,6 +238,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - 📱 Dikey ekran: telefon dik tutulunca ana sayfa (kartlar alt alta), iki satırlı üst çubuk, kaydırılabilir sekmeler, taktik (saha üstte, panel altta), transfer (açılır filtreler), gelen kutusu (liste → tam ekran mesaj), kulüp kartları, maç ekranı (saha üstte, anlatım altta) ve oyuncu profili dikeye uyar. Ayarlar → Ekran yönü: Otomatik (döndürme kilidine uyar) / Yatay / Dikey.
 - 💾 Kayıt yedekleme (Ana menü → Kariyer yükle → Yedekle / Geri yükle): her yuva .smk dosyası olarak dışa aktarılır (Drive, WhatsApp, telefon), dosyadan herhangi bir yuvaya geri yüklenir. Bozuk ya da yanlış dosya reddedilir; yuvadaki eski kayıt önce yedeğe alınır.
 - Testler her sınıf ayrı süreçte ve 3 GB bellekle çalışıyor (test sayısı arttıkça bellek yetmiyordu).
+- 💶 Gerçek finans: maaşlar her ay kasadan ödenir (tüm kulüplerde), TV yayın geliri ligin zenginliğine ve kulüp itibarına göre her ay girer. Her ay sonunda gelen kutusuna mali rapor gelir; kasa ekside kalırsa yönetim güveni her ay düşer. Kulüp → Finans'ta son 12 ayın grafiği ve banka kredisi (faiz %8, 12 ay taksit, limit kulübün gelirine göre).
 
 
 ### v2.15

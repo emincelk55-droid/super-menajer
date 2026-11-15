@@ -15,6 +15,9 @@ object MonthlyAwards {
     private val monthsCache = LangCached { listOf(L("Ocak", "January"), L("Şubat", "February"), L("Mart", "March"), L("Nisan", "April"), L("Mayıs", "May"), L("Haziran", "June"), L("Temmuz", "July"), L("Ağustos", "August"), L("Eylül", "September"), L("Ekim", "October"), L("Kasım", "November"), L("Aralık", "December")) }
     private val months get() = monthsCache.get()
 
+    /** Ay adı (1-12). */
+    fun monthName(m: Int): String = months[(m - 1).coerceIn(0, 11)]
+
     class Award(val season: Int, val month: String, val kind: String, val id: Int, val text: String)
 
     private fun key(epochDay: Long): Int = LocalDate.ofEpochDay(epochDay).let { it.year * 12 + it.monthValue - 1 }

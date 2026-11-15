@@ -480,6 +480,7 @@ object Season {
     fun endDay(g: Game, rnd: Random = Random.Default) {
         g.reindex()
         MonthlyAwards.check(g)
+        Finance.check(g)
         val d = g.today ?: return
         val dayFixtures = g.weekFixtures(g.week)
         for (f in dayFixtures) {
@@ -745,6 +746,7 @@ object Season {
     fun freeDay(g: Game, rnd: Random = Random.Default) {
         if (g.fired) return
         MonthlyAwards.check(g)
+        Finance.check(g)
         if (Career.isDeadlineDay(g)) {
             g.addNews(L("📺 Transfer döneminin son günü!", "📺 Transfer deadline day!"), L("Kulüpler son dakika transferleri için kolları sıvadı. Gece yarısı pencere kapanıyor!", "Clubs are rolling up their sleeves for last-minute deals. The window closes at midnight!"))
             repeat(3) { aiTransfers(g, rnd) }

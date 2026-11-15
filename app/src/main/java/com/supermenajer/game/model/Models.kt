@@ -516,6 +516,12 @@ class Game(
     /** Aylık ödüller: ay başındaki oyuncu istatistikleri ("maç|gol|asist|not toplamı"), son değerlendirilen ay (yıl*12+ay). */
     var monthSnap: MutableMap<Int, String> = mutableMapOf(),
     var awardMonth: Int = -1,
+    /** Finans: son işlenen ay, ay başı gelir defteri görüntüsü, aylık rapor "ay|gelir|gider|net|kasa", kredi. */
+    var finMonth: Int = -1,
+    var finSnap: MutableMap<String, Long> = mutableMapOf(),
+    var monthLedger: MutableList<String> = mutableListOf(),
+    var loanLeft: Long = 0,
+    var loanMonthly: Long = 0,
     /** Verilen aylık ödüller: "sezon|ay adı|tür|oyuncu ya da takım id|açıklama" (en fazla 60). */
     var monthAwards: MutableList<String> = mutableListOf(),
     /** Ana sayfada gösterilecek yeni aylık ödül var mı. */

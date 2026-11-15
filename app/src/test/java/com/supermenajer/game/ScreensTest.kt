@@ -201,6 +201,16 @@ class ScreensTest {
         GameRepo.leagueTab = 5; shot("auto_05_history")
         GameRepo.tab = GameRepo.TAB_TRANSFER; shot("auto_06_transfer")
         GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3; shot("auto_07_finance")
+        paparazzi.snapshot("auto_07b_monthly") {
+            AppTheme {
+                Surface(Modifier.fillMaxSize(), color = Bg) {
+                    androidx.compose.foundation.layout.Row(Modifier.padding(16.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { com.supermenajer.game.ui.MonthlyFinanceCard(g) }
+                        androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { com.supermenajer.game.ui.LoanCard(g) }
+                    }
+                }
+            }
+        }
         GameRepo.tab = GameRepo.TAB_INBOX; GameRepo.inboxCat = 0; GameRepo.openNews(g.news.first()); shot("auto_08_inbox_report")
         println("OTOTUR ${g.userTeam.name} sezon ${g.season} hafta ${g.week} · ${log.actions.takeLast(6)}")
     }

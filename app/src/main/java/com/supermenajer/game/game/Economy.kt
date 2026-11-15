@@ -68,6 +68,8 @@ object Economy {
             t.wageBudget = maxOf(wageCap(t), (squadWages(g, t.id) * 1.12).toLong())
             t.income = mutableMapOf()
         }
+        // Gelir defteri sıfırlandı: aylık raporun karşılaştırma noktası da sıfırlanır
+        g.finSnap = mutableMapOf()
     }
 
     fun ticketIncome(t: Team): Long = 20_000L + t.reputation * 900L
