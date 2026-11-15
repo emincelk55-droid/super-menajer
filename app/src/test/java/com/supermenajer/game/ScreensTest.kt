@@ -26,6 +26,7 @@ import com.supermenajer.game.ui.drawTvPlayer
 import com.supermenajer.game.ui.Look
 import com.supermenajer.game.ui.Motion
 import com.supermenajer.game.ui.drawKitPattern
+import com.supermenajer.game.ui.drawSoccerBall
 import androidx.compose.ui.text.drawText
 import com.supermenajer.game.ui.TifoOverlay
 import com.supermenajer.game.ui.drawFmPitch
@@ -250,6 +251,10 @@ class ScreensTest {
                 androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF2F8F48))) {
                     val tm = androidx.compose.ui.text.rememberTextMeasurer()
                     androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                        // Top yakın planda: farklı boyut ve dönüş
+                        for ((j, r) in listOf(34f, 20f, 11f, 5f).withIndex()) {
+                            run { drawSoccerBall(androidx.compose.ui.geometry.Offset(size.width * (0.08f + j * 0.07f), size.height * 0.16f), r, j * 0.7f) }
+                        }
                         val cols = list.size
                         val k = size.height / 5f
                         for ((i, e) in list.withIndex()) {

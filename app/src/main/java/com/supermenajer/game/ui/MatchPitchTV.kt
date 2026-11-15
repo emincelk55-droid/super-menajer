@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.supermenajer.game.engine.Pitch2D
 import com.supermenajer.game.engine.Pitch2D.Companion.L
 import com.supermenajer.game.engine.Pitch2D.Companion.W
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -95,6 +96,36 @@ private class TvCam(val camX: Float, w: Float, h: Float, focusY: Float, ballY: F
 /** Kamera durumu: kareler arası yumuşak takip. */
 private class CamState { var x = Float.NaN; var y = Float.NaN }
 
+/** Topun son konumları (iz efekti) ve dönüş açısı. */
+private class BallTrail {
+    val xs = FloatArray(N); val ys = FloatArray(N); val zs = FloatArray(N)
+    var count = 0
+    var head = 0
+    var spin = 0f
+    var speed = 0f
+    var lastT = 0L
+
+    fun push(x: Float, y: Float, z: Float, t: Long) {
+        if (count > 0) {
+            val p = (head - 1 + N) % N
+            val d = kotlin.math.sqrt((x - xs[p]) * (x - xs[p]) + (y - ys[p]) * (y - ys[p]) + (z - zs[p]) * (z - zs[p]))
+            val dt = ((t - lastT) / 1e9f).coerceIn(1e-3f, 0.2f)
+            speed = speed * 0.6f + (d / dt) * 0.4f
+            spin += d * 2.6f * (if (x < xs[p]) -1f else 1f)
+            if (d > 12f) count = 0 // sahne değişti (tekrar, santra): iz bağlanmasın
+        }
+        xs[head] = x; ys[head] = y; zs[head] = z
+        head = (head + 1) % N
+        count = (count + 1).coerceAtMost(N)
+        lastT = t
+    }
+
+    /** i = 0 en yeni. */
+    fun at(i: Int): Int = (head - 1 - i + N * 2) % N
+
+    companion object { const val N = 7 }
+}
+
 /** Çizilecek oyuncu (canlı ya da tekrar karesinden). */
 private class TvMan(
     val id: Int, val side: Int, val gk: Boolean, val number: Int, val x: Float, val y: Float,
@@ -112,6 +143,7 @@ fun MatchPitchTV(
     val run by rememberUpdatedState(running)
     val scale by rememberUpdatedState(timeScale)
     val cam = remember(anim) { CamState() }
+    val trail = remember(anim) { BallTrail() }
     LaunchedEffect(anim) {
         var last = 0L
         while (true) {
@@ -170,17 +202,27 @@ fun MatchPitchTV(
             val foot = c.p(m.x, m.y)
             drawOval(Color.Black.copy(alpha = 0.28f * m.alpha), Offset(foot.x - k * 0.45f + k * 0.35f, foot.y - k * 0.14f), Size(k * 1.2f, k * 0.3f))
         }
-        // Topun gölgesi
+        // Topun gölgesi: yükseldikçe büyür ve soluklaşır
         val bk = c.meter(ballY)
         val bs = c.p(ballX, ballY)
-        drawOval(Color.Black.copy(alpha = (0.4f - ballZ * 0.03f).coerceAtLeast(0.12f)), Offset(bs.x - bk * 0.3f, bs.y - bk * 0.1f), Size(bk * 0.6f, bk * 0.2f))
+        val hz = ballZ.coerceIn(0f, 12f)
+        val sh = 1f + hz * 0.09f
+        drawOval(Color.Black.copy(alpha = (0.42f - hz * 0.03f).coerceAtLeast(0.1f)), Offset(bs.x - bk * 0.24f * sh, bs.y - bk * 0.08f * sh), Size(bk * 0.48f * sh, bk * 0.16f * sh))
+        if (Fx.enabled) trail.push(ballX, ballY, ballZ, t)
         val ballDrawn = BooleanArray(1)
         fun drawBall() {
             val b = c.p(ballX, ballY, ballZ + 0.11f)
-            val br = (bk * 0.24f).coerceAtLeast(2.6f)
-            drawCircle(Color.White, br, b)
-            drawCircle(Color(0xFF263238), br * 0.42f, b + Offset(br * 0.2f, -br * 0.15f))
-            drawCircle(Color.Black.copy(alpha = 0.35f), br, b, style = androidx.compose.ui.graphics.drawscope.Stroke(br * 0.18f))
+            val br = (bk * 0.2f).coerceAtLeast(2.6f)
+            // Sert şut / uzun top: arkasında solan iz
+            if (trail.speed > 15f && trail.count >= 3) {
+                val pts = (0 until trail.count).map { i -> val j = trail.at(i); c.p(trail.xs[j], trail.ys[j], trail.zs[j] + 0.11f) }
+                val strength = ((trail.speed - 15f) / 12f).coerceIn(0.25f, 1f)
+                for (i in 0 until pts.size - 1) {
+                    val f = 1f - i / (pts.size - 1f)
+                    drawLine(Color.White.copy(alpha = 0.42f * f * strength), pts[i], pts[i + 1], br * 1.6f * f, StrokeCap.Round)
+                }
+            }
+            drawSoccerBall(b, br, trail.spin)
             ballDrawn[0] = true
         }
         for (m in men.sortedBy { it.y }) {
@@ -388,4 +430,34 @@ private fun DrawScope.drawReplayBands(progress: Float, measurer: TextMeasurer) {
     val label = measurer.measure(L("⟲ TEKRAR · dokun: geç", "⟲ REPLAY · tap: skip"), TextStyle(color = Color(0xFFFFE14D), fontSize = (band * 0.42f / density / fontScale).sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp))
     drawText(label, topLeft = Offset(size.width * 0.03f, (band - label.size.height) / 2f))
     drawRect(Color(0xFFFFE14D), Offset(0f, size.height - band * 0.2f), Size(size.width * progress, band * 0.12f))
+}
+
+/** Futbol topu: yuvarlak ışık, dönen beşgen deseni ve ince kontur (küçükken sade nokta). */
+internal fun DrawScope.drawSoccerBall(c: Offset, r: Float, spin: Float) {
+    drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFDCE1E6), Color(0xFF9AA4AE)), c + Offset(-r * 0.35f, -r * 0.4f), r * 1.6f), r, c)
+    if (r >= 4f) {
+        val clip = Path().apply { addOval(androidx.compose.ui.geometry.Rect(c, r)) }
+        clipPath(clip) {
+            val dark = Color(0xFF20262C)
+            fun pent(cx: Float, cy: Float, pr: Float, rot: Float) {
+                val p = Path()
+                for (i in 0 until 5) {
+                    val ang = rot + i * (2f * Math.PI.toFloat() / 5f) - Math.PI.toFloat() / 2f
+                    val x = cx + cos(ang) * pr; val y = cy + sin(ang) * pr
+                    if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
+                }
+                p.close(); drawPath(p, dark)
+            }
+            // Dönüş: desen top üzerinde kayar (yanlara gidince kısalır, küre hissi)
+            val off = ((spin % 2f) + 2f) % 2f - 1f
+            pent(c.x + off * r * 0.55f, c.y + r * 0.05f, r * 0.34f * (1f - abs(off) * 0.35f), spin * 0.4f)
+            for (i in 0 until 5) {
+                val ang = spin * 0.4f + i * 2f * Math.PI.toFloat() / 5f
+                pent(c.x + off * r * 0.55f + cos(ang) * r * 0.95f, c.y + sin(ang) * r * 0.95f, r * 0.26f, ang)
+            }
+        }
+    } else drawCircle(Color(0xFF263238), r * 0.4f, c + Offset(r * 0.2f, -r * 0.15f))
+    drawCircle(Color.Black.copy(alpha = 0.35f), r, c, style = androidx.compose.ui.graphics.drawscope.Stroke((r * 0.14f).coerceAtLeast(0.8f)))
+    // Parlama
+    drawCircle(Color.White.copy(alpha = 0.55f), r * 0.22f, c + Offset(-r * 0.38f, -r * 0.42f))
 }
