@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
         GameRepo.init(filesDir)
         com.supermenajer.game.ui.Fx.init(this)
         com.supermenajer.game.game.Lang.init(this)
+        requestedOrientation = com.supermenajer.game.ui.Fx.orientationFlag()
         com.supermenajer.game.audio.Sound.init(this)
         // Tam ekran oyun: sistem çubukları gizli, kaydırınca geçici olarak görünür
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {

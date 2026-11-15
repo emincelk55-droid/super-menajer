@@ -70,6 +70,22 @@ object Fx {
         prefs?.edit()?.putBoolean("tvView", on)?.apply()
     }
 
+    /** Ekran yönü: 0 otomatik (döndürme kilidine uyar), 1 yatay, 2 dikey. */
+    var orientation by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+
+    fun orientationFlag(): Int = when (orientation) {
+        1 -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        2 -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER
+    }
+
+    fun changeOrientation(v: Int, activity: android.app.Activity?) {
+        orientation = v.coerceIn(0, 2)
+        prefs?.edit()?.putInt("orientation", orientation)?.apply()
+        activity?.requestedOrientation = orientationFlag()
+    }
+
     fun init(context: android.content.Context) {
         prefs = context.getSharedPreferences("fx", android.content.Context.MODE_PRIVATE).also {
             lowPower = it.getBoolean("lowPower", false)
@@ -77,6 +93,7 @@ object Fx {
             textSize = it.getInt("textSize", 0)
             homeSimple = it.getBoolean("homeSimple", true)
             tvView = it.getBoolean("tvView", true)
+            orientation = it.getInt("orientation", 0)
         }
     }
 

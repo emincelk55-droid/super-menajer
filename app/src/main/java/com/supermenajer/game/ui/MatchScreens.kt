@@ -211,9 +211,10 @@ fun MatchScreen() {
     val shownEvents = sim.events.take(shown)
     Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0C1131), Color(0xFF120E36), Color(0xFF080B20))))) {
         SmScoreboard(sim, scoreH, scoreA, shownEvents, shown >= sim.events.size, homeC, awayC)
-        Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Sol: 2D saha ve son olay
-            Column(Modifier.weight(2.1f).fillMaxHeight()) {
+        val vertical = portrait()
+        val pitchPane: @Composable (Modifier) -> Unit = { paneMod ->
+            // Sol (dikeyde üstte): saha ve son olay
+            Column(paneMod) {
                 Box(
                     Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF256F3B))
                         .border(1.dp, CardLine, RoundedCornerShape(14.dp)),
@@ -295,9 +296,11 @@ fun MatchScreen() {
                     }
                 }
             }
-            // Sağ: anlatım, istatistik, oyuncular
+        }
+        val infoPane: @Composable (Modifier) -> Unit = { paneMod ->
+            // Sağ (dikeyde altta): anlatım, istatistik, oyuncular
             Column(
-                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp))
+                paneMod.clip(RoundedCornerShape(14.dp))
                     .background(Brush.verticalGradient(listOf(CardTop, CardBottom))).border(1.dp, CardLine, RoundedCornerShape(14.dp)),
             ) {
                 SmTabBar(listOf(L("Olaylar", "Events"), L("İstatistik", "Stats"), L("Oyuncular", "Players")), tab, Modifier.padding(horizontal = 4.dp), small = true) { tab = it }
@@ -309,6 +312,13 @@ fun MatchScreen() {
                     }
                 }
             }
+        }
+        if (vertical) Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            pitchPane(Modifier.fillMaxWidth().weight(1.2f))
+            infoPane(Modifier.fillMaxWidth().weight(1f))
+        } else Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            pitchPane(Modifier.weight(2.1f).fillMaxHeight())
+            infoPane(Modifier.weight(1f).fillMaxHeight())
         }
         if (!sim.finished) {
             MatchControls(
@@ -936,15 +946,18 @@ private fun MatchControls(
     onPlay: () -> Unit, onSpeed: (Int) -> Unit, onMentality: (Int) -> Unit, onShout: (Int) -> Unit, onSubs: () -> Unit, onSkip: () -> Unit,
     onTactics: () -> Unit = {},
 ) {
+    // Dikeyde kontroller sığmaz: yatay kaydırılır
+    val vertical = portrait()
     Row(
-        Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).padding(horizontal = 10.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().background(Color(0xFF0A0E26)).then(if (vertical) Modifier.horizontalScroll(rememberScrollState()) else Modifier)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         RoundIconButton(if (running) "⏸" else "▶", 42.dp, onClick = onPlay)
         Segmented(listOf("1x", "3x", "⚡"), speed, Modifier.width(150.dp), onSpeed)
         val us = sim.userSide
         if (us != null) {
-            Segmented(listOf(L("Defans", "Defend"), L("Denge", "Balanced"), L("Hücum", "Attack")), us.team.mentality, Modifier.weight(1f), onMentality)
+            Segmented(listOf(L("Defans", "Defend"), L("Denge", "Balanced"), L("Hücum", "Attack")), us.team.mentality, if (vertical) Modifier.width(240.dp) else Modifier.weight(1f), onMentality)
             var open by remember { mutableStateOf(false) }
             Box {
                 Box(

@@ -348,6 +348,7 @@ fun SmPlayerCard(
 /** SM tarzı sekme çubuğu: kenarlıklı kutu, seçili sekmenin altında kayan turkuaz çizgi. */
 @Composable
 fun SmTabBar(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, small: Boolean = false, onSelect: (Int) -> Unit) {
+    if (portrait() && tabs.size > 4) { FmTabs(tabs, selected, modifier, onSelect = onSelect); return }
     BoxWithConstraints(
         modifier.fillMaxWidth().then(
             if (small) Modifier else Modifier.clip(RoundedCornerShape(12.dp)).background(Brush.verticalGradient(listOf(Color(0xFF131A3C), Color(0xFF0B1029))))
@@ -457,9 +458,10 @@ fun TacticsBoard(g: Game) {
     }
 
     Box(Modifier.fillMaxSize().onGloballyPositioned { rootPos = it.positionInRoot() }) {
-        Row(Modifier.fillMaxSize().padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val vertical = portrait()
+        val pitchPane: @Composable (Modifier) -> Unit = { paneMod ->
             // Sol: perspektif saha
-            BoxWithConstraints(Modifier.weight(1.08f).fillMaxHeight()) {
+            BoxWithConstraints(paneMod) {
                 val bw = maxWidth
                 val bh = maxHeight
                 val range = depthRange(slots)
@@ -524,8 +526,10 @@ fun TacticsBoard(g: Game) {
                     }
                 }
             }
-            // Sağ: sekmeler
-            Column(Modifier.weight(1f).fillMaxHeight()) {
+        }
+        val rightPane: @Composable (Modifier) -> Unit = { paneMod ->
+            // Sağ (dikeyde altta): sekmeler
+            Column(paneMod) {
                 SmTabBar(listOf(L("Kadro", "Squad"), L("Diziliş", "Formation"), L("Talimatlar", "Instructions"), L("Roller", "Roles"), L("Antrenman", "Training")), panel) { i ->
                     if (i == 4) GameRepo.tacticsMode = 1 else GameRepo.tacticsPanel = i
                     sel = -1; benchSel = -1
@@ -557,6 +561,14 @@ fun TacticsBoard(g: Game) {
                     }
                 }
             }
+        }
+        // Yatayda saha solda, panel sağda; dikeyde saha üstte, panel altta
+        if (vertical) Column(Modifier.fillMaxSize().padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            pitchPane(Modifier.fillMaxWidth().weight(1.15f))
+            rightPane(Modifier.fillMaxWidth().weight(1f))
+        } else Row(Modifier.fillMaxSize().padding(start = 8.dp, end = 10.dp, top = 6.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            pitchPane(Modifier.weight(1.08f).fillMaxHeight())
+            rightPane(Modifier.weight(1f).fillMaxHeight())
         }
         if (GameRepo.tacticWizard) TacticWizard(g) { GameRepo.tacticWizard = false }
         if (GameRepo.roleDialog in slots.indices) RoleDialog(g, GameRepo.roleDialog) { GameRepo.roleDialog = -1 }

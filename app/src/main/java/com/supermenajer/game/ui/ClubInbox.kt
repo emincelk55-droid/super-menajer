@@ -71,6 +71,10 @@ fun ClubTab(g: Game) {
 
 @Composable
 private fun TwoCards(left: @Composable () -> Unit, right: @Composable () -> Unit) {
+    if (portrait()) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { left(); right() }
+        return
+    }
     Row(Modifier.fillMaxSize().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { left() }
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { right() }
@@ -223,9 +227,22 @@ fun InboxTab(g: Game) {
     val cat = GameRepo.inboxCat
     val list = g.news.filter { cat == Inbox.ALL || it.category == cat }
     val sel = GameRepo.inboxSel?.takeIf { it in g.news } ?: list.firstOrNull()
-    androidx.compose.runtime.LaunchedEffect(sel) { if (sel != null && !sel.read) GameRepo.openNews(sel) }
+    val vertical = portrait()
+    // Dikey: önce liste, dokunulan mesaj tam ekran açılır
+    val opened = GameRepo.inboxSel?.takeIf { it in g.news }
+    if (vertical && opened != null) {
+        androidx.activity.compose.BackHandler { GameRepo.inboxSel = null }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text(L("‹ Gelen kutusu", "‹ Inbox"), color = Teal, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { GameRepo.inboxSel = null }.padding(vertical = 6.dp, horizontal = 2.dp))
+            Spacer(Modifier.height(8.dp))
+            MessageDetail(g, opened)
+        }
+        return
+    }
+    if (!vertical) androidx.compose.runtime.LaunchedEffect(sel) { if (sel != null && !sel.read) GameRepo.openNews(sel) }
     Row(Modifier.fillMaxSize()) {
-        Column(Modifier.width(330.dp).fillMaxHeight().background(Surface1)) {
+        Column((if (vertical) Modifier.fillMaxWidth() else Modifier.width(330.dp)).fillMaxHeight().background(Surface1)) {
             Row(
                 Modifier.horizontalScroll(rememberScrollState()).padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -242,21 +259,26 @@ fun InboxTab(g: Game) {
                 TextButton(onClick = { GameRepo.readAll() }, modifier = Modifier.fillMaxWidth()) { Text(L("Tümünü okundu say", "Mark all as read")) }
             }
         }
-        Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(18.dp)) {
+        if (!vertical) Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(18.dp)) {
             if (sel == null) {
                 Text(L("Mesaj yok.", "No messages."), color = TextDim)
             } else {
-                Text(Inbox.names[sel.category].uppercase(), color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Text(sel.title, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                Text("${sel.season} · ${g.dayLabel(sel.week).ifEmpty { "Sezon arası" }}", color = TextDim, fontSize = 12.sp)
-                Spacer(Modifier.height(14.dp))
-                Text(sel.body, fontSize = 15.sp, lineHeight = 22.sp)
-                Spacer(Modifier.height(16.dp))
-                MessageAction(g, sel)
+                MessageDetail(g, sel)
             }
         }
     }
+}
+
+@Composable
+private fun MessageDetail(g: Game, sel: News) {
+    Text(Inbox.names[sel.category].uppercase(), color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(4.dp))
+    Text(sel.title, fontWeight = FontWeight.Black, fontSize = 20.sp)
+    Text("${sel.season} · ${g.dayLabel(sel.week).ifEmpty { L("Sezon arası", "Off-season") }}", color = TextDim, fontSize = 12.sp)
+    Spacer(Modifier.height(14.dp))
+    Text(sel.body, fontSize = 15.sp, lineHeight = 22.sp)
+    Spacer(Modifier.height(16.dp))
+    MessageAction(g, sel)
 }
 
 @Composable

@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.lerp
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,6 +83,35 @@ private fun gameTypography(): androidx.compose.material3.Typography {
         bodyLarge = t.bodyLarge.f(), bodyMedium = t.bodyMedium.f(), bodySmall = t.bodySmall.f(),
         labelLarge = t.labelLarge.f(), labelMedium = t.labelMedium.f(), labelSmall = t.labelSmall.f(),
     )
+}
+
+/**
+ * İki panelli düzen: yatayda yan yana (ilk panel [landFirst] genişliğinde), dikeyde alt alta
+ * (ilk panel [portFirst] yüksekliğinde, ikincisi kalan alanı alır).
+ */
+@Composable
+fun SplitPane(
+    landFirst: Modifier, portFirst: Modifier,
+    first: @Composable (Modifier) -> Unit, second: @Composable (Modifier) -> Unit,
+) {
+    if (portrait()) {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+            first(portFirst)
+            second(Modifier.weight(1f).fillMaxWidth())
+        }
+    } else {
+        androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+            first(landFirst)
+            second(Modifier.weight(1f).fillMaxHeight())
+        }
+    }
+}
+
+/** Ekran dik mi (telefon dikey tutuluyor): düzenler yan yana yerine alt alta dizilir. */
+@Composable
+fun portrait(): Boolean {
+    val c = androidx.compose.ui.platform.LocalConfiguration.current
+    return c.screenWidthDp < c.screenHeightDp
 }
 
 @Composable
@@ -371,6 +401,31 @@ fun WideDialog(onDismissRequest: () -> Unit, maxWidth: Dp = 600.dp, content: @Co
 /** FM tarzı sekme şeridi: seçili sekmenin altında kayan renkli çizgi. */
 @Composable
 fun FmTabs(tabs: List<String>, selected: Int, modifier: Modifier = Modifier, dots: Set<Int> = emptySet(), onSelect: (Int) -> Unit) {
+    // Dar ekranda (dikey) çok sekme: yatay kaydırılan, seçili sekmesi vurgulu çubuk
+    if (portrait() && tabs.size > 4) {
+        val sc = androidx.compose.foundation.rememberScrollState()
+        androidx.compose.runtime.LaunchedEffect(selected) { sc.animateScrollTo((selected * 260 - 300).coerceAtLeast(0)) }
+        androidx.compose.foundation.layout.Row(
+            modifier.fillMaxWidth().background(Surface1).border(1.dp, Line.copy(alpha = 0.5f)).horizontalScroll(sc),
+        ) {
+            tabs.forEachIndexed { i, n ->
+                val sel = i == selected
+                Column(
+                    Modifier.background(if (sel) Purple.copy(alpha = 0.22f) else Color.Transparent)
+                        .clickable { com.supermenajer.game.audio.Sound.click(); onSelect(i) }.padding(top = 9.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    androidx.compose.foundation.layout.Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(n, fontSize = 13.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, color = if (sel) TextMain else TextDim, maxLines = 1)
+                        if (i in dots) Box(Modifier.padding(start = 4.dp).size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Red))
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Box(Modifier.height(3.dp).width(40.dp).background(if (sel) Green else Color.Transparent))
+                }
+            }
+        }
+        return
+    }
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier.fillMaxWidth().background(Surface1).border(1.dp, Line.copy(alpha = 0.5f)),
     ) {

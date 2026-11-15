@@ -173,6 +173,19 @@ private fun SettingsDialog() {
                             )
                         }
                     }
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(L("📱 Ekran yönü", "📱 Orientation"), fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        listOf(L("Otomatik", "Auto"), L("Yatay", "Landscape"), L("Dikey", "Portrait")).forEachIndexed { i, label ->
+                            val sel = Fx.orientation == i
+                            Text(
+                                label, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (sel) Color.Black else TextMain,
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (sel) Green else Surface2)
+                                    .clickable { Fx.changeOrientation(i, ctx as? android.app.Activity) }.padding(horizontal = 10.dp, vertical = 7.dp),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
                     Text(L("Bazı adlar (ligler, roller) oyun yeniden açılınca değişir. Kayıttaki eski haberler yazıldıkları dilde kalır.", "Some names (leagues, roles) change after restarting the game. Old news in your save stays in the language it was written in."), color = TextDim, fontSize = 10.sp, lineHeight = 13.sp)
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = { GameRepo.save(force = true); saved = true }, modifier = Modifier.fillMaxWidth()) {

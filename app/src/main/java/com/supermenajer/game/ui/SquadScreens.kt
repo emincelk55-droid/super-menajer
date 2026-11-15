@@ -397,6 +397,7 @@ fun PlayerDialog(g: Game, p: Player) {
         ) {
             val tm = if (p.teamId >= 0) g.teamOrNull(p.teamId) else null
             val r = com.supermenajer.game.game.Scouting.range(g, p, p.overall)
+            val vertical = portrait()
             // Başlık şeridi: kart, temel bilgiler, mevki haritası
             Row(
                 Modifier.fillMaxWidth().background(
@@ -425,6 +426,11 @@ fun PlayerDialog(g: Game, p: Player) {
                         color = Gold, fontSize = 12.sp, maxLines = 1,
                     )
                     Text(team?.let { "${Generator.flag(g.flagOf(it))} ${it.name} · ${g.leagueName(it)}" } ?: L("Serbest oyuncu", "Free agent"), color = TextDim, fontSize = 12.sp, maxLines = 1)
+                    if (vertical) Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        HeaderStat(money(p.value), L("Değer", "Value"))
+                        if (p.teamId >= 0) HeaderStat(money(p.wage), L("Maaş/hf", "Wage/wk"))
+                        HeaderStat(if (p.teamId < 0) "–" else L("${p.contractYears} sezon", "${p.contractYears} seas."), L("Sözleşme", "Contract"), if (p.contractYears == 1 && p.teamId >= 0) Red else TextMain)
+                    }
                     if (own && p.promiseUntil > 0) {
                         val played = p.apps - p.promiseBaseApps
                         Text(
@@ -433,14 +439,14 @@ fun PlayerDialog(g: Game, p: Player) {
                         )
                     }
                 }
-                Row(Modifier.weight(1.2f), horizontalArrangement = Arrangement.SpaceEvenly) {
+                if (!vertical) Row(Modifier.weight(1.2f), horizontalArrangement = Arrangement.SpaceEvenly) {
                     HeaderStat(money(p.value), L("Değer", "Value"))
                     if (p.teamId >= 0) HeaderStat(money(p.wage), L("Maaş/hafta", "Wage/week"))
                     HeaderStat(if (p.teamId < 0) "–" else L("${p.contractYears} sezon", "${p.contractYears} seasons"), L("Sözleşme", "Contract"), if (p.contractYears == 1 && p.teamId >= 0) Red else TextMain)
                     HeaderStat(if (known) moraleText(p.morale).substringBefore(' ') else "?", L("Moral", "Morale"))
                 }
                 Spacer(Modifier.width(8.dp))
-                PositionMap(p, Modifier.size(132.dp, 84.dp).clip(RoundedCornerShape(6.dp)))
+                if (!vertical) PositionMap(p, Modifier.size(132.dp, 84.dp).clip(RoundedCornerShape(6.dp)))
                 Spacer(Modifier.width(6.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -639,9 +645,14 @@ fun TransferTab(g: Game) {
             )
             .take(150).toList()
     }
-    Row(Modifier.fillMaxSize()) {
-        // Sol panel: pencere durumu, gözlemci, arama ve filtreler
-        Column(Modifier.width(310.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(10.dp)) {
+    var showFilters by remember { mutableStateOf(false) }
+    val vertical = portrait()
+    SplitPane(
+        Modifier.width(310.dp).fillMaxHeight(),
+        Modifier.fillMaxWidth().heightIn(max = if (showFilters) 430.dp else 132.dp),
+        first = { panelMod ->
+        // Sol panel (dikeyde üstte, açılır): pencere durumu, gözlemci, arama ve filtreler
+        Column(panelMod.verticalScroll(rememberScrollState()).padding(10.dp)) {
             val open = Season.transferWindowOpen(g)
             Text(
                 Season.windowText(g), color = if (open) Green else Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp,
@@ -651,6 +662,11 @@ fun TransferTab(g: Game) {
             OutlinedTextField(
                 value = query, onValueChange = { query = it.take(30) }, singleLine = true,
                 placeholder = { Text(L("🔍 Oyuncu ara", "🔍 Search player")) }, modifier = Modifier.fillMaxWidth(),
+            )
+            if (vertical) Text(
+                if (showFilters) L("▴ Filtreleri gizle", "▴ Hide filters") else L("▾ Filtreler ve sıralama", "▾ Filters and sorting"),
+                color = Teal, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { showFilters = !showFilters }.padding(vertical = 8.dp),
             )
             FilterTitle(L("Liste", "List"))
             FlowChips {
@@ -690,10 +706,12 @@ fun TransferTab(g: Game) {
             Spacer(Modifier.height(10.dp))
             ScoutCard(g)
         }
-        // Sağ: oyuncular
+        },
+        second = { listMod ->
+        // Sağ (dikeyde altta): oyuncular
         androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
             androidx.compose.foundation.lazy.grid.GridCells.Adaptive(340.dp),
-            Modifier.weight(1f).fillMaxHeight(),
+            listMod,
             contentPadding = PaddingValues(vertical = 6.dp),
         ) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -712,7 +730,8 @@ fun TransferTab(g: Game) {
                 PlayerRow(g, p, false, extra = "$star$team · ${money(price)}$pot")
             }
         }
-    }
+        },
+    )
 }
 
 /** Bonservis üst sınırı adımları (son adım: sınırsız). */

@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -122,16 +124,16 @@ fun RoundIconButton(icon: String, size: Dp = 40.dp, dot: Boolean = false, onClic
 
 /** Üst çubuktaki kaynak göstergesi (bütçe, maaş, güven). */
 @Composable
-private fun ResourceChip(icon: String, value: String, color: Color = TextMain, onClick: () -> Unit) {
+private fun ResourceChip(icon: String, value: String, color: Color = TextMain, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
-        Modifier.height(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028))
+        modifier.height(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B1028))
             .border(1.dp, Color(0xFF2F3A6E), RoundedCornerShape(8.dp)).clickable(onClick = onClick)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         GIcon(icon, 18.dp, color)
         Spacer(Modifier.width(6.dp))
-        Text(value, color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+        Text(value, color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -150,6 +152,7 @@ fun devamTitle(g: Game): String = when {
 @Composable
 fun SmTopBar(g: Game, onMenu: () -> Unit) {
     val t = g.userTeam
+    if (portrait()) { SmTopBarPortrait(g, onMenu); return }
     Row(
         Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF0C1131), Color(0xFF15103D), Color(0xFF0C1131))))
             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -182,8 +185,45 @@ fun SmTopBar(g: Game, onMenu: () -> Unit) {
     }
 }
 
+/** Dikey üst çubuk: üstte menü/arma/Devam, altta kaynak göstergeleri. */
 @Composable
-private fun DevamButton(g: Game) {
+private fun SmTopBarPortrait(g: Game, onMenu: () -> Unit) {
+    val t = g.userTeam
+    Column(
+        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF0C1131), Color(0xFF15103D), Color(0xFF0C1131))))
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RoundIconButton("☰", 36.dp, dot = g.unread > 0, onClick = onMenu)
+            if (GameRepo.tab != GameRepo.TAB_HOME) {
+                Spacer(Modifier.width(6.dp))
+                RoundIconButton("‹", 36.dp) { GameRepo.tab = GameRepo.TAB_HOME }
+            }
+            Spacer(Modifier.width(8.dp))
+            TeamBadge(t, 30.dp)
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f)) {
+                Text(t.short, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1)
+                Text(t.name, color = TextDim, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            DevamButton(g, compact = true)
+        }
+        val wages = Economy.squadWages(g, t.id)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ResourceChip("💶", money(t.budget), if (t.budget >= 0) Gold else Red, Modifier.weight(1f)) { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3 }
+            ResourceChip("👥", money(wages).removePrefix("€") + "/" + money(t.wageBudget).removePrefix("€"), if (wages > t.wageBudget) Red else TextMain, Modifier.weight(1.3f)) {
+                GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3
+            }
+            ResourceChip("🏛", "%${g.confidence.toInt()}", when { g.confidence >= 60 -> Green; g.confidence >= 30 -> Gold; else -> Red }, Modifier.weight(0.8f)) {
+                GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3
+            }
+        }
+    }
+}
+
+@Composable
+private fun DevamButton(g: Game, compact: Boolean = false) {
     val shape = RoundedCornerShape(10.dp)
     val active = !g.fired
     val date = if (g.date > 0) GameCalendar.format(g.date) else "${g.season}"
@@ -196,7 +236,7 @@ private fun DevamButton(g: Game) {
     val auto = GameRepo.autoRunning
     val main = if (auto) listOf(Color(0xFFB388FF), Color(0xFF7C4DFF)) else if (GameRepo.advancing) listOf(Color(0xFFF5C542), Color(0xFFE0A21B)) else listOf(Color(0xFF34F5C0), Color(0xFF12C795))
     Row(
-        Modifier.height(48.dp).width(210.dp).pressClick(0.94f, enabled = active) { GameRepo.continueGame() }
+        Modifier.height(if (compact) 42.dp else 48.dp).width(if (compact) 168.dp else 210.dp).pressClick(0.94f, enabled = active) { GameRepo.continueGame() }
             .shadow(10.dp, shape, ambientColor = main[1], spotColor = main[1]).clip(shape).background(Brush.horizontalGradient(main))
             .shine().border(1.5.dp, Color.White.copy(alpha = 0.5f), shape),
         verticalAlignment = Alignment.CenterVertically,
@@ -232,12 +272,13 @@ private fun TaskChip(icon: String, label: String, onClick: () -> Unit) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun QuickRow(g: Game) {
+    val vertical = portrait()
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().then(if (vertical) Modifier.horizontalScroll(rememberScrollState()) else Modifier).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(L("Görevler", "Tasks"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextDim)
+        if (!vertical) Text(L("Görevler", "Tasks"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextDim)
         TaskChip("🏋", L("Antrenman", "Training")) { GameRepo.tab = GameRepo.TAB_TACTICS; GameRepo.tacticsMode = 1 }
         TaskChip("🎯", L("Hedefler", "Objectives")) { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 3 }
         TaskChip("🔭", L("Gözlemci", "Scout")) { GameRepo.tab = GameRepo.TAB_TRANSFER }
@@ -245,7 +286,7 @@ fun QuickRow(g: Game) {
         // Haber bandı: çerçeveli kutu, solda etiket, kenarlarda yumuşak geçiş (yazı butonlara yapışık kesilmesin)
         val tickerBg = Color(0xFF0B1028)
         Row(
-            Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(10.dp)).background(tickerBg)
+            (if (vertical) Modifier.width(280.dp) else Modifier.weight(1f)).height(38.dp).clip(RoundedCornerShape(10.dp)).background(tickerBg)
                 .border(1.dp, CardLine, RoundedCornerShape(10.dp)).clickable { GameRepo.tab = GameRepo.TAB_INBOX },
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -362,14 +403,21 @@ fun HomeDashboard(g: Game) {
         if (prevPending[0] >= 0 && pending.size > prevPending[0]) com.supermenajer.game.audio.Sound.play(com.supermenajer.game.audio.Sound.Fx.NOTIFY, 0.7f)
         prevPending[0] = pending.size
     }
+    val vertical = portrait()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            Row(Modifier.fillMaxWidth().height(186.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HeroMatchCard(g, Modifier.weight(2.15f).fillMaxHeight())
-                ClubStatusMini(g, Modifier.weight(1f).fillMaxHeight())
+        if (vertical) {
+            item { HeroMatchCard(g, Modifier.fillMaxWidth().height(200.dp * Fx.textScale)) }
+            item { ClubStatusMini(g, Modifier.fillMaxWidth().height(150.dp * Fx.textScale)) }
+            items(pending.size) { i -> pending[i]() }
+        } else {
+            item {
+                Row(Modifier.fillMaxWidth().height(186.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroMatchCard(g, Modifier.weight(2.15f).fillMaxHeight())
+                    ClubStatusMini(g, Modifier.weight(1f).fillMaxHeight())
+                }
             }
         }
-        if (pending.isNotEmpty()) {
+        if (pending.isNotEmpty() && !vertical) {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     for (col in 0..1) {
@@ -389,7 +437,20 @@ fun HomeDashboard(g: Game) {
                 }
             }
         }
-        if (!Fx.homeSimple) {
+        if (!Fx.homeSimple && vertical) {
+            // Dikey: kartlar ikişer ikişer
+            val cards = listOf<@Composable (Modifier) -> Unit>(
+                { InboxCard(g, it) }, { ManagerCard(g, it) }, { CompetitionCard(g, it) }, { SpotlightCard(g, it) },
+                { TransfersCard(g, it) }, { FacilitiesMini(g, it) }, { UpcomingCard(g, it) }, { FormCard(g, it) },
+                { MissionsCard(g, it) }, { FeedCard(g, it) },
+            )
+            items((cards.size + 1) / 2) { r ->
+                Row(Modifier.fillMaxWidth().height(184.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    for (k in 0..1) cards.getOrNull(r * 2 + k)?.invoke(Modifier.weight(1f).fillMaxHeight()) ?: Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+        if (!Fx.homeSimple && !vertical) {
             item {
                 Row(Modifier.fillMaxWidth().height(184.dp * Fx.textScale), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     InboxCard(g, Modifier.weight(1f).fillMaxHeight())
