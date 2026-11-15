@@ -896,6 +896,11 @@ private fun MatchPrepCard(g: Game) {
     val opp = g.team(if (f.home == g.userTeamId) f.away else f.home)
     val issues = g.userTeam.lineup.mapNotNull { g.player(it) }.filter { !it.available }
     DashCard(L("Maç Hazırlığı · ${opp.name}", "Match Preparation · ${opp.name}"), Modifier.fillMaxWidth()) {
+        // Maç günü koşulları: hava, zemin, hakem ve yardımcı antrenörün notu
+        val cond = com.supermenajer.game.engine.Conditions.of(g, f)
+        Text(cond.summary(), color = TextMain, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        cond.advice()?.let { Text("💡 $it", color = TextDim, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+        Spacer(Modifier.height(4.dp))
         if (issues.isNotEmpty()) {
             Text(L("⚠️ İlk 11'de oynayamayan: ${issues.joinToString { it.name }}", "⚠️ Unavailable in the starting XI: ${issues.joinToString { it.name }}"), color = Gold, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))

@@ -239,6 +239,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - 💾 Kayıt yedekleme (Ana menü → Kariyer yükle → Yedekle / Geri yükle): her yuva .smk dosyası olarak dışa aktarılır (Drive, WhatsApp, telefon), dosyadan herhangi bir yuvaya geri yüklenir. Bozuk ya da yanlış dosya reddedilir; yuvadaki eski kayıt önce yedeğe alınır.
 - Testler her sınıf ayrı süreçte ve 3 GB bellekle çalışıyor (test sayısı arttıkça bellek yetmiyordu).
 - 💶 Gerçek finans: maaşlar her ay kasadan ödenir (tüm kulüplerde), TV yayın geliri ligin zenginliğine ve kulüp itibarına göre her ay girer. Her ay sonunda gelen kutusuna mali rapor gelir; kasa ekside kalırsa yönetim güveni her ay düşer. Kulüp → Finans'ta son 12 ayın grafiği ve banka kredisi (faiz %8, 12 ay taksit, limit kulübün gelirine göre).
+- 🌦️ Maç günü koşulları: her maçın havası (açık, bulutlu, yağmurlu, rüzgârlı, karlı yalnız kışın, sıcak yazın), zemini ve hakemi var; maç hazırlığında görünür, yardımcı antrenör öneri verir. Yağmur ve kar şutu azaltır, rüzgâr uzun topu, ağır zemin kısa pası zorlaştırır, sıcak ve ağır zemin daha çok yorar; sert hakem daha çok kart ve penaltı verir (testte maç başı 3,1'e karşı 1,9 sarı kart).
 
 
 ### v2.15

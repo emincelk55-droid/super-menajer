@@ -92,6 +92,9 @@ class MatchSim(
     private val isLeague: Boolean get() = Comp.isLeague(fixture.comp)
     val userSide: Side? get() = sides.firstOrNull { it.team.id == userTeamId }
 
+    /** Maç günü koşulları: hava, zemin, hakem. */
+    val cond: MatchConditions = Conditions.of(game, fixture)
+
     init {
         setup(home)
         setup(away)
@@ -104,6 +107,7 @@ class MatchSim(
             if (fixture.attendance == 0) fixture.attendance = Facilities.attendance(game, fixture, rnd)
             Facilities.crowdText(this).takeIf { it.isNotEmpty() }?.let { ev(Ev.INFO, -1, "🏟️ $it") }
         }
+        ev(Ev.INFO, -1, cond.summary())
         if (nat == null) userSide?.let { us ->
             // Gizli antrenman: rakibe özel hazırlık
             if (game.secretWeek == fixture.week) {
@@ -268,6 +272,8 @@ class MatchSim(
 
         // Güç farkının etkisi yumuşatıldı: gerçekçi gol ortalaması (~2.7) ve daha az farklı skor
         var pShot = (0.185 * (sA.atk / sD.def).pow(1.25)).coerceIn(0.06, 0.36)
+        // Hava ve zemin: yağmur/kar şutu azaltır; rüzgârda uzun top, ağır zeminde kısa pas zorlaşır
+        pShot *= cond.shotFactor * cond.styleFactor(atk.team)
         when (atk.team.tempo) { 0 -> pShot *= 0.93; 2 -> pShot *= 1.08 }
         // Önde olan takım zaman geçiriyorsa oyun yavaşlar
         val leader = if (home.goals > away.goals) home else if (away.goals > home.goals) away else null
@@ -335,7 +341,7 @@ class MatchSim(
     private fun shot(atk: Side, def: Side, sA: Str, sD: Str, forcedQ: Double? = null, header: Boolean = false) {
         val outfield = atk.onPitch.filter { it.slot.pos != Pos.GK }
         val setPiece = forcedQ != null
-        val penalty = !setPiece && rnd.nextDouble() < 0.02
+        val penalty = !setPiece && rnd.nextDouble() < 0.02 * kotlin.math.sqrt(cond.refStrict)
         val onPitchPlayers = atk.onPitch.map { it.p }
         val R = com.supermenajer.game.game.Roles
         // Duran toplarda belirlenen kullanıcılar
@@ -424,9 +430,10 @@ class MatchSim(
         } ?: return
         def.fouls++
         val r = rnd.nextDouble()
+        // Hakemin sertliği kart sıklığını belirler
         when {
-            r < 0.004 -> sendOff(def, fouler, secondYellow = false)
-            r < 0.13 -> {
+            r < 0.004 * cond.refStrict -> sendOff(def, fouler, secondYellow = false)
+            r < 0.13 * cond.refStrict -> {
                 fouler.yellow++
                 def.yellows++
                 fouler.rating -= 0.3
@@ -530,7 +537,7 @@ class MatchSim(
         val pressF = when (s.team.pressing) { 0 -> 0.8; 2 -> 1.3; else -> 1.0 } *
             when (s.team.tempo) { 0 -> 0.92; 2 -> 1.1; else -> 1.0 }
         for (m in s.onPitch) {
-            val drop = 0.42 * (1.32 - m.p.physical / 100.0) * pressF * (0.8 + rnd.nextDouble() * 0.4)
+            val drop = 0.42 * (1.32 - m.p.physical / 100.0) * pressF * cond.fatigueFactor * (0.8 + rnd.nextDouble() * 0.4)
             m.fit = (m.fit - drop).coerceAtLeast(5.0)
         }
     }
