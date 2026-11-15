@@ -243,6 +243,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - 🔥 Maç sonu analizi: iki takımın ısı haritası (topun takımdayken oynandığı bölgeler, savunma/orta/hücum yüzdeleri) ve oyuncu istatistikleri tablosu (not, şut ve isabet, kilit pas, top kazanma, kaleci kurtarışı).
 - 📜 Oyuncu kariyer geçmişi: oyuncu profilinde yeni **Kariyer** sekmesi — sezon sezon kulüp, maç, gol, asist, ortalama puan; tüm transferler bonservisiyle (kiralık, kiralıktan dönüş, serbest transfer, serbest kalma), kariyer toplamları, kulüp sayısı ve en iyi sezon ⭐. Yapay zekâ kulüpleri bir oyuncuyu aynı sezonda tekrar tekrar satamıyor (bir oyuncunun bir sezonda 5 kez el değiştirdiği hata düzeldi). İngilizce modda oyuncu profili sekmelerinin açılmaması düzeltildi.
 - 🎁 Günlük ödül ve maç görevleri: her gün oyuna girince günlük ödül (para, XP, moral; 7. gün büyük ödül), seri bir gün atlanırsa sıfırlanır. Her maçtan önce 3 maç görevi (kazan, gol yeme, 12 şut, %55 topa sahip olma, iki farklı golcü...) maç hazırlığında görünür; maç sonunda sonuçları özet ekranında, her başarılan görev XP ve yönetim primi, üçü birden +30 XP bonus. 5 yeni başarım: 7 ve 30 günlük seri, 25 maç görevi, 5 kusursuz maç, hat-trick.
+- 🏃 2,5D maçta yeni oyuncu figürleri: dizden ve dirsekten bükülen uzuvlar, koşu döngüsü, saç modelleri ve renkleri, boy farkı (kaleciler uzun). Hareket pozları: şut, kafa vuruşu (zıplama), kayarak müdahale, kalecinin hazır duruşu ve topa uçuşu, gol sevinci (atan oyuncu dizüstü kayar, takım arkadaşları kollar havada zıplar). Pozlar gol tekrarına da kaydedilir.
 
 
 ### v2.15

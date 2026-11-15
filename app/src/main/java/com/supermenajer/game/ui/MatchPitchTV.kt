@@ -99,6 +99,7 @@ private class CamState { var x = Float.NaN; var y = Float.NaN }
 private class TvMan(
     val id: Int, val side: Int, val gk: Boolean, val number: Int, val x: Float, val y: Float,
     val alpha: Float, val speed: Float, val focus: Boolean, val name: String,
+    val vx: Float = 0f, val pose: Int = 0, val poseT: Float = 0f, val poseDir: Float = 1f,
 )
 
 @Composable
@@ -159,9 +160,9 @@ fun MatchPitchTV(
         }
 
         val focus = if (rv == null) anim.focus() else null
-        val men = if (rv != null) rv.agents.mapIndexed { i, a -> TvMan(i, a.side, a.gk, a.number, a.x, a.y, 1f, 0f, false, "") }
+        val men = if (rv != null) rv.agents.map { a -> TvMan(a.id, a.side, a.gk, a.number, a.x, a.y, 1f, a.speed, false, "", a.vx, a.pose, a.poseT, a.poseDir) }
         else anim.agents.filter { it.alpha > 0f }.map { a ->
-            TvMan(a.id, a.side, a.gk, a.number, a.x, a.y, a.alpha, hypot(a.vx, a.vy), a === focus, a.name)
+            TvMan(a.id, a.side, a.gk, a.number, a.x, a.y, a.alpha, hypot(a.vx, a.vy), a === focus, a.name, a.vx, a.pose, a.poseT, a.poseDir)
         }
         // Gölgeler önce, sonra uzaktan yakına oyuncular (yakındakiler öndekini örter)
         for (m in men) {
@@ -186,7 +187,7 @@ fun MatchPitchTV(
             if (!ballDrawn[0] && ballY < m.y) drawBall()
             val fill = if (m.gk) (if (m.side == 0) homeGk else awayGk) else if (m.side == 0) homeC else awayC
             val kit = if (m.gk) 0 else if (m.side == 0) homeKit else awayKit
-            drawMan(c, m, fill, if (m.side == 0) homeAlt else awayAlt, kit, t, measurer, numCache)
+            drawMan(c, m, fill, if (m.side == 0) homeAlt else awayAlt, kit, t, measurer, numCache, ballX)
         }
         if (!ballDrawn[0]) drawBall()
         for (left in listOf(true, false)) drawGoal(c, left, back = false)
@@ -342,52 +343,42 @@ private fun DrawScope.drawStands(c: TvCam, seats: List<Seat>, t: Long) {
     }
 }
 
-private val Skins = listOf(Color(0xFFF1C9A5), Color(0xFFD9A37A), Color(0xFFA8714A), Color(0xFF6E4429), Color(0xFFE8B98F))
-
-private fun DrawScope.drawMan(c: TvCam, m: TvMan, fill: Color, alt: Color, kit: Int, t: Long, measurer: TextMeasurer, numCache: HashMap<String, TextLayoutResult>) {
+private fun DrawScope.drawMan(
+    c: TvCam, m: TvMan, fill: Color, alt: Color, kit: Int, t: Long,
+    measurer: TextMeasurer, numCache: HashMap<String, TextLayoutResult>, ballX: Float,
+) {
     val foot = c.p(m.x, m.y)
     val k = c.meter(m.y)
-    val h = 1.85f * k
-    val a = m.alpha
-    val bw = h * 0.3f
-    val run = (m.speed / 6f).coerceIn(0f, 1f)
     val still = !Fx.enabled
-    val sw = if (still) 0.35f else sin(t / 1e9f * 11f + m.id) * run
-    val legLen = h * 0.44f
+    val sec = t / 1e9f
+    // Bakış yönü: koşuyorsa koştuğu yöne, duruyorsa topa (pozlarda pozun yönüne)
+    val face = when {
+        m.pose != 0 && m.pose != com.supermenajer.game.engine.Pose.DIVE -> m.poseDir
+        kotlin.math.abs(m.vx) > 0.6f -> if (m.vx < 0f) -1f else 1f
+        else -> if (ballX < m.x) -1f else 1f
+    }
+    val run = if (still) 0.35f else (m.speed / 6.5f).coerceIn(0f, 1f)
+    val phase = if (still) 0.9f + m.id else runPhase(sec, m.id, m.speed)
+    val motion = Motion(face, run, phase, m.pose, m.poseT, m.poseDir, m.alpha, if (still) 0.3f else sec)
+    val look = Look.of(m.id, m.side, m.gk)
     val sock = lerp(fill, Color.Black, 0.55f)
     val shorts = lerp(fill, Color.Black, 0.6f).let { if (m.gk) lerp(fill, Color.Black, 0.35f) else it }
-    // Bacaklar (koşarken açılıp kapanır)
-    for (s in listOf(-1f, 1f)) {
-        val dx = s * bw * 0.22f + s * sw * h * 0.09f
-        drawLine(sock.copy(alpha = a), Offset(foot.x + dx, foot.y), Offset(foot.x + s * bw * 0.18f, foot.y - legLen), bw * 0.28f, StrokeCap.Round)
-    }
-    // Şort ve forma
-    drawRoundRect(shorts.copy(alpha = a), Offset(foot.x - bw * 0.48f, foot.y - h * 0.56f), Size(bw * 0.96f, h * 0.16f), CornerRadius(bw * 0.15f))
-    val shirtTop = foot.y - h * 0.86f
-    drawRoundRect(fill.copy(alpha = a), Offset(foot.x - bw / 2, shirtTop), Size(bw, h * 0.34f), CornerRadius(bw * 0.3f))
-    if (kit > 0 && a > 0.3f) {
-        val clip = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(foot.x - bw / 2, shirtTop, foot.x + bw / 2, shirtTop + h * 0.34f, CornerRadius(bw * 0.3f))) }
-        clipPath(clip) { drawKitPattern(alt.copy(alpha = a), kit, foot.x - bw / 2, shirtTop, bw, h * 0.34f) }
-    }
-    // Kollar
-    for (s in listOf(-1f, 1f)) {
-        drawLine(fill.copy(alpha = a), Offset(foot.x + s * bw * 0.45f, shirtTop + h * 0.05f), Offset(foot.x + s * bw * 0.62f - s * sw * h * 0.05f, shirtTop + h * 0.27f), bw * 0.22f, StrokeCap.Round)
-    }
-    // Hafif ışık: sol üstten
-    drawRoundRect(Color.White.copy(alpha = 0.18f * a), Offset(foot.x - bw / 2, shirtTop), Size(bw * 0.45f, h * 0.34f), CornerRadius(bw * 0.3f))
-    // Baş
-    val skin = Skins[Math.floorMod(m.id * 7 + m.side, Skins.size)]
-    drawCircle(skin.copy(alpha = a), h * 0.085f, Offset(foot.x, shirtTop - h * 0.07f))
+    val a = m.alpha
+    drawTvPlayer(
+        foot, k, look, motion, fill, shorts, sock,
+        shirt = if (kit > 0) { l, tp, w, h -> drawKitPattern(alt.copy(alpha = a), kit, l, tp, w, h) } else null,
+        number = if (m.number > 0 && a > 0.5f) { cx, cy, h ->
+            if (h > 26f) {
+                val px = (h * 0.14f / density / fontScale)
+                val key = "${m.number}-${contentOn(fill).hashCode()}-${px.toInt()}"
+                val tl = numCache.getOrPut(key) {
+                    measurer.measure("${m.number}", TextStyle(color = contentOn(fill), fontSize = px.sp, fontWeight = FontWeight.Black))
+                }
+                drawText(tl, topLeft = Offset(cx - tl.size.width / 2f, cy - tl.size.height / 2f))
+            }
+        } else null,
+    )
     if (m.focus) drawOval(Color(0xFFFFE14D), Offset(foot.x - k * 0.75f, foot.y - k * 0.22f), Size(k * 1.5f, k * 0.44f), style = androidx.compose.ui.graphics.drawscope.Stroke(2.2f))
-    // Forma numarası: oyuncu yeterince büyükse
-    if (m.number > 0 && h > 26f && a > 0.5f) {
-        val px = (h * 0.15f / density / fontScale)
-        val key = "${m.number}-${contentOn(fill).hashCode()}-${px.toInt()}"
-        val tl = numCache.getOrPut(key) {
-            measurer.measure("${m.number}", TextStyle(color = contentOn(fill), fontSize = px.sp, fontWeight = FontWeight.Black))
-        }
-        drawText(tl, topLeft = Offset(foot.x - tl.size.width / 2f, shirtTop + h * 0.17f - tl.size.height / 2f))
-    }
 }
 
 private fun DrawScope.drawReplayBands(progress: Float, measurer: TextMeasurer) {

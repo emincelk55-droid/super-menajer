@@ -21,6 +21,12 @@ import androidx.compose.foundation.background
 import com.supermenajer.game.ui.GoalCelebrationFrame
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.supermenajer.game.ui.drawTvPlayer
+import com.supermenajer.game.ui.Look
+import com.supermenajer.game.ui.Motion
+import com.supermenajer.game.ui.drawKitPattern
+import androidx.compose.ui.text.drawText
 import com.supermenajer.game.ui.TifoOverlay
 import com.supermenajer.game.ui.drawFmPitch
 import java.nio.file.Files
@@ -227,6 +233,47 @@ class ScreensTest {
         }
         println("KARIYER ${star.name}: ${star.career} ${star.moves}")
         println("OTOTUR ${g.userTeam.name} sezon ${g.season} hafta ${g.week} · ${log.actions.takeLast(6)}")
+    }
+
+    /** 2,5D oyuncu figürleri: farklı görünümler ve tüm pozlar yan yana (büyük ölçek). */
+    @Test
+    fun tvPlayerPoses() {
+        val P = com.supermenajer.game.engine.Pose
+        // (poz, pozdaki süre, koşu hızı, etiket)
+        val list = listOf(
+            listOf(P.NONE, 0f, 0f, "Duruş"), listOf(P.NONE, 0f, 1f, "Koşu"), listOf(P.KICK, 0.25f, 0.4f, "Şut"),
+            listOf(P.HEADER, 0.25f, 0f, "Kafa"), listOf(P.TACKLE, 0.3f, 0f, "Kayarak müdahale"), listOf(P.DIVE, -0.2f, 0f, "Kaleci hazır"),
+            listOf(P.DIVE, 0.45f, 0f, "Kaleci uçuyor"), listOf(P.SLIDE, 0.6f, 0f, "Dizüstü kayış"), listOf(P.CELEB, 0.2f, 0f, "Sevinç"),
+        )
+        paparazzi.snapshot("28_tv_player_poses") {
+            AppTheme {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF2F8F48))) {
+                    val tm = androidx.compose.ui.text.rememberTextMeasurer()
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                        val cols = list.size
+                        val k = size.height / 5f
+                        for ((i, e) in list.withIndex()) {
+                            val x = size.width * (i + 0.5f) / cols
+                            val foot = androidx.compose.ui.geometry.Offset(x, size.height * 0.78f)
+                            val pose = e[0] as Int
+                            val gk = pose == P.DIVE
+                            val fill = if (gk) androidx.compose.ui.graphics.Color(0xFFFF9800) else if (i % 2 == 0) androidx.compose.ui.graphics.Color(0xFFD32F2F) else androidx.compose.ui.graphics.Color(0xFFF5F5F5)
+                            drawOval(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.28f), androidx.compose.ui.geometry.Offset(foot.x - k * 0.45f, foot.y - k * 0.14f), androidx.compose.ui.geometry.Size(k * 1.2f, k * 0.3f))
+                            run {
+                                drawTvPlayer(
+                                    foot, k, Look.of(i * 13 + 5, i % 2, gk),
+                                    Motion(1f, e[2] as Float, 0.9f + i, pose, e[1] as Float, 1f, 1f, 0.3f),
+                                    fill, androidx.compose.ui.graphics.lerp(fill, androidx.compose.ui.graphics.Color.Black, 0.6f), androidx.compose.ui.graphics.lerp(fill, androidx.compose.ui.graphics.Color.Black, 0.5f),
+                                    shirt = if (i == 2) { l, t, w, h -> drawKitPattern(androidx.compose.ui.graphics.Color.White, 1, l, t, w, h) } else null,
+                                )
+                            }
+                            val tl = tm.measure(e[3] as String, androidx.compose.ui.text.TextStyle(color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp))
+                            drawText(tl, topLeft = androidx.compose.ui.geometry.Offset(x - tl.size.width / 2f, size.height * 0.88f))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /** Günlük ödül kartı, maç hazırlığında görevler ve maç sonu görev sonuçları. */

@@ -26,6 +26,26 @@ class Agent(val id: Int, val side: Int, val number: Int, val name: String, val g
     var alpha = 1f
     /** Soyunma odasına yürümeye başlamadan önce sahada geçen süre (tokalaşma). */
     var offDelay = 0f
+    /** Hareket pozu ([Pose]), pozdaki süre (eksi: henüz başlamadı) ve yönü (+1 sağa, -1 sola). */
+    var pose = Pose.NONE
+    var poseT = 0f
+    var poseDir = 1f
+
+    fun setPose(p: Int, dir: Float, delay: Float = 0f) { pose = p; poseT = -delay; poseDir = if (dir < 0f) -1f else 1f }
+}
+
+/** Oyuncu pozları (2,5D görünümde çizilir, tekrarlara da kaydedilir). */
+object Pose {
+    const val NONE = 0
+    const val KICK = 1
+    const val HEADER = 2
+    const val DIVE = 3
+    const val TACKLE = 4
+    const val CELEB = 5
+    const val SLIDE = 6
+
+    /** Pozun süresi (sn); sevinç pozları mod değişince biter. */
+    fun duration(p: Int): Float = when (p) { KICK -> 0.38f; HEADER -> 0.55f; DIVE -> 1.4f; TACKLE -> 0.75f; else -> Float.MAX_VALUE }
 }
 
 /**
@@ -52,10 +72,16 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
     private enum class Mode { NORMAL, ATTACK, SETPIECE, DEAD, CELEBRATE, KICKOFF, WALKOFF, REPLAY }
 
     /** Tekrar için kaydedilen kare: oyuncu konumları ve top. */
-    class Frame(val ids: IntArray, val xs: FloatArray, val ys: FloatArray, val bx: Float, val by: Float, val bz: Float)
+    class Frame(
+        val ids: IntArray, val xs: FloatArray, val ys: FloatArray, val bx: Float, val by: Float, val bz: Float,
+        val poses: ByteArray = ByteArray(ids.size), val poseTs: FloatArray = FloatArray(ids.size), val poseDirs: ByteArray = ByteArray(ids.size),
+    )
 
     /** Tekrarda çizilecek oyuncu bilgisi. */
-    class ReplayAgent(val side: Int, val gk: Boolean, val number: Int, val x: Float, val y: Float)
+    class ReplayAgent(
+        val side: Int, val gk: Boolean, val number: Int, val x: Float, val y: Float,
+        val id: Int = 0, val speed: Float = 0f, val vx: Float = 0f, val pose: Int = Pose.NONE, val poseT: Float = 0f, val poseDir: Float = 1f,
+    )
 
     /** Tekrarın o anki karesi (gösterilmiyorsa null). */
     class ReplayView(val agents: List<ReplayAgent>, val ballX: Float, val ballY: Float, val ballZ: Float, val progress: Float, val goalX: Float = ballX)
@@ -118,7 +144,12 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
                 val kb = b.ids.indexOf(a.ids[k])
                 val x = if (kb >= 0) a.xs[k] + (b.xs[kb] - a.xs[k]) * u else a.xs[k]
                 val y = if (kb >= 0) a.ys[k] + (b.ys[kb] - a.ys[k]) * u else a.ys[k]
-                list += ReplayAgent(ag.side, ag.gk, ag.number, x, y)
+                val vx = if (kb >= 0) (b.xs[kb] - a.xs[k]) * REC_HZ else 0f
+                val vy = if (kb >= 0) (b.ys[kb] - a.ys[k]) * REC_HZ else 0f
+                list += ReplayAgent(
+                    ag.side, ag.gk, ag.number, x, y, ag.id, kotlin.math.hypot(vx, vy), vx,
+                    a.poses[k].toInt(), a.poseTs[k] + u / REC_HZ, if (a.poseDirs[k] < 0) -1f else 1f,
+                )
             }
             return ReplayView(list, a.bx + (b.bx - a.bx) * u, a.by + (b.by - a.by) * u, a.bz + (b.bz - a.bz) * u, pos / (replay.size - 1).coerceAtLeast(1), replay.last().bx)
         }
@@ -219,7 +250,17 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         hold = 0.5f
     }
 
-    private fun setMode(m: Mode) { mode = m; modeTime = 0f }
+    private fun setMode(m: Mode) {
+        mode = m; modeTime = 0f
+        if (m == Mode.CELEBRATE) {
+            val c = celebrator
+            for (a in agents) if (c != null && a.side == c.side && !a.gk) {
+                if (a === c) a.setPose(Pose.SLIDE, fromD(c.side, L) - a.x) else a.setPose(Pose.CELEB, fromD(c.side, L) - a.x, (a.id % 4) * 0.25f)
+            }
+        } else if (m != Mode.REPLAY) {
+            for (a in agents) if (a.pose == Pose.CELEB || a.pose == Pose.SLIDE) a.pose = Pose.NONE
+        }
+    }
 
     /** Motor olayını sahaya yansıt. */
     fun play(e: MatchEvent) {
@@ -375,12 +416,20 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
     private fun step(dt: Float) {
         time += dt
         modeTime += dt
+        if (mode != Mode.REPLAY) for (a in agents) {
+            if (a.pose == Pose.NONE) continue
+            a.poseT += dt
+            if (a.poseT > Pose.duration(a.pose)) a.pose = Pose.NONE
+        }
         hold += dt
         if (mode != Mode.REPLAY) {
             recordAcc += dt
             if (recordAcc >= 1f / REC_HZ) {
                 recordAcc = 0f
-                history.addLast(Frame(IntArray(agents.size) { agents[it].id }, FloatArray(agents.size) { agents[it].x }, FloatArray(agents.size) { agents[it].y }, ballX, ballY, ballZ))
+                history.addLast(Frame(
+                    IntArray(agents.size) { agents[it].id }, FloatArray(agents.size) { agents[it].x }, FloatArray(agents.size) { agents[it].y }, ballX, ballY, ballZ,
+                    ByteArray(agents.size) { agents[it].pose.toByte() }, FloatArray(agents.size) { agents[it].poseT }, ByteArray(agents.size) { if (agents[it].poseDir < 0) -1 else 1 },
+                ))
                 while (history.size > (REC_HZ * REC_SEC).toInt()) history.removeFirst()
             }
         }
@@ -422,6 +471,7 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
         if (presser != null && dist(presser.x, presser.y, o.x, o.y) < 1.6f) {
             pressTime += dt
             if (pressTime > 0.6f && rnd.nextFloat() < dt * 1.6f * (1.15f - share(o.side))) {
+                presser.setPose(Pose.TACKLE, o.x - presser.x)
                 owner = presser
                 possSide = presser.side
                 hold = 0f
@@ -483,6 +533,7 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
 
     private fun launch(o: Agent, ex: Float, ey: Float, dur: Float, peak: Float, to: Agent?, kind: Int) {
         flight = Flight(ballX, ballY, ex, ey, dur.coerceAtLeast(0.12f), peak, to, kind)
+        o.setPose(Pose.KICK, ex - o.x)
         owner = null
         hold = 0f
         if (to != null) possSide = to.side
@@ -545,6 +596,11 @@ class Pitch2D(val sim: MatchSim, seed: Long = 7L) {
             agents.firstOrNull { it.gk && it.side != atk }?.let { k -> k.boost = 2.2f }
         }
         launch(o, ex, ey, len / speed, if (header) 0.6f else 0.2f + rnd.nextFloat() * 1.2f, null, 1)
+        if (header) o.setPose(Pose.HEADER, ex - o.x)
+        // Kaleci: gol ya da kurtarışta topa uçar (top kaleye varmadan hemen önce)
+        if (e.type == Ev.SAVE || e.type == Ev.GOAL) agents.firstOrNull { it.gk && it.side != atk }?.let { k ->
+            k.setPose(Pose.DIVE, if (ey < k.y) -1f else 1f, (len / speed - 0.32f).coerceAtLeast(0f))
+        }
         possSide = atk
     }
 
