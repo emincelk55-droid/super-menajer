@@ -470,6 +470,20 @@ class ScreensTest {
         shot("12b_walkoff")
         GameRepo.finishMatch()
         shot("13_summary")
+        GameRepo.match?.let { sim ->
+            paparazzi.snapshot("13b_analysis") {
+                AppTheme {
+                    Surface(Modifier.fillMaxSize(), color = Bg) {
+                        androidx.compose.foundation.layout.Row(Modifier.padding(12.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                            androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { com.supermenajer.game.ui.PlayerStatsCard(sim.userSide ?: sim.home) }
+                            androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
+                                com.supermenajer.game.ui.HeatMapCard(sim, androidx.compose.ui.graphics.Color(sim.home.team.color1), androidx.compose.ui.graphics.Color(0xFFE53935))
+                            }
+                        }
+                    }
+                }
+            }
+        }
         GameRepo.closeSummary()
         // gün atlama kartı
         while (g.todayUserFixture() != null && !g.seasonOver && !g.fired) advance(1)

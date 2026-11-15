@@ -677,18 +677,13 @@ fun SummaryScreen() {
                         Text("🏟️ $crowd$income", color = TextDim, fontSize = 12.sp)
                     }
                 }
-                sim.userSide?.let { us ->
-                    item {
-                        DashCard(L("Oyuncu Puanları", "Player Ratings"), Modifier.fillMaxWidth()) {
-                            us.used.sortedByDescending { it.rating }.forEach { PimRow(it, onPitch = true) }
-                        }
-                    }
-                }
+                (sim.userSide ?: sim.home).let { us -> item { PlayerStatsCard(us) } }
             }
             LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     DashCard(L("Maç İstatistikleri", "Match Stats"), Modifier.fillMaxWidth()) { Box(Modifier.heightIn(max = 520.dp)) { Stats(sim) } }
                 }
+                item { HeatMapCard(sim, homeC, awayC) }
                 if (sim.nat == null && !sim.twoPlayer) item {
                     DashCard(L("Diğer Sonuçlar · ${Comp.name(sim.fixture.comp)}", "Other Results · ${Comp.name(sim.fixture.comp)}"), Modifier.fillMaxWidth()) {
                         g.weekFixtures(sim.fixture.week).filter { it !== sim.fixture && it.comp == sim.fixture.comp }.forEachIndexed { i, f ->

@@ -240,6 +240,7 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Testler her sınıf ayrı süreçte ve 3 GB bellekle çalışıyor (test sayısı arttıkça bellek yetmiyordu).
 - 💶 Gerçek finans: maaşlar her ay kasadan ödenir (tüm kulüplerde), TV yayın geliri ligin zenginliğine ve kulüp itibarına göre her ay girer. Her ay sonunda gelen kutusuna mali rapor gelir; kasa ekside kalırsa yönetim güveni her ay düşer. Kulüp → Finans'ta son 12 ayın grafiği ve banka kredisi (faiz %8, 12 ay taksit, limit kulübün gelirine göre).
 - 🌦️ Maç günü koşulları: her maçın havası (açık, bulutlu, yağmurlu, rüzgârlı, karlı yalnız kışın, sıcak yazın), zemini ve hakemi var; maç hazırlığında görünür, yardımcı antrenör öneri verir. Yağmur ve kar şutu azaltır, rüzgâr uzun topu, ağır zemin kısa pası zorlaştırır, sıcak ve ağır zemin daha çok yorar; sert hakem daha çok kart ve penaltı verir (testte maç başı 3,1'e karşı 1,9 sarı kart).
+- 🔥 Maç sonu analizi: iki takımın ısı haritası (topun takımdayken oynandığı bölgeler, savunma/orta/hücum yüzdeleri) ve oyuncu istatistikleri tablosu (not, şut ve isabet, kilit pas, top kazanma, kaleci kurtarışı).
 
 
 ### v2.15

@@ -35,6 +35,12 @@ class PIM(val p: Player, var slot: Slot) {
     var injWeeks = 0
     var injType = ""
     var subbedOn = false
+    /** Maç istatistikleri: şut, isabet, kilit pas, top kazanma, kurtarış. */
+    var shots = 0
+    var onTarget = 0
+    var keyPasses = 0
+    var tackles = 0
+    var saves = 0
     /** Takım konuşmasından gelen maç içi motivasyon (performans çarpanı, ör. 0.03 = %3). */
     var boost = 0.0
 }
@@ -53,7 +59,22 @@ class Side(val team: Team, val index: Int) {
     var yellows = 0
     var reds = 0
     var xg = 0.0
+    /** Isı haritası: topun bu takımdayken bulunduğu yer (10 boy × 6 en, hücum yönü hep sağa). */
+    val heat = IntArray(HEAT_W * HEAT_H)
     fun gk(): PIM? = onPitch.firstOrNull { it.slot.pos == Pos.GK }
+
+    /** Top bu takımdayken bulunduğu konumu ısı haritasına işler (x,y 0..1, ev sahibi sağa hücum eder). */
+    fun mark(x: Float, y: Float, home: Boolean) {
+        val fx = if (home) x else 1f - x
+        val cx = (fx * HEAT_W).toInt().coerceIn(0, HEAT_W - 1)
+        val cy = (y * HEAT_H).toInt().coerceIn(0, HEAT_H - 1)
+        heat[cy * HEAT_W + cx]++
+    }
+
+    companion object {
+        const val HEAT_W = 10
+        const val HEAT_H = 6
+    }
 }
 
 /** Milli maç kurulumu: iki ulusun geçici takım nesneleri ve çağrılan oyuncuları. */
@@ -269,6 +290,13 @@ class MatchSim(
         val dir = if (atk === home) 1f else -1f
         ballX = 0.5f + dir * (0.05f + rnd.nextFloat() * 0.3f)
         ballY = 0.2f + rnd.nextFloat() * 0.6f
+        // Isı haritası: atağın geçtiği noktalar (geriden oyun kurma, orta saha çıkışı ve hücum bölgesi)
+        if (rnd.nextDouble() < 0.75) {
+            val back = 0.12f + rnd.nextFloat() * 0.33f
+            atk.mark(if (atk === home) back else 1f - back, 0.1f + rnd.nextFloat() * 0.8f, atk === home)
+        }
+        atk.mark(0.5f + dir * (rnd.nextFloat() * 0.2f - 0.05f), 0.1f + rnd.nextFloat() * 0.8f, atk === home)
+        atk.mark(ballX, ballY, atk === home)
 
         // Güç farkının etkisi yumuşatıldı: gerçekçi gol ortalaması (~2.7) ve daha az farklı skor
         var pShot = (0.185 * (sA.atk / sD.def).pow(1.25)).coerceIn(0.06, 0.36)
@@ -306,6 +334,8 @@ class MatchSim(
             r < pShot -> shot(atk, def, sA, sD)
             r < pShot + 0.2 -> foul(def, atk)
             r < pShot + 0.3 -> pick(atk.onPitch)?.let { ev(Ev.INFO, atk.index, Comms.filler(atk.team, it.p.name, rnd)) }
+            // Atak bir şeye dönüşmedi: savunmadan biri topu kazandı
+            else -> pickW(def.onPitch) { when (it.slot.pos) { Pos.GK -> 0.1; Pos.DF -> 2.5; Pos.MF -> 2.0; Pos.FW -> 0.6 } * (it.p.defending / 70.0) }?.let { it.tackles++ }
         }
         fatigue(home); fatigue(away)
         for (s in sides) if (rnd.nextDouble() < 0.0012) injury(s)
@@ -378,10 +408,14 @@ class MatchSim(
         val style = when { penalty -> 2; header -> 1; setPiece && assister == null -> 3; else -> 0 }
         ballX = if (atk === home) 0.93f else 0.07f
         ballY = 0.38f + rnd.nextFloat() * 0.24f
+        atk.mark(ballX, ballY, atk === home)
+        shooter.shots++
+        assister?.let { it.keyPasses++ }
 
         if (rnd.nextDouble() < pGoal) {
             atk.goals++
             atk.onTarget++
+            shooter.onTarget++
             shooter.goals++
             shooter.rating += 1.1
             assister?.let { it.assists++; it.rating += 0.7 }
@@ -400,8 +434,9 @@ class MatchSim(
         when {
             r2 < 0.42 -> {
                 atk.onTarget++
+                shooter.onTarget++
                 shooter.rating += 0.1
-                keeper?.let { it.rating += 0.3 }
+                keeper?.let { it.rating += 0.3; it.saves++ }
                 ev(Ev.SAVE, atk.index, Comms.save(shooter.p.name, keeper?.p?.name ?: "savunma", penalty, rnd, header), shooter.p.id, build, aId, style)
             }
             r2 < 0.48 -> {
