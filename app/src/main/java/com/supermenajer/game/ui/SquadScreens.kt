@@ -385,10 +385,17 @@ fun PlayerDialog(g: Game, p: Player) {
         }
     }
     var ptab by remember(p.id) { mutableIntStateOf(0) }
-    val tabs = buildList {
-        add(L("Nitelikler", "Attributes")); add(L("Bilgi", "Info"))
-        if (own && p.loanFrom < 0) add(L("Antrenman", "Training"))
-        add(if (own || loaned) L("İşlemler", "Actions") else L("Transfer", "Transfers"))
+    // Sekme anahtarları dilden bağımsız (Türkçe), görünen adlar çevrilir.
+    val tabKeys = buildList {
+        add("Nitelikler"); add("Bilgi"); add("Kariyer")
+        if (own && p.loanFrom < 0) add("Antrenman")
+        add(if (own || loaned) "İşlemler" else "Transfer")
+    }
+    val tabs = tabKeys.map {
+        when (it) {
+            "Nitelikler" -> L("Nitelikler", "Attributes"); "Bilgi" -> L("Bilgi", "Info"); "Kariyer" -> L("Kariyer", "Career")
+            "Antrenman" -> L("Antrenman", "Training"); "İşlemler" -> L("İşlemler", "Actions"); else -> L("Transfer", "Transfers")
+        }
     }
     WideDialog(onDismissRequest = { GameRepo.selectedPlayer = null }, maxWidth = 980.dp) {
         Column(
@@ -483,7 +490,7 @@ fun PlayerDialog(g: Game, p: Player) {
             }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 message?.takeIf { ptab == 0 }?.let { Text(it, color = Gold, fontSize = 13.sp); Spacer(Modifier.height(6.dp)) }
-                when (tabs[ptab.coerceIn(0, tabs.lastIndex)]) {
+                when (tabKeys[ptab.coerceIn(0, tabKeys.lastIndex)]) {
                     "Nitelikler" -> {
                         if (!known) Text(L("🔍 Gözlemci raporu yok: değerler tahmini. Transfer sekmesinden gözlemci gönderebilirsin.", "🔍 No scout report: values are estimates. You can send a scout from the transfer tab."), color = Gold, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
                         AttributeTable(
@@ -520,20 +527,6 @@ fun PlayerDialog(g: Game, p: Player) {
                                 Stat(L("Asist", "Assists"), "${p.assists}")
                                 Stat(L("Ort. Puan", "Avg. Rating"), if (p.apps > 0) "%.2f".format(p.avgRating) else "-")
                             }
-                            if (p.career.isNotEmpty()) {
-                                Spacer(Modifier.height(12.dp))
-                                Text(L("KARİYER GEÇMİŞİ", "CAREER HISTORY"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(4.dp))
-                                for (line in p.career.takeLast(8).reversed()) {
-                                    val c = line.split("|")
-                                    if (c.size < 6) continue
-                                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                                        Text("${c[0]}-${(c[0].toIntOrNull()?.plus(1) ?: 0) % 100}", color = TextDim, fontSize = 12.sp, modifier = Modifier.width(56.dp))
-                                        Text(c[1], fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                                        Text(L("${c[2]}M ${c[3]}G ${c[4]}A · ${c[5]}", "${c[2]}A ${c[3]}G ${c[4]}As · ${c[5]}"), color = TextDim, fontSize = 12.sp)
-                                    }
-                                }
-                            }
                             Spacer(Modifier.height(12.dp))
                             Text(L("ANA ÖZELLİKLER (1-20)", "KEY ATTRIBUTES (1-20)"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(6.dp))
@@ -547,6 +540,7 @@ fun PlayerDialog(g: Game, p: Player) {
                             Attr(L("Fizik", "Physical"), p.physical, rg(p.physical))
                         }
                     }
+                    "Kariyer" -> CareerHistory(g, p)
                     "Antrenman" -> TrainingBox(p)
                     else -> Box(Modifier.fillMaxWidth(0.6f)) { actions() }
                 }
@@ -589,7 +583,7 @@ private fun Attr(label: String, v: Int, range: IntRange = v..v) {
 }
 
 @Composable
-private fun Stat(label: String, v: String) {
+internal fun Stat(label: String, v: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(v, fontSize = 20.sp, fontWeight = FontWeight.Black)
         Text(label, fontSize = 11.sp, color = TextDim)

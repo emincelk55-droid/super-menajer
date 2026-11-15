@@ -222,7 +222,7 @@ object TransferTalks {
         val fromName = sellerName(g, p)
         if (n.loan && fromId >= 0) {
             g.team(fromId).lineup.replaceAll { if (it == p.id) -1 else it }
-            g.movePlayer(p, us.id)
+            g.movePlayer(p, us.id, 'L')
             p.loanFrom = fromId
             p.salary = n.wage
             p.squadRole = n.role
@@ -239,7 +239,7 @@ object TransferTalks {
             Economy.earn(us, Economy.BUYS, -now)
             if (n.installments) g.pendingPayments += n.agreedFee - now
             if (n.bonus > 0) Economy.earn(us, Economy.BUYS, -n.bonus)
-            g.movePlayer(p, us.id)
+            g.movePlayer(p, us.id, fee = n.agreedFee)
             p.salary = n.wage
             p.contractYears = n.years
             p.squadRole = n.role

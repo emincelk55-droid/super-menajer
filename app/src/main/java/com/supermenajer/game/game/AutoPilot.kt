@@ -159,6 +159,8 @@ object Invariants {
             if (p.fitness.isNaN() || p.fitness < -0.5 || p.fitness > 100.5) out += "Kondisyon bozuk: ${p.name} ${p.fitness}"
             if (p.morale.isNaN() || p.morale < -0.5 || p.morale > 100.5) out += "Moral bozuk: ${p.name} ${p.morale}"
             if (p.value < 0) out += "Negatif değer: ${p.name}"
+            val sold = p.moves.count { it.substringBefore('|').toIntOrNull() == g.season && it.endsWith("|T") }
+            if (sold > 2) out += "Aynı sezonda ${sold} kez satıldı: ${p.name}"
         }
         for (t in g.teams) {
             if (t.division < 0) continue

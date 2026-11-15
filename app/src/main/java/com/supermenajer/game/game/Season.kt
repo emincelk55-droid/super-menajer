@@ -624,7 +624,7 @@ object Season {
             club?.lineup?.replaceAll { if (it == p.id) -1 else it }
             if (home != null) {
                 if (home.id == g.userTeamId) g.addNews(L("Kiralıktan dönüş", "Back from loan"), L("${p.name} kiralık dönemini tamamlayıp döndü (${p.apps} maç, ${p.goals} gol). Güç: ${p.startOvr} → ${p.overall}.", "${p.name} is back after his loan spell (${p.apps} apps, ${p.goals} goals). Overall: ${p.startOvr} → ${p.overall}."))
-                g.movePlayer(p, home.id)
+                g.movePlayer(p, home.id, 'R')
             }
             p.loanFrom = -1
         }
@@ -718,7 +718,7 @@ object Season {
             val candidates = (freeAgents + g.players.filter { it.teamId >= 0 && it.pos == weakest && it.overall >= bar + 2 })
                 .asSequence()
                 .filter { p ->
-                    p.pos == weakest && p.teamId != buyer.id && p.teamId != g.userTeamId && p.loanFrom < 0 && p.preContract < 0 && p.overall >= bar + 2 && p.age <= 31 &&
+                    p.pos == weakest && p.teamId != buyer.id && p.teamId != g.userTeamId && p.loanFrom < 0 && p.preContract < 0 && p.overall >= bar + 2 && p.age <= 31 && !g.movedThisSeason(p) &&
                         (p.teamId < 0 || g.teamOrNull(p.teamId)?.let { s -> s.reputation <= buyer.reputation + 4 && s.division != Leagues.LEGACY_EURO } == true) &&
                         p.value * (if (p.teamId < 0) 0.15 else 1.15) <= maxPrice &&
                         Economy.fitsWages(g, buyer, p.demandWage)

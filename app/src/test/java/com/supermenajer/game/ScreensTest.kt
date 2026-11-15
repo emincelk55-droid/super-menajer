@@ -212,6 +212,20 @@ class ScreensTest {
             }
         }
         GameRepo.tab = GameRepo.TAB_INBOX; GameRepo.inboxCat = 0; GameRepo.openNews(g.news.first()); shot("auto_08_inbox_report")
+        // Kariyer geçmişi: sezon satırları ve transferler (bonservisli) kayda geçmeli
+        val moved = g.players.filter { p -> p.moves.any { it.split("|")[4].toLong() > 0 } }
+        org.junit.Assert.assertTrue("bonservisli transfer kaydı yok", moved.isNotEmpty())
+        val star = moved.filter { it.career.isNotEmpty() }.maxByOrNull { it.moves.size * 10 + it.overall } ?: moved.first()
+        paparazzi.snapshot("auto_09_career") {
+            AppTheme {
+                Surface(Modifier.fillMaxSize(), color = Bg) {
+                    androidx.compose.foundation.layout.Box(Modifier.padding(16.dp).fillMaxSize().background(com.supermenajer.game.ui.Surface1).padding(16.dp)) {
+                        com.supermenajer.game.ui.CareerHistory(g, star)
+                    }
+                }
+            }
+        }
+        println("KARIYER ${star.name}: ${star.career} ${star.moves}")
         println("OTOTUR ${g.userTeam.name} sezon ${g.season} hafta ${g.week} · ${log.actions.takeLast(6)}")
     }
 

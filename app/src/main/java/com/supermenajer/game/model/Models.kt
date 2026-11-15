@@ -71,6 +71,8 @@ class Player(
     var reserve: Boolean = false,
     /** Geçmiş sezonlar: "sezon|kulüp|maç|gol|asist|ort. puan". */
     var career: MutableList<String> = mutableListOf(),
+    /** Kulüp değişiklikleri: "sezon|hafta|eski kulüp|yeni kulüp|bonservis (-1 bilinmiyor)|tür" (T transfer, L kiralık, R kiralıktan dönüş, F serbest, X serbest kaldı). */
+    var moves: MutableList<String> = mutableListOf(),
     /** Forma numarası (0 = atanmadı). */
     var number: Int = 0,
     /** Satış listesinde mi (kulüpler daha sık teklif yapar). */
@@ -585,8 +587,10 @@ class Game(
     fun squad(teamId: Int): List<Player> = index().byTeam[teamId]?.toList() ?: emptyList()
 
     /** Oyuncunun takımını değiştirir (indeksi de günceller). */
-    fun movePlayer(p: Player, teamId: Int) {
+    fun movePlayer(p: Player, teamId: Int, kind: Char = 'T', fee: Long = -1) {
         if (p.teamId != teamId) {
+            val k = when { teamId < 0 -> 'X'; p.teamId < 0 && kind == 'T' -> 'F'; else -> kind }
+            recordMove(p, teamOrNull(p.teamId)?.name ?: "", teamOrNull(teamId)?.name ?: "", fee, k)
             p.wantsAway = false
             p.promised = false
             p.number = 0
@@ -599,7 +603,26 @@ class Game(
         p.teamId = teamId
     }
 
+    /** Oyuncunun kulüp değişikliğini kariyer kaydına yazar (aynı hareket iki kez yazılmaz; bonservisli kayıt önceliklidir). */
+    fun recordMove(p: Player, from: String, to: String, fee: Long, kind: Char) {
+        val clean = { x: String -> x.replace("|", " ") }
+        val head = "$season|$week|${clean(from)}|${clean(to)}|"
+        val last = p.moves.lastOrNull()
+        if (last != null && last.startsWith(head)) {
+            if (fee >= 0 && (last.split("|").getOrNull(4)?.toLongOrNull() ?: -1) < 0) p.moves[p.moves.lastIndex] = "$head$fee|$kind"
+            return
+        }
+        p.moves += "$head$fee|$kind"
+        while (p.moves.size > 40) p.moves.removeAt(0)
+    }
+
+    /** Oyuncu bu sezon kulüp değiştirdi mi (yapay zekâ aynı sezonda yeniden satmasın). */
+    fun movedThisSeason(p: Player): Boolean = p.moves.lastOrNull()?.let { m ->
+        m.substringBefore('|').toIntOrNull() == season && m.last() in "TF"
+    } == true
+
     fun logTransfer(p: Player, from: Team?, to: Team, price: Long) {
+        recordMove(p, from?.name ?: "", to.name, price, if (from == null) 'F' else 'T')
         transfers.add(0, listOf(p.name, from?.short ?: "SRB", to.short, price.toString(), p.overall.toString()).joinToString("|") { it.replace("|", " ") })
         while (transfers.size > 40) transfers.removeAt(transfers.lastIndex)
     }

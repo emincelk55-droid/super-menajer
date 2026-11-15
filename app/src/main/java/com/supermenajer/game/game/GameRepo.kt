@@ -723,7 +723,7 @@ object GameRepo {
         val club = clubs.filter { g.countryOf(it) == country }.randomOrNull() ?: clubs.randomOrNull()
             ?: return L("Oyuncuyu düzenli oynatacak bir kulüp bulunamadı.", "No club was found that would play him regularly.")
         us.lineup.replaceAll { if (it == p.id) -1 else it }
-        g.movePlayer(p, club.id)
+        g.movePlayer(p, club.id, 'L')
         p.loanFrom = us.id
         Lineups.validate(g, us)
         g.addNews(L("Kiralık", "Loan"), L("${p.name} sezon sonuna kadar kiralık olarak ${club.name} (${g.leagueName(club)}) takımına gitti. Düzenli oynayıp gelişecek.", "${p.name} has gone on loan to ${club.name} (${g.leagueName(club)}) until the end of the season. He'll play regularly and develop."))
@@ -736,7 +736,7 @@ object GameRepo {
         val g = game ?: return
         if (p.loanFrom != g.userTeamId) return
         g.teamOrNull(p.teamId)?.lineup?.replaceAll { if (it == p.id) -1 else it }
-        g.movePlayer(p, g.userTeamId)
+        g.movePlayer(p, g.userTeamId, 'R')
         p.loanFrom = -1
         g.addNews(L("Kiralıktan geri çağrıldı", "Recalled from loan"), L("${p.name} takıma geri döndü.", "${p.name} is back with the team."))
         changed()
