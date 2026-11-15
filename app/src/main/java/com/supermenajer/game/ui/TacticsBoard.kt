@@ -596,7 +596,7 @@ private fun SquadPanel(
                 color = if (sel >= 0 || benchSel >= 0 || drag != null) Gold else TextDim, fontSize = 11.sp, maxLines = 2,
             )
         }
-        for ((title, list) in listOf("Yedekler" to bench, "Kadro" to rest)) {
+        for ((title, list) in listOf(L("Yedekler", "Substitutes") to bench, L("Kadro", "Squad") to rest)) {
             if (list.isEmpty()) continue
             item(span = { GridItemSpan(maxLineSpan) }) { Text(title, fontWeight = FontWeight.Black, fontSize = 15.sp) }
             items(list, key = { it.id }) { p ->
@@ -962,7 +962,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dutiesItems(g: Game) 
         val tier = when { tiers[0]?.contains(p) == true -> L("Lider", "Leader"); tiers[1]?.contains(p) == true -> L("Etkili", "Influential"); else -> L("Normal", "Normal") }
         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(p.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), fontWeight = if (p.id == cap?.id || p.id == vice?.id) FontWeight.Black else FontWeight.Normal)
-            Text(tier, fontSize = 11.sp, color = if (tier == "Lider") Gold else TextMain, modifier = Modifier.width(64.dp), textAlign = TextAlign.Center)
+            Text(tier, fontSize = 11.sp, color = if (tier == L("Lider", "Leader")) Gold else TextMain, modifier = Modifier.width(64.dp), textAlign = TextAlign.Center)
             Text(Dynamics.groupOf(g, t, p).substringBefore(" "), fontSize = 11.sp, modifier = Modifier.width(64.dp), textAlign = TextAlign.Center, maxLines = 1)
             Text("${p.age}", fontSize = 12.sp, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
             Text("${leadership(p)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (leadership(p) >= 15) Green else TextMain, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)

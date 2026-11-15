@@ -285,15 +285,15 @@ private fun MessageRow(g: Game, n: News, selected: Boolean) {
 private fun MessageAction(g: Game, n: News) {
     val t = n.title.lowercase()
     val (label, go) = when {
-        "sponsor" in t -> "Sponsorlara git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 2 }
-        "inşaat" in t || "altyapı" in t -> "Tesislere git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 1 }
-        "teknik ekip" in t -> "Teknik ekibe git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 0 }
-        "taraftar" in t -> "Taraftar durumuna git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 4 }
-        "başarım" in t -> "Kariyerime git" to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5 }
-        "teklif" in t && "kariyer" !in t -> "Ana sayfaya git" to { GameRepo.tab = GameRepo.TAB_HOME }
-        "gözlemci" in t -> "Gözlem listesine git" to { GameRepo.tab = GameRepo.TAB_TRANSFER }
-        "yardımcı antrenör" in t -> "Kadroya git" to { GameRepo.tab = GameRepo.TAB_SQUAD }
-        "kariyer" in t || "kovul" in t -> "Ana sayfaya git" to { GameRepo.tab = GameRepo.TAB_HOME }
+        "sponsor" in t -> L("Sponsorlara git", "Go to sponsors") to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 2 }
+        "inşaat" in t || "altyapı" in t || "construction" in t || "youth intake" in t -> L("Tesislere git", "Go to facilities") to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 1 }
+        "teknik ekip" in t || "staff" in t -> L("Teknik ekibe git", "Go to staff") to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 0 }
+        "taraftar" in t || "fan" in t -> L("Taraftar durumuna git", "Go to fans") to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 4 }
+        "başarım" in t || "achievement" in t -> L("Kariyerime git", "Go to my career") to { GameRepo.tab = GameRepo.TAB_CLUB; GameRepo.clubMode = 5 }
+        ("teklif" in t && "kariyer" !in t) || ("offer" in t && "job" !in t) -> L("Ana sayfaya git", "Go to home") to { GameRepo.tab = GameRepo.TAB_HOME }
+        "gözlemci" in t || "scout" in t -> L("Gözlem listesine git", "Go to scouting list") to { GameRepo.tab = GameRepo.TAB_TRANSFER }
+        "yardımcı antrenör" in t || "assistant" in t -> L("Kadroya git", "Go to squad") to { GameRepo.tab = GameRepo.TAB_SQUAD }
+        "kariyer" in t || "kovul" in t || "job" in t || "sacked" in t -> L("Ana sayfaya git", "Go to home") to { GameRepo.tab = GameRepo.TAB_HOME }
         else -> return
     }
     OutlinedButton(onClick = go) { Text("$label →") }

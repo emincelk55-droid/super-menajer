@@ -94,10 +94,10 @@ object National {
         if (others.isEmpty()) return
         val opp = others[rnd.nextInt(others.size.coerceAtMost(16))]
         val home = rnd.nextBoolean()
-        val kind = if (leagueWeek == 6 || leagueWeek == 22) "Hazırlık maçı" else "Eleme maçı"
+        val kind = if (leagueWeek == 6 || leagueWeek == 22) L("Hazırlık maçı", "Friendly") else L("Eleme maçı", "Qualifier")
         g.natPending = "$opp|$kind|${if (home) 1 else 0}"
         val line = if (home) "${name(code)} - ${name(opp)}" else "${name(opp)} - ${name(code)}"
-        g.addNews("🌍 Milli maç günü: $line", "$kind. DEVAM ET ile maça çık; kadronu Milli Takım ekranından düzenleyebilirsin.")
+        g.addNews(L("🌍 Milli maç günü: $line", "🌍 International match day: $line"), L("$kind. DEVAM ET ile maça çık; kadronu Milli Takım ekranından düzenleyebilirsin.", "$kind. Press CONTINUE to play; you can edit your squad on the National Team screen."))
     }
 
     /** ko: tek maç eleme (beraberlikte penaltı); tour: yaz turnuvası maçı. */
@@ -131,7 +131,7 @@ object National {
         }
         return Team(id, name(code), shorts[code] ?: name(code).take(3).uppercase(), name(code), c1, c2, 80, 0, formation).also {
             it.stadium = 52_000
-            it.stadiumName = "${name(code)} Ulusal Stadı"
+            it.stadiumName = L("${name(code)} Ulusal Stadı", "${name(code)} National Stadium")
         }
     }
 
@@ -148,7 +148,7 @@ object National {
         val a = if (p.home) them else me
         val fx = Fixture(g.week, h.id, a.id, comp = Comp.NATIONAL, round = if (p.ko) 1 else 0)
         val pools = mapOf(USER_ID to squad(g), OPP_ID to autoSquad(g, p.opp))
-        return MatchSim(g, fx, USER_ID, autoUserSubs = !live, nat = NatMatch(h, a, pools, if (p.tour) p.kind else "Milli Maç · ${p.kind}"))
+        return MatchSim(g, fx, USER_ID, autoUserSubs = !live, nat = NatMatch(h, a, pools, if (p.tour) p.kind else L("Milli Maç · ${p.kind}", "International · ${p.kind}")))
     }
 
     /** Maç sonucunu işler (kendi gollerimiz x, rakip y). */
@@ -163,9 +163,9 @@ object National {
         val line = if (p.home) "${name(code)} $x-$y ${name(p.opp)}" else "${name(p.opp)} $y-$x ${name(code)}"
         g.natResults.add(0, "${g.season}|${p.kind}|$line|$pts")
         while (g.natResults.size > 30) g.natResults.removeAt(g.natResults.lastIndex)
-        val who = if (scorers.isNotEmpty()) " Golcüler: ${scorers.joinToString()}." else ""
+        val who = if (scorers.isNotEmpty()) L(" Golcüler: ${scorers.joinToString()}.", " Scorers: ${scorers.joinToString()}.") else ""
         g.addNews(
-            "🌍 Milli maç: $line",
+            L("🌍 Milli maç: $line", "🌍 International: $line"),
             "${p.kind} · ${when (pts) { 3 -> "Galibiyet! Taraftar milli takımın oyunundan memnun."; 1 -> "Beraberlik."; else -> "Mağlubiyet. Basın kadro tercihlerini sorguluyor." }}$who",
         )
         if (pts == 3) Perks.addXp(g, 15)
@@ -194,12 +194,12 @@ object National {
     fun summerTournament(g: Game, rnd: Random) {
         val code = g.nationalTeam
         if (code.isEmpty() || g.tourSeason == g.season) return
-        val title = if (g.season % 2 == 0) "Avrupa Şampiyonası" else "Dünya Kupası"
+        val title = if (g.season % 2 == 0) L("Avrupa Şampiyonası", "European Championship") else L("Dünya Kupası", "World Cup")
         val field = (listOf(code) + nations(g).filter { it != code }.take(7)).shuffled(rnd).toMutableList()
         val str = field.associateWith { if (it == code) strengthOf(g, it, squad(g)) * Perks.tactics(g) else strengthOf(g, it) }
         var round = field
-        var reached = "çeyrek finalde elendi"
-        val stages = listOf("çeyrek finalde elendi", "yarı finalde elendi", "finalde kaybetti")
+        var reached = L("çeyrek finalde elendi", "out in the quarter-finals")
+        val stages = listOf(L("çeyrek finalde elendi", "out in the quarter-finals"), L("yarı finalde elendi", "out in the semi-finals"), L("finalde kaybetti", "lost in the final"))
         var stage = 0
         while (round.size > 1) {
             val next = mutableListOf<String>()
@@ -223,9 +223,9 @@ object National {
             g.trophies += "${g.season} $title (${name(code)})"
             g.managerRep = (g.managerRep + 12).coerceAtMost(100)
             Perks.addXp(g, 150)
-            g.addNews("🏆 ŞAMPİYONUZ!", "${name(code)}, $title'nı kazandı! Menajer olarak tarihe geçtin.")
+            g.addNews(L("🏆 ŞAMPİYONUZ!", "🏆 CHAMPIONS!"), L("${name(code)}, $title'nı kazandı! Menajer olarak tarihe geçtin.", "${name(code)} have won the $title! You've made history as manager."))
         } else if (code in field) {
-            g.addNews("🌍 $title", "${name(code)} turnuvada $reached. Şampiyon: ${name(champ)}.")
+            g.addNews("🌍 $title", L("${name(code)} turnuvada $reached. Şampiyon: ${name(champ)}.", "${name(code)} $reached in the tournament. Champions: ${name(champ)}."))
         }
     }
 }

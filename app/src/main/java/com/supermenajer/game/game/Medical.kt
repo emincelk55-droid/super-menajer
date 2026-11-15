@@ -23,8 +23,8 @@ object Medical {
             if (p.teamId != g.userTeamId || p.injuredWeeks < 3 || p.id in g.medical) continue
             g.medical += p.id
             g.addNews(
-                "🚑 Sağlık raporu: ${p.name}",
-                "${p.name}: ${p.injuryType.ifEmpty { "sakatlık" }}, tahmini ${p.injuredWeeks} hafta. Sağlık ekibi tedavi yöntemi için kararını bekliyor (ana sayfa).",
+                L("🚑 Sağlık raporu: ${p.name}", "🚑 Medical report: ${p.name}"),
+                L("${p.name}: ${p.injuryType.ifEmpty { "sakatlık" }}, tahmini ${p.injuredWeeks} hafta. Sağlık ekibi tedavi yöntemi için kararını bekliyor (ana sayfa).", "${p.name}: ${p.injuryType.ifEmpty { "injury" }}, about ${p.injuredWeeks} weeks. The medical team is waiting for your treatment decision (home screen)."),
             )
         }
     }
@@ -35,18 +35,18 @@ object Medical {
         return when (choice) {
             1 -> {
                 val c = specialistCost(p)
-                if (g.userTeam.budget < c) return "Bütçe yetmiyor: uzman tedavisi ${money(c)}.".also { g.medical += p.id }
-                Economy.earn(g.userTeam, "Sağlık giderleri", -c)
+                if (g.userTeam.budget < c) return L("Bütçe yetmiyor: uzman tedavisi ${money(c)}.", "Not enough budget: specialist treatment ${money(c)}.").also { g.medical += p.id }
+                Economy.earn(g.userTeam, L("Sağlık giderleri", "Medical costs"), -c)
                 val cut = if (rnd.nextDouble() < 0.7) 2 else 1
                 p.injuredWeeks = (p.injuredWeeks - cut).coerceAtLeast(1)
-                "${p.name} yurtdışında uzman tedavisi görecek (${money(c)}). Dönüş: ${p.injuredWeeks} hafta."
+                L("${p.name} yurtdışında uzman tedavisi görecek (${money(c)}). Dönüş: ${p.injuredWeeks} hafta.", "${p.name} will receive specialist treatment abroad (${money(c)}). Return: ${p.injuredWeeks} weeks.")
             }
             2 -> {
                 p.injuredWeeks = (p.injuredWeeks + 1) / 2
                 p.fragileWeeks = 6
-                "${p.name} hızlandırılmış programla ${p.injuredWeeks} haftada dönecek. Sağlık ekibi uyarıyor: 6 hafta yeniden sakatlanma riski yüksek!"
+                L("${p.name} hızlandırılmış programla ${p.injuredWeeks} haftada dönecek. Sağlık ekibi uyarıyor: 6 hafta yeniden sakatlanma riski yüksek!", "${p.name} will return in ${p.injuredWeeks} weeks on an accelerated programme. The medical team warns: high re-injury risk for 6 weeks!")
             }
-            else -> "${p.name} için tam tedavi uygulanacak. Dönüş: ${p.injuredWeeks} hafta."
-        }.also { g.addNews("🚑 Sağlık kararı", it) }
+            else -> L("${p.name} için tam tedavi uygulanacak. Dönüş: ${p.injuredWeeks} hafta.", "${p.name} will get full treatment. Return: ${p.injuredWeeks} weeks.")
+        }.also { g.addNews(L("🚑 Sağlık kararı", "🚑 Medical decision"), it) }
     }
 }

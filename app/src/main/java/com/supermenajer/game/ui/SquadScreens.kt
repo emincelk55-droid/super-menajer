@@ -484,8 +484,8 @@ fun PlayerDialog(g: Game, p: Player) {
                             p, known,
                             extra = listOf(
                                 "Kondisyon" to "${p.fitness.toInt()}%",
-                                "Moral" to if (known) moraleText(p.morale) else "?",
-                                "Ort. Puan" to if (p.apps > 0) "%.2f".format(p.avgRating) else "–",
+                                L("Moral", "Morale") to if (known) moraleText(p.morale) else "?",
+                                L("Ort. Puan", "Avg. Rating") to if (p.apps > 0) "%.2f".format(p.avgRating) else "–",
                             ),
                         )
                     }
@@ -804,7 +804,7 @@ private fun ScoutCard(g: Game) {
     val country = g.scoutCountry.ifEmpty { g.userCountry }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Surface1).padding(10.dp)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
-            Text(L("🔍 Gözlemci: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} $country · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}", "🔍 Scout: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} $country · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}"), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(L("🔍 Gözlemci: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} ${com.supermenajer.game.model.Leagues.countryName(country)} · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}", "🔍 Scout: ${Generator.flag(com.supermenajer.game.model.Leagues.flagOf(country))} ${com.supermenajer.game.model.Leagues.countryName(country)} · ${com.supermenajer.game.game.Scouting.focusNames[g.scoutFocus]}"), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(if (open) "▲" else "▼", color = TextDim)
         }
         if (open) {

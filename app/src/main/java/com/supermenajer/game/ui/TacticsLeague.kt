@@ -247,7 +247,7 @@ private fun HistoryView(g: Game) {
             val euros = g.history.count { it.euroWinner == it.userTeam }
             SectionCard(L("Kariyer · ${g.managerName}", "Career · ${g.managerName}")) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                    listOf("Sezon" to g.history.size, "Lig 🏆" to titles, "Kupa 🥇" to cups, "Avrupa 🌍" to euros).forEach { (l, v) ->
+                    listOf(L("Sezon", "Season") to g.history.size, L("Lig 🏆", "League 🏆") to titles, L("Kupa 🥇", "Cup 🥇") to cups, L("Avrupa 🌍", "Europe 🌍") to euros).forEach { (l, v) ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("$v", fontSize = 22.sp, fontWeight = FontWeight.Black)
                             Text(l, color = TextDim, fontSize = 11.sp)

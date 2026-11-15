@@ -10,7 +10,8 @@ import kotlin.random.Random
  * yakın bir mevki öğretilebilir. Mevki öğrenilince oyuncu orada neredeyse tam verimle oynar.
  */
 object Development {
-    val focusNames = listOf("Hız", "Şut", "Pas", "Teknik", "Savunma", "Fizik", "Kalecilik")
+    private val focusNamesCache = LangCached { listOf(L("Hız", "Pace"), L("Şut", "Shooting"), L("Pas", "Passing"), L("Teknik", "Technique"), L("Savunma", "Defending"), L("Fizik", "Physical"), L("Kalecilik", "Goalkeeping")) }
+    val focusNames get() = focusNamesCache.get()
 
     private val D = Positions.Det.entries
 
@@ -60,7 +61,7 @@ object Development {
                     if (p.secondDet < 0) p.secondDet = learned else if (learned !in p.extraDets) p.extraDets += learned
                     p.learnDet = -1
                     p.learnProgress = 0
-                    g.addNews("🎓 Yeni mevki öğrenildi", "${p.name} artık ${D[learned].label} (${D[learned].code}) mevkisinde de oynayabiliyor.")
+                    g.addNews(L("🎓 Yeni mevki öğrenildi", "🎓 New position learned"), L("${p.name} artık ${D[learned].label} (${D[learned].code}) mevkisinde de oynayabiliyor.", "${p.name} can now also play as ${D[learned].label} (${D[learned].code})."))
                 }
             }
         }

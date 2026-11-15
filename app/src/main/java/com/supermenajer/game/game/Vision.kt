@@ -24,13 +24,13 @@ object Vision {
         val target = Season.objectiveTarget(t.expected)
         val tier1 = Leagues.of(t.division)?.tier == 1
         g.vision = mutableListOf(
-            if (!tier1) goal("promote", "2 sezon içinde üst lige çık", s + 1, s)
-            else if (target <= 2) goal("title", "3 sezon içinde lig şampiyonu ol", s + 2, s)
-            else goal("top4", "4 sezon içinde ligi ilk 4'te bitir", s + 3, s),
-            goal("europe", "5 sezon içinde Avrupa kupasında oyna", s + 4, s),
-            goal("youth", "Her sezon 21 yaş altı bir oyuncu 15+ maç oynasın", s + 4, s),
-            goal("finance", "Bütçeyi hiçbir sezon eksiye düşürme", s + 4, s),
-            goal("facility", "Antrenman tesisini ${(t.trainingFac + 2).coerceAtMost(10)}. seviyeye çıkar", s + 3, s),
+            if (!tier1) goal("promote", L("2 sezon içinde üst lige çık", "Win promotion within 2 seasons"), s + 1, s)
+            else if (target <= 2) goal("title", L("3 sezon içinde lig şampiyonu ol", "Win the league within 3 seasons"), s + 2, s)
+            else goal("top4", L("4 sezon içinde ligi ilk 4'te bitir", "Finish in the top 4 within 4 seasons"), s + 3, s),
+            goal("europe", L("5 sezon içinde Avrupa kupasında oyna", "Play in European competition within 5 seasons"), s + 4, s),
+            goal("youth", L("Her sezon 21 yaş altı bir oyuncu 15+ maç oynasın", "An under-21 player plays 15+ matches every season"), s + 4, s),
+            goal("finance", L("Bütçeyi hiçbir sezon eksiye düşürme", "Never let the budget go negative in any season"), s + 4, s),
+            goal("facility", L("Antrenman tesisini ${(t.trainingFac + 2).coerceAtMost(10)}. seviyeye çıkar", "Raise the training facility to level ${(t.trainingFac + 2).coerceAtMost(10)}"), s + 3, s),
         )
     }
 
@@ -75,10 +75,10 @@ object Vision {
             g.confidence = (g.confidence + 10).coerceAtMost(100.0)
             g.managerRep = (g.managerRep + 3).coerceAtMost(100)
             Perks.addXp(g, 80)
-            g.addNews("🏛 Vizyon hedefi başarıldı", "\"$title\" hedefi gerçekleşti! Yönetim çok memnun (+10 güven).")
+            g.addNews(L("🏛 Vizyon hedefi başarıldı", "🏛 Vision goal achieved"), L("\"$title\" hedefi gerçekleşti! Yönetim çok memnun (+10 güven).", "The goal \"$title\" was achieved! The board is delighted (+10 confidence)."))
         } else {
             g.confidence = (g.confidence - 10).coerceAtLeast(0.0)
-            g.addNews("🏛 Vizyon hedefi kaçtı", "\"$title\" hedefi tutturulamadı. Yönetim hayal kırıklığı içinde (-10 güven).")
+            g.addNews(L("🏛 Vizyon hedefi kaçtı", "🏛 Vision goal missed"), L("\"$title\" hedefi tutturulamadı. Yönetim hayal kırıklığı içinde (-10 güven).", "The goal \"$title\" was missed. The board is disappointed (-10 confidence)."))
         }
     }
 }

@@ -15,14 +15,17 @@ object Talks {
     const val HALF = 1
     const val POST = 2
 
-    val preOptions = listOf(
-        "🧘 Sakin olun, kendi oyunumuzu oynayalım",
-        "🔥 Onlara kim olduğumuzu gösterin!",
-        "😊 Baskı yok, keyfini çıkarın",
-        "⚠️ Bu maç bizim için hayati!",
-    )
-    val halfOptions = listOf("👏 Övgü", "🧘 Sakin", "😠 Sert")
-    val postOptions = listOf("👏 Tebrikler", "🙂 Fena değil", "😠 Yetersiz")
+    private val preOptionsCache = LangCached { listOf(
+        L("🧘 Sakin olun, kendi oyunumuzu oynayalım", "🧘 Stay calm, let's play our own game"),
+        L("🔥 Onlara kim olduğumuzu gösterin!", "🔥 Show them who we are!"),
+        L("😊 Baskı yok, keyfini çıkarın", "😊 No pressure, enjoy it"),
+        L("⚠️ Bu maç bizim için hayati!", "⚠️ This match is vital for us!"),
+    ) }
+    val preOptions get() = preOptionsCache.get()
+    private val halfOptionsCache = LangCached { listOf(L("👏 Övgü", "👏 Praise"), L("🧘 Sakin", "🧘 Calm"), L("😠 Sert", "😠 Harsh")) }
+    val halfOptions get() = halfOptionsCache.get()
+    private val postOptionsCache = LangCached { listOf(L("👏 Tebrikler", "👏 Well done"), L("🙂 Fena değil", "🙂 Not bad"), L("😠 Yetersiz", "😠 Not good enough")) }
+    val postOptions get() = postOptionsCache.get()
 
     class Result(val message: String, val reactions: List<String>)
 
@@ -46,9 +49,9 @@ object Talks {
         val h = g.teamOrNull(f.home) ?: return null
         val a = g.teamOrNull(f.away) ?: return null
         if (h.city.isNotBlank() && h.city.equals(a.city, ignoreCase = true) && Leagues.of(h.division)?.country == Leagues.of(a.division)?.country) {
-            return "${h.city} Derbisi"
+            return L("${h.city} Derbisi", "${h.city} Derby")
         }
-        if (h.division == a.division && h.reputation >= 86 && a.reputation >= 86) return "Dev Maç · Klasik"
+        if (h.division == a.division && h.reputation >= 86 && a.reputation >= 86) return L("Dev Maç · Klasik", "Big Match · Classic")
         return null
     }
 
@@ -68,13 +71,13 @@ object Talks {
         return buildString {
             append(
                 when {
-                    d >= 3 -> "Favori biziz."
-                    d <= -3 -> "Rakip bizden güçlü, sürpriz peşindeyiz."
-                    else -> "Güçler denk."
+                    d >= 3 -> L("Favori biziz.", "We're the favourites.")
+                    d <= -3 -> L("Rakip bizden güçlü, sürpriz peşindeyiz.", "They're stronger than us, we're looking for an upset.")
+                    else -> L("Güçler denk.", "The sides are evenly matched.")
                 },
             )
-            if (isDerby(sim.game, sim.fixture)) append(" DERBİ! Şehrin hâkimi belli olacak.")
-            else if (big) append(" Büyük maç, eleme heyecanı.")
+            if (isDerby(sim.game, sim.fixture)) append(L(" DERBİ! Şehrin hâkimi belli olacak.", " DERBY! The city will find out who rules it."))
+            else if (big) append(L(" Büyük maç, eleme heyecanı.", " A big match, knockout excitement."))
         }
     }
 
@@ -87,59 +90,59 @@ object Talks {
         val score = us.goals - sim.other(us).goals
         val (base, msg) = when (kind) {
             PRE -> when (choice) {
-                0 -> (if (diff >= 3) 5.0 else 2.0) to "Takım sakin ve odaklı."
+                0 -> (if (diff >= 3) 5.0 else 2.0) to L("Takım sakin ve odaklı.", "The team is calm and focused.")
                 1 -> when {
-                    diff >= 2 -> 5.0 to "Favori olduklarını biliyorlar, sahaya iştahla çıkıyorlar!"
-                    diff <= -2 -> -3.0 to "Güçlü rakip karşısında bu söz oyuncuları baskı altına soktu."
-                    else -> 2.0 to "Oyuncular hırslı."
+                    diff >= 2 -> 5.0 to L("Favori olduklarını biliyorlar, sahaya iştahla çıkıyorlar!", "They know they're favourites and take the field hungry!")
+                    diff <= -2 -> -3.0 to L("Güçlü rakip karşısında bu söz oyuncuları baskı altına soktu.", "Against a strong opponent your words put the players under pressure.")
+                    else -> 2.0 to L("Oyuncular hırslı.", "The players are driven.")
                 }
                 2 -> when {
-                    diff <= -2 -> 6.0 to "Baskısız ortam oyuncuları rahatlattı, sürprize hazırlar!"
-                    diff >= 2 -> -3.0 to "Oyuncular maçı fazla hafife aldı."
-                    else -> 1.0 to "Oyuncular rahat."
+                    diff <= -2 -> 6.0 to L("Baskısız ortam oyuncuları rahatlattı, sürprize hazırlar!", "The pressure-free mood relaxed the players, they're ready for an upset!")
+                    diff >= 2 -> -3.0 to L("Oyuncular maçı fazla hafife aldı.", "The players took the match too lightly.")
+                    else -> 1.0 to L("Oyuncular rahat.", "The players are relaxed.")
                 }
                 else -> when {
-                    big -> 6.0 to "Maçın önemini biliyorlar, ateş gibiler!"
-                    rnd.nextDouble() < 0.5 -> 4.0 to "Oyuncular mesajı aldı."
-                    else -> -4.0 to "Fazla baskı! Bazı oyuncular gergin."
+                    big -> 6.0 to L("Maçın önemini biliyorlar, ateş gibiler!", "They know how important the match is, they're on fire!")
+                    rnd.nextDouble() < 0.5 -> 4.0 to L("Oyuncular mesajı aldı.", "The players got the message.")
+                    else -> -4.0 to L("Fazla baskı! Bazı oyuncular gergin.", "Too much pressure! Some players are tense.")
                 }
             }
             HALF -> when (choice) {
                 0 -> when {
-                    score > 0 -> 6.0 to "Övgülerin oyuncuları coşturdu!"
-                    score == 0 -> 3.0 to "Oyuncular güvenini hissetti."
-                    else -> -2.0 to "Geride olmamıza rağmen övgü, oyuncuları fazla rahatlattı."
+                    score > 0 -> 6.0 to L("Övgülerin oyuncuları coşturdu!", "Your praise fired the players up!")
+                    score == 0 -> 3.0 to L("Oyuncular güvenini hissetti.", "The players felt your trust.")
+                    else -> -2.0 to L("Geride olmamıza rağmen övgü, oyuncuları fazla rahatlattı.", "Praise while we're behind made the players too comfortable.")
                 }
-                1 -> 2.5 to "Sakin konuşman takıma güven verdi."
+                1 -> 2.5 to L("Sakin konuşman takıma güven verdi.", "Your calm talk gave the team confidence.")
                 else -> when {
-                    score < 0 -> if (rnd.nextDouble() < 0.7) 9.0 to "Sert çıkışın oyuncuları ateşledi!" else -5.0 to "Sert çıkışın ters tepti, oyuncular gergin."
-                    score == 0 -> if (rnd.nextDouble() < 0.5) 5.0 to "Oyuncular mesajı aldı, daha agresifler." else -3.0 to "Oyuncular sert tavrından rahatsız oldu."
-                    else -> -4.0 to "Önde olmamıza rağmen sert çıkışın oyuncuları gerdi."
+                    score < 0 -> if (rnd.nextDouble() < 0.7) 9.0 to L("Sert çıkışın oyuncuları ateşledi!", "Your outburst fired the players up!") else -5.0 to L("Sert çıkışın ters tepti, oyuncular gergin.", "Your outburst backfired, the players are tense.")
+                    score == 0 -> if (rnd.nextDouble() < 0.5) 5.0 to L("Oyuncular mesajı aldı, daha agresifler.", "The players got the message and are more aggressive.") else -3.0 to L("Oyuncular sert tavrından rahatsız oldu.", "The players didn't like your harsh tone.")
+                    else -> -4.0 to L("Önde olmamıza rağmen sert çıkışın oyuncuları gerdi.", "Your harshness while ahead made the players tense.")
                 }
             }
             else -> when (choice) {
                 0 -> when {
-                    score > 0 -> 4.0 to "Oyuncular galibiyetin ve övgünün tadını çıkarıyor."
-                    score == 0 -> 1.0 to "Oyuncular övgüye şaşırdı ama memnun."
-                    else -> -2.0 to "Yenilgiye rağmen övgü, oyuncuları rehavete soktu."
+                    score > 0 -> 4.0 to L("Oyuncular galibiyetin ve övgünün tadını çıkarıyor.", "The players are enjoying the win and the praise.")
+                    score == 0 -> 1.0 to L("Oyuncular övgüye şaşırdı ama memnun.", "The players were surprised by the praise but pleased.")
+                    else -> -2.0 to L("Yenilgiye rağmen övgü, oyuncuları rehavete soktu.", "Praise despite the defeat made the players complacent.")
                 }
-                1 -> (if (score >= 0) 2.0 else 1.0) to "Ölçülü bir konuşma, kimse rahatsız olmadı."
+                1 -> (if (score >= 0) 2.0 else 1.0) to L("Ölçülü bir konuşma, kimse rahatsız olmadı.", "A measured talk, nobody was upset.")
                 else -> when {
-                    score > 0 -> -5.0 to "Kazandıkları maç sonrası eleştiri oyuncuları kırdı!"
-                    score == 0 -> if (rnd.nextDouble() < 0.5) 3.0 to "Oyuncular hırslandı." else -3.0 to "Oyuncular eleştiriyi haksız buldu."
-                    else -> if (rnd.nextDouble() < 0.6) 4.0 to "Oyuncular hatalarını kabul etti, bir sonraki maça bileniyorlar." else -5.0 to "Soyunma odasında gerginlik var."
+                    score > 0 -> -5.0 to L("Kazandıkları maç sonrası eleştiri oyuncuları kırdı!", "Criticism after a win hurt the players!")
+                    score == 0 -> if (rnd.nextDouble() < 0.5) 3.0 to L("Oyuncular hırslandı.", "The players are driven.") else -3.0 to L("Oyuncular eleştiriyi haksız buldu.", "The players found the criticism unfair.")
+                    else -> if (rnd.nextDouble() < 0.6) 4.0 to L("Oyuncular hatalarını kabul etti, bir sonraki maça bileniyorlar.", "The players accepted their mistakes and are eager for the next match.") else -5.0 to L("Soyunma odasında gerginlik var.", "There's tension in the dressing room.")
                 }
             }
         }
         val changes = sim.applyTalk(kind, base, StaffLogic.talkFactor(sim.game))
-        val label = listOf("Maç öncesi konuşma", "Devre arası konuşması", "Maç sonu konuşması")[kind]
+        val label = listOf(L("Maç öncesi konuşma", "Pre-match talk"), L("Devre arası konuşması", "Half-time talk"), L("Maç sonu konuşması", "Post-match talk"))[kind]
         if (kind != POST) sim.note("$label: $msg")
         val reactions = changes.shuffled(rnd).take(3).map { (m, d) ->
             m.p.name + " " + when {
-                d >= 5 -> "çok motive 🔥"
-                d >= 2 -> "odaklandı 👍"
-                d > -2 -> "tepkisiz 😐"
-                else -> "gergin 😬"
+                d >= 5 -> L("çok motive 🔥", "very motivated 🔥")
+                d >= 2 -> L("odaklandı 👍", "focused 👍")
+                d > -2 -> L("tepkisiz 😐", "unmoved 😐")
+                else -> L("gergin 😬", "tense 😬")
             }
         }
         return Result(msg, reactions)

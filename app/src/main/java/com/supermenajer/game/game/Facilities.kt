@@ -18,9 +18,11 @@ object Facilities {
     const val TRAINING = 1
     const val YOUTH = 2
     const val MEDICAL = 3
-    val names = listOf("Stadyum", "Antrenman tesisi", "Altyapı akademisi", "Sağlık merkezi")
+    private val namesCache = LangCached { listOf(L("Stadyum", "Stadium"), L("Antrenman tesisi", "Training facility"), L("Altyapı akademisi", "Youth academy"), L("Sağlık merkezi", "Medical centre")) }
+    val names get() = namesCache.get()
     val icons = listOf("🏟️", "🏋️", "🌱", "🏥")
-    val priceNames = listOf("Ucuz", "Normal", "Pahalı")
+    private val priceNamesCache = LangCached { listOf(L("Ucuz", "Cheap"), L("Normal", "Normal"), L("Pahalı", "Expensive")) }
+    val priceNames get() = priceNamesCache.get()
     private val priceDemand = listOf(1.15, 1.0, 0.82)
     private val priceIncome = listOf(0.75, 1.0, 1.35)
 
@@ -41,7 +43,7 @@ object Facilities {
             t.youthFac = lvl
             t.medicalFac = lvl
         }
-        if (t.stadiumName.isEmpty()) t.stadiumName = t.name.substringBefore(" ") + " Arena"
+        if (t.stadiumName.isEmpty()) t.stadiumName = t.name.substringBefore(" ") + L(" Arena", " Arena")
     }
 
     fun ensureAll(g: Game) = g.teams.forEach { ensure(it) }
@@ -117,21 +119,21 @@ object Facilities {
     fun start(g: Game, type: Int, seatOption: Int = 0): String? {
         val us = g.userTeam
         ensure(us)
-        if (busy(g, type)) return "Bu alanda zaten devam eden bir inşaat var."
+        if (busy(g, type)) return L("Bu alanda zaten devam eden bir inşaat var.", "There's already construction under way in this area.")
         val project = if (type == STADIUM) {
             val o = stadiumOptions(us)[seatOption]
-            if (us.stadium + o.seats > 90_000) return "Stadyum daha fazla büyütülemez."
+            if (us.stadium + o.seats > 90_000) return L("Stadyum daha fazla büyütülemez.", "The stadium can't be expanded any further.")
             Project(STADIUM, o.seats, o.weeks, o.weeks, o.cost)
         } else {
             val lvl = level(us, type)
-            if (lvl >= 10) return "${names[type]} zaten en üst seviyede."
+            if (lvl >= 10) return L("${names[type]} zaten en üst seviyede.", "${names[type]} is already at the top level.")
             Project(type, lvl + 1, upgradeWeeks(lvl), upgradeWeeks(lvl), upgradeCost(lvl))
         }
-        if (us.budget < project.cost) return "Bütçe yetersiz: ${money(project.cost)} gerekli."
+        if (us.budget < project.cost) return L("Bütçe yetersiz: ${money(project.cost)} gerekli.", "Not enough budget: ${money(project.cost)} needed.")
         Economy.earn(us, Economy.BUILD, -project.cost)
         g.projects += project
-        val what = if (type == STADIUM) "+${project.amount} koltuk" else "seviye ${project.amount}"
-        g.addNews("🏗️ İnşaat başladı", "${names[type]} ($what) için çalışmalar başladı. ${project.weeksLeft} hafta sürecek.")
+        val what = if (type == STADIUM) L("+${project.amount} koltuk", "+${project.amount} seats") else L("seviye ${project.amount}", "level ${project.amount}")
+        g.addNews(L("🏗️ İnşaat başladı", "🏗️ Construction started"), L("${names[type]} ($what) için çalışmalar başladı. ${project.weeksLeft} hafta sürecek.", "Work has started on the ${names[type]} ($what). It will take ${project.weeksLeft} weeks."))
         return null
     }
 
@@ -141,13 +143,13 @@ object Facilities {
         val done = g.projects.filter { --it.weeksLeft <= 0 }
         for (p in done) {
             when (p.type) {
-                STADIUM -> { us.stadium += p.amount; Fans.change(g, 4.0, "Stadyum büyüdü"); Career.unlock(g, "stadium") }
+                STADIUM -> { us.stadium += p.amount; Fans.change(g, 4.0, L("Stadyum büyüdü", "Stadium expanded")); Career.unlock(g, "stadium") }
                 TRAINING -> us.trainingFac = p.amount
                 YOUTH -> us.youthFac = p.amount
                 else -> us.medicalFac = p.amount
             }
-            val what = if (p.type == STADIUM) "Yeni kapasite: ${"%,d".format(us.stadium).replace(',', '.')}" else "Yeni seviye: ${p.amount}/10"
-            g.addNews("✅ İnşaat tamamlandı", "${names[p.type]} hazır! $what.")
+            val what = if (p.type == STADIUM) L("Yeni kapasite: ${"%,d".format(us.stadium).replace(',', '.')}", "New capacity: ${"%,d".format(us.stadium).replace(',', '.')}") else L("Yeni seviye: ${p.amount}/10", "New level: ${p.amount}/10")
+            g.addNews(L("✅ İnşaat tamamlandı", "✅ Construction complete"), L("${names[p.type]} hazır! $what.", "${names[p.type]} is ready! $what."))
         }
         g.projects.removeAll(done.toSet())
     }
@@ -189,11 +191,11 @@ object Facilities {
             val y = Generator.youth(g, us, pos, rnd)
             y.age = rnd.nextInt(16, 18)
             g.addPlayer(y)
-            names += "${y.name} (${pos.short}, ${y.overall}, potansiyel ${y.potential}${if (y.potential >= 84) " 💎" else ""})"
+            names += L("${y.name} (${pos.short}, ${y.overall}, potansiyel ${y.potential}${if (y.potential >= 84) " 💎" else ""})", "${y.name} (${pos.short}, ${y.overall}, potential ${y.potential}${if (y.potential >= 84) " 💎" else ""})")
             if (y.potential >= 84) Career.unlock(g, "wonderkid")
         }
         if (names.isNotEmpty()) {
-            g.addNews("🌱 Altyapı seçmeleri", "Akademimizden (seviye ${us.youthFac}/10) A takıma yükselenler: ${names.joinToString()}.")
+            g.addNews(L("🌱 Altyapı seçmeleri", "🌱 Youth intake"), L("Akademimizden (seviye ${us.youthFac}/10) A takıma yükselenler: ${names.joinToString()}.", "Promoted from our academy (level ${us.youthFac}/10) to the first team: ${names.joinToString()}."))
         }
     }
 
@@ -203,7 +205,7 @@ object Facilities {
         if (n <= 0) return ""
         val h = sim.home.team
         val full = n >= h.stadium * 0.98
-        return "${"%,d".format(n).replace(',', '.')} seyirci ${h.stadiumName}'da" + if (full) " · Stat tıklım tıklım!" else ""
+        return L("${"%,d".format(n).replace(',', '.')} seyirci ${h.stadiumName}'da", "${"%,d".format(n).replace(',', '.')} fans at ${h.stadiumName}") + if (full) L(" · Stat tıklım tıklım!", " · Packed to the rafters!") else ""
     }
 
     @Suppress("unused")

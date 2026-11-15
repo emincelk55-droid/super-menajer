@@ -18,24 +18,26 @@ object TacticStyles {
 
     private val all3 = setOf(Pos.DF, Pos.MF, Pos.FW)
 
-    val all = listOf(
-        Style("Tiki-Taka", "Kısa paslarla topa sahip ol, rakibi yorarak boşluk bul. Top kaybedilince hemen baskı.",
+    private val allCache = LangCached { listOf(
+        Style(L("Tiki-Taka", "Tiki-Taka"), L("Kısa paslarla topa sahip ol, rakibi yorarak boşluk bul. Top kaybedilince hemen baskı.", "Keep the ball with short passes and find space by tiring the opponent. Press immediately when the ball is lost."),
             1, 0, 0, 0, 2, 2, false, listOf("4-3-3", "4-2-3-1"), doubleArrayOf(0.0, 0.0, 1.0, 1.0, 0.0, 0.0), setOf(Pos.MF, Pos.FW)),
-        Style("Gegenpress", "Takımda her oyuncu top kaybedildiği an pres yapar; yüksek tempo, yüksek savunma hattı.",
+        Style(L("Gegenpress", "Gegenpress"), L("Takımda her oyuncu top kaybedildiği an pres yapar; yüksek tempo, yüksek savunma hattı.", "Every player presses the moment the ball is lost; high tempo, high defensive line."),
             2, 2, 1, 1, 2, 2, false, listOf("4-2-3-1", "4-3-3"), doubleArrayOf(0.5, 0.0, 0.2, 0.0, 0.3, 1.0), all3),
-        Style("Topa Sahip Ol", "Sabırlı oyun kurulumu, topu ayakta tut; top kaybında yerine dönen derli toplu bir takım.",
+        Style(L("Topa Sahip Ol", "Possession"), L("Sabırlı oyun kurulumu, topu ayakta tut; top kaybında yerine dönen derli toplu bir takım.", "Patient build-up, keep the ball on the ground; a compact team that recovers its shape when losing the ball."),
             1, 0, 1, 0, 1, 1, false, listOf("4-3-3", "4-2-3-1", "4-5-1"), doubleArrayOf(0.0, 0.0, 1.0, 0.6, 0.2, 0.0), setOf(Pos.DF, Pos.MF)),
-        Style("Kanat Oyunu", "Oyunu genişlet; hızlı kanatlar ve bekler çizgiye inip ortalar yapar.",
+        Style(L("Kanat Oyunu", "Wing Play"), L("Oyunu genişlet; hızlı kanatlar ve bekler çizgiye inip ortalar yapar.", "Stretch the play; quick wingers and full backs get to the byline and cross."),
             1, 1, 2, 1, 1, 1, false, listOf("4-4-2", "4-3-3"), doubleArrayOf(1.0, 0.0, 0.6, 0.6, 0.0, 0.0), setOf(Pos.MF, Pos.FW)),
-        Style("Uzun Top", "Orta sahayı hızla geç; güçlü santrforlara uzun toplar.",
+        Style(L("Uzun Top", "Long Ball"), L("Orta sahayı hızla geç; güçlü santrforlara uzun toplar.", "Bypass midfield quickly; long balls to strong strikers."),
             1, 2, 1, 2, 0, 0, false, listOf("4-4-2", "3-5-2"), doubleArrayOf(0.3, 0.5, 0.0, 0.0, 0.0, 1.0), setOf(Pos.FW)),
-        Style("Kontra Atak", "Geride kal, top kazanınca hızlı forvetlerle boşlukları cezalandır.",
+        Style(L("Kontra Atak", "Counter-Attack"), L("Geride kal, top kazanınca hızlı forvetlerle boşlukları cezalandır.", "Sit deep and punish the spaces with quick forwards when you win the ball."),
             0, 2, 1, 2, 0, 0, true, listOf("4-2-3-1", "4-4-2", "5-3-2"), doubleArrayOf(1.0, 0.6, 0.0, 0.0, 0.4, 0.0), setOf(Pos.DF, Pos.FW)),
-        Style("Catenaccio", "Önce savunma: derin ve dar blok, alan verme, fırsat buldukça vur.",
+        Style(L("Catenaccio", "Catenaccio"), L("Önce savunma: derin ve dar blok, alan verme, fırsat buldukça vur.", "Defence first: a deep, narrow block, give no space, strike when the chance comes."),
             0, 0, 0, 1, 0, 0, true, listOf("5-3-2", "3-5-2", "4-5-1"), doubleArrayOf(0.0, 0.0, 0.0, 0.0, 1.0, 0.6), setOf(Pos.DF, Pos.MF)),
-    )
+    ) }
+    val all get() = allCache.get()
 
-    private val attrNames = listOf("hız", "şut", "pas", "teknik", "savunma", "fizik")
+    private val attrNamesCache = LangCached { listOf(L("hız", "pace"), L("şut", "shooting"), "pas", "teknik", "savunma", "fizik") }
+    private val attrNames get() = attrNamesCache.get()
 
     private fun attrs(p: Player) = intArrayOf(p.pace, p.shooting, p.passing, p.dribbling, p.defending, p.physical)
 
@@ -70,13 +72,13 @@ object TacticStyles {
             val v = ps.map { attrs(it)[i] }.average()
             val who = s.positions.joinToString("/") { it.label.lowercase() }
             when {
-                v >= teamAvg + 2 -> pros += "Kadromuzdaki $who oyuncularının ${attrNames[i]} gücü bu sisteme çok uygun (${v.toInt()})."
-                v <= teamAvg - 2 -> cons += "$who oyuncularımızın ${attrNames[i]} seviyesi bu tarzın gerektirdiğinin altında (${v.toInt()})."
-                else -> pros += "${attrNames[i].replaceFirstChar { it.uppercase() }} açısından kadromuz yeterli (${v.toInt()})."
+                v >= teamAvg + 2 -> pros += L("Kadromuzdaki $who oyuncularının ${attrNames[i]} gücü bu sisteme çok uygun (${v.toInt()}).", "The ${attrNames[i]} of our $who players suits this system very well (${v.toInt()}).")
+                v <= teamAvg - 2 -> cons += L("$who oyuncularımızın ${attrNames[i]} seviyesi bu tarzın gerektirdiğinin altında (${v.toInt()}).", "The ${attrNames[i]} level of our $who players is below what this style needs (${v.toInt()}).")
+                else -> pros += L("${attrNames[i].replaceFirstChar { it.uppercase() }} açısından kadromuz yeterli (${v.toInt()}).", "Our squad is good enough in ${attrNames[i].replaceFirstChar { it.uppercase() }} (${v.toInt()}).")
             }
         }
-        if (s.pressing == 2 && c.map { it.physical }.average() < teamAvg) cons += "Yoğun pres oyuncuları çabuk yorabilir; rotasyon gerekecek."
-        if (s.defLine == 2 && g.squad(g.userTeamId).filter { it.pos == Pos.DF }.map { it.pace }.average() < 65) cons += "Yüksek savunma hattı yavaş stoperlerle arkaya top yiyebilir."
+        if (s.pressing == 2 && c.map { it.physical }.average() < teamAvg) cons += L("Yoğun pres oyuncuları çabuk yorabilir; rotasyon gerekecek.", "Intense pressing can tire players quickly; rotation will be needed.")
+        if (s.defLine == 2 && g.squad(g.userTeamId).filter { it.pos == Pos.DF }.map { it.pace }.average() < 65) cons += L("Yüksek savunma hattı yavaş stoperlerle arkaya top yiyebilir.", "A high defensive line with slow centre-backs may concede balls in behind.")
         return pros to cons
     }
 

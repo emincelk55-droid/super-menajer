@@ -14,8 +14,10 @@ object GameCalendar {
     private var cacheKey = ""
     private var cache: List<Long> = emptyList()
 
-    private val months = listOf("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
-    private val days = listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz")
+    private val monthsCache = LangCached { listOf(L("Oca", "Jan"), L("Şub", "Feb"), L("Mar", "Mar"), L("Nis", "Apr"), L("May", "May"), L("Haz", "Jun"), L("Tem", "Jul"), L("Ağu", "Aug"), L("Eyl", "Sep"), L("Eki", "Oct"), L("Kas", "Nov"), L("Ara", "Dec")) }
+    private val months get() = monthsCache.get()
+    private val daysCache = LangCached { listOf(L("Pzt", "Mon"), L("Sal", "Tue"), L("Çar", "Wed"), L("Per", "Thu"), L("Cum", "Fri"), L("Cmt", "Sat"), L("Paz", "Sun")) }
+    private val days get() = daysCache.get()
 
     /** Takvimdeki her günün tarihi (epoch günü). */
     fun dates(g: Game): List<Long> {

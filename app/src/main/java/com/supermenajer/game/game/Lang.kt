@@ -28,3 +28,13 @@ object Lang {
 
 /** Dile göre metin. */
 fun L(tr: String, en: String): String = if (Lang.en) en else tr
+
+/**
+ * Dile göre bir kez kurulan değer: her dil için ayrı önbellek. Nesne kimliği sabit kalır
+ * (harita anahtarı olarak kullanılabilir), dil değişince diğer dilin kopyası döner.
+ */
+class LangCached<T>(private val build: () -> T) {
+    private var tr: T? = null
+    private var en: T? = null
+    fun get(): T = if (Lang.en) en ?: build().also { en = it } else tr ?: build().also { tr = it }
+}

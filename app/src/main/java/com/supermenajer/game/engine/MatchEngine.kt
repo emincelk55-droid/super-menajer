@@ -74,7 +74,7 @@ class MatchSim(
     val away = Side(nat?.away ?: game.team(fixture.away), 1)
     /** Skor tabelasındaki başlık (milli maçta turnuva adı). */
     val title: String? get() = nat?.title ?: if (twoPlayer) L("👥 İki kişilik maç", "👥 Two-player match") else null
-    val sides: List<Side> get() = listOf(home, away)
+    val sides: List<Side> = listOf(home, away)
     var minute = 0
         private set
     val events = mutableListOf<MatchEvent>()

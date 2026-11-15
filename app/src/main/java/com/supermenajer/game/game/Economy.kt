@@ -81,16 +81,16 @@ object Economy {
         val t = g.userTeam
         val cost = weekly * SHIFT_RATIO
         if (weekly > 0) {
-            if (t.budget < cost) return "Transfer bütçesi yetersiz."
+            if (t.budget < cost) return L("Transfer bütçesi yetersiz.", "Not enough transfer budget.")
             earn(t, SHIFT, -cost)
             t.wageBudget += weekly
-            return "Maaş bütçesi +${money(weekly)}/hafta (transfer bütçesinden ${money(cost)})."
+            return L("Maaş bütçesi +${money(weekly)}/hafta (transfer bütçesinden ${money(cost)}).", "Wage budget +${money(weekly)}/week (${money(cost)} from the transfer budget).")
         }
         val w = -weekly
-        if (t.wageBudget - w < squadWages(g, t.id)) return "Maaş bütçesi mevcut maaşların altına inemez."
+        if (t.wageBudget - w < squadWages(g, t.id)) return L("Maaş bütçesi mevcut maaşların altına inemez.", "The wage budget can't go below current wages.")
         t.wageBudget -= w
         earn(t, SHIFT, w * SHIFT_RATIO)
-        return "Transfer bütçesi +${money(w * SHIFT_RATIO)} (maaş bütçesi -${money(w)}/hafta)."
+        return L("Transfer bütçesi +${money(w * SHIFT_RATIO)} (maaş bütçesi -${money(w)}/hafta).", "Transfer budget +${money(w * SHIFT_RATIO)} (wage budget -${money(w)}/week).")
     }
 
     /** Sezon sonu yönetim ödeneği. Mali rapor lastReport'a yazılır. */
@@ -99,7 +99,7 @@ object Economy {
         for (t in g.teams) if (t.id != g.userTeamId && t.budget > 0) t.budget = (t.budget * 0.6).toLong()
         if (g.pendingPayments > 0 && !g.fired) {
             earn(g.userTeam, BUYS, -g.pendingPayments)
-            g.addNews("Taksit ödemesi", "Taksitli transferlerin kalan ${money(g.pendingPayments)} tutarı ödendi.")
+            g.addNews(L("Taksit ödemesi", "Instalment payment"), L("Taksitli transferlerin kalan ${money(g.pendingPayments)} tutarı ödendi.", "The remaining ${money(g.pendingPayments)} of instalment transfers has been paid."))
             g.pendingPayments = 0
         }
         for (t in g.divisionTeams(Leagues.LEGACY_EURO)) earn(t, BOARD, r5k(6_000_000.0 * (t.reputation / 70.0).pow(2)))
@@ -153,7 +153,7 @@ object Economy {
                 p.contractYears = if (p.age >= 30) 2 else 3
                 p.salary = p.demandWage
                 p.releaseClause = 0
-                if (pre.id == g.userTeamId) g.addNews("✍️ Ön sözleşmeli oyuncu geldi", "${p.name} ön sözleşmesi gereği bedelsiz olarak kadromuza katıldı.")
+                if (pre.id == g.userTeamId) g.addNews(L("✍️ Ön sözleşmeli oyuncu geldi", "✍️ Pre-contract player arrived"), L("${p.name} ön sözleşmesi gereği bedelsiz olarak kadromuza katıldı.", "${p.name} has joined us on a free under his pre-contract."))
                 continue
             }
             if (t.id != g.userTeamId) {
@@ -180,7 +180,7 @@ object Economy {
             p.contractYears = 0
         }
         Contracts.processPre(g)
-        if (left.isNotEmpty()) g.addNews("Sözleşmesi bitenler", "Sözleşmesi sona eren oyuncular kulüpten ayrıldı: ${left.joinToString()}.")
+        if (left.isNotEmpty()) g.addNews(L("Sözleşmesi bitenler", "Contracts expired"), L("Sözleşmesi sona eren oyuncular kulüpten ayrıldı: ${left.joinToString()}.", "Players whose contracts ended have left the club: ${left.joinToString()}."))
         // Serbest oyuncu havuzu çok büyümesin: yalnız 31 yaş üstünden en yaşlıları emekli olur
         // (gençler alt liglerde/serbestte kalıp yeniden kulüp bulur; dünya erken gençleşmesin).
         val free = g.squad(-1).sortedByDescending { it.age * 100 - it.overall }

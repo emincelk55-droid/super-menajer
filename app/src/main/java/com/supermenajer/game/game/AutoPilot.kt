@@ -38,15 +38,15 @@ object AutoPilot {
             g.fired -> {
                 val id = g.jobOffers.firstOrNull()
                 log.fired++
-                if (id != null) { GameRepo.takeJob(id); log.add("Kovuldu → yeni iş: ${g.userTeam.name}") }
-                else { g.jobOffers += g.teams.filter { it.division == 1 || it.reputation < 55 }.random(rnd).id; log.add("Kovuldu, teklif bekleniyor") }
+                if (id != null) { GameRepo.takeJob(id); log.add(L("Kovuldu → yeni iş: ${g.userTeam.name}", "Sacked → new job: ${g.userTeam.name}")) }
+                else { g.jobOffers += g.teams.filter { it.division == 1 || it.reputation < 55 }.random(rnd).id; log.add(L("Kovuldu, teklif bekleniyor", "Sacked, waiting for offers")) }
             }
             g.pendingEvent != null -> {
                 val e = g.pendingEvent!!
                 val c = rnd.nextInt(e.options.size.coerceAtLeast(1))
                 GameRepo.resolveEvent(c)
                 log.events++
-                log.add("Olay: ${e.title} → ${e.options.getOrNull(c)}")
+                log.add(L("Olay: ${e.title} → ${e.options.getOrNull(c)}", "Event: ${e.title} → ${e.options.getOrNull(c)}"))
             }
             g.press != null -> {
                 val q = g.press!!
@@ -64,7 +64,7 @@ object AutoPilot {
             g.seasonOver -> {
                 log.seasons++
                 val t = g.table(g.userTeam.division)
-                log.add("Sezon ${g.season} bitti: ${g.userTeam.name} ${t.indexOf(g.userTeam) + 1}. (${g.userTeam.points} puan)")
+                log.add(L("Sezon ${g.season} bitti: ${g.userTeam.name} ${t.indexOf(g.userTeam) + 1}. (${g.userTeam.points} puan)", "Season ${g.season} over: ${g.userTeam.name} ${t.indexOf(g.userTeam) + 1}. (${g.userTeam.points} pts)"))
                 GameRepo.startNewSeason()
                 return true
             }
@@ -97,7 +97,7 @@ object AutoPilot {
         val key = g.squad(g.userTeamId).sortedByDescending { it.overall }.take(13)
         if (p != null && p !in key && o.price >= p.value && g.squad(g.userTeamId).size > 22) {
             val err = GameRepo.acceptIncoming(o)
-            if (err == null) { log.sold++; log.add("Satış: ${p.name} ${o.price / 1000}K") } else GameRepo.rejectIncoming(o)
+            if (err == null) { log.sold++; log.add(L("Satış: ${p.name} ${o.price / 1000}K", "Sale: ${p.name} ${o.price / 1000}K")) } else GameRepo.rejectIncoming(o)
         } else GameRepo.rejectIncoming(o)
         g.offers.remove(o)
     }
@@ -134,9 +134,9 @@ object AutoPilot {
             .take(5)
         val (p, price) = cands.randomOrNull(rnd) ?: return
         when (val r = GameRepo.offerFor(p, price)) {
-            is GameRepo.Reply.Accepted -> { log.bought++; log.add("Transfer: ${p.name} (${p.overall}) ${price / 1000}K"); GameRepo.afterTransfer() }
+            is GameRepo.Reply.Accepted -> { log.bought++; log.add(L("Transfer: ${p.name} (${p.overall}) ${price / 1000}K", "Signing: ${p.name} (${p.overall}) ${price / 1000}K")); GameRepo.afterTransfer() }
             is GameRepo.Reply.Counter -> if (r.price <= us.budget * 0.6 && GameRepo.offerFor(p, r.price) is GameRepo.Reply.Accepted) {
-                log.bought++; log.add("Transfer (pazarlık): ${p.name} ${r.price / 1000}K"); GameRepo.afterTransfer()
+                log.bought++; log.add(L("Transfer (pazarlık): ${p.name} ${r.price / 1000}K", "Signing (negotiated): ${p.name} ${r.price / 1000}K")); GameRepo.afterTransfer()
             }
             is GameRepo.Reply.Rejected -> {}
         }

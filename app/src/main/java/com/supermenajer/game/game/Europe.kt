@@ -80,7 +80,7 @@ object Europe {
         val ug = groupOf(g, g.userTeamId)
         if (ug >= 0) {
             val rivals = g.euroTeams.subList(ug * 4, ug * 4 + 4).filter { it != g.userTeamId }.map { g.team(it).name }
-            g.addNews("Avrupa Kupası kurası", "Grup ${groupLetter(ug)}'deyiz! Rakiplerimiz: ${rivals.joinToString()}.")
+            g.addNews(L("Avrupa Kupası kurası", "European Cup draw"), L("Grup ${groupLetter(ug)}'deyiz! Rakiplerimiz: ${rivals.joinToString()}.", "We're in Group ${groupLetter(ug)}! Our opponents: ${rivals.joinToString()}."))
         }
     }
 
@@ -130,10 +130,10 @@ object Europe {
                 if (ug >= 0) {
                     val pos = groupTable(g, ug).indexOfFirst { it.team.id == us } + 1
                     if (pos <= 2) {
-                        g.addNews("Avrupa'da gruptan çıktık!", "Grup ${groupLetter(ug)}'yi $pos. sırada bitirdik ve son 16'dayız!")
+                        g.addNews(L("Avrupa'da gruptan çıktık!", "We're through the group in Europe!"), L("Grup ${groupLetter(ug)}'yi $pos. sırada bitirdik ve son 16'dayız!", "We finished $pos. in Group ${groupLetter(ug)} and we're in the last 16!"))
                         g.confidence = (g.confidence + 5).coerceAtMost(100.0)
                     } else {
-                        g.addNews("Avrupa'ya veda", "Grup ${groupLetter(ug)}'de $pos. olduk ve Avrupa Kupası'na veda ettik.")
+                        g.addNews(L("Avrupa'ya veda", "Farewell to Europe"), L("Grup ${groupLetter(ug)}'de $pos. olduk ve Avrupa Kupası'na veda ettik.", "We finished $pos. in Group ${groupLetter(ug)} and are out of the European Cup."))
                     }
                 }
                 // Grup birincisi, başka grubun ikincisini ağırlar.
@@ -149,10 +149,10 @@ object Europe {
                 g.euroWinner = w
                 val t = g.team(w)
                 t.reputation = (t.reputation + 3).coerceAtMost(97)
-                g.addNews("Avrupa'nın en büyüğü belli oldu!", "Avrupa Kupası'nı ${t.name} kazandı! 🏆")
+                g.addNews(L("Avrupa'nın en büyüğü belli oldu!", "Europe has its champion!"), L("Avrupa Kupası'nı ${t.name} kazandı! 🏆", "${t.name} have won the European Cup! 🏆"))
                 if (w == us) {
                     g.confidence = 100.0
-                    g.addNews("AVRUPA FATİHİ!", "İnanılmaz! Avrupa Kupası'nı kaldırdık! Bu başarı yıllarca konuşulacak hocam!")
+                    g.addNews(L("AVRUPA FATİHİ!", "CONQUERORS OF EUROPE!"), L("İnanılmaz! Avrupa Kupası'nı kaldırdık! Bu başarı yıllarca konuşulacak hocam!", "Incredible! We've lifted the European Cup! This will be talked about for years, boss!"))
                 }
             }
             else -> {
@@ -172,7 +172,7 @@ object Europe {
         val us = g.userTeamId
         g.fixtures.firstOrNull { it.comp == Comp.EURO && it.round == round && it.involves(us) }?.let {
             val opp = g.team(if (it.home == us) it.away else it.home)
-            g.addNews("Avrupa kurası", "Avrupa Kupası ${Comp.euroRounds[round]} turunda rakibimiz: ${opp.name} (${opp.city}).")
+            g.addNews(L("Avrupa kurası", "European draw"), L("Avrupa Kupası ${Comp.euroRounds[round]} turunda rakibimiz: ${opp.name} (${opp.city}).", "Our opponent in the European Cup ${Comp.euroRounds[round]}: ${opp.name} (${opp.city})."))
         }
     }
 }

@@ -411,9 +411,9 @@ private fun SlotRow(s: GameRepo.SlotInfo, action: String, confirmDelete: Boolean
             TextButton(onClick = onDelete) { Text(if (confirmDelete) L("Sil?", "Delete?") else "🗑", color = if (confirmDelete) Red else TextDim, fontWeight = FontWeight.Bold) }
         }
         Box(
-            Modifier.clip(RoundedCornerShape(10.dp)).background(if (s.exists && action == "YÜKLE") Green else Color.Transparent)
+            Modifier.clip(RoundedCornerShape(10.dp)).background(if (s.exists && action == L("YÜKLE", "LOAD")) Green else Color.Transparent)
                 .border(1.dp, Green, RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp),
-        ) { Text(action, color = if (s.exists && action == "YÜKLE") Color.Black else Green, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+        ) { Text(action, color = if (s.exists && action == L("YÜKLE", "LOAD")) Color.Black else Green, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
     }
 }
 

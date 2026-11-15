@@ -17,19 +17,21 @@ object Traits {
     const val HOTHEAD = 7
     const val LOYAL = 8
 
-    val names = listOf("Dengeli", "Profesyonel", "Hırslı", "Tembel", "Lider", "Büyük maç oyuncusu", "Sakatlığa yatkın", "Sinirli", "Sadık")
+    private val namesCache = LangCached { listOf(L("Dengeli", "Balanced"), L("Profesyonel", "Professional"), L("Hırslı", "Ambitious"), L("Tembel", "Lazy"), L("Lider", "Leader"), L("Büyük maç oyuncusu", "Big-game player"), L("Sakatlığa yatkın", "Injury-prone"), L("Sinirli", "Hot-headed"), L("Sadık", "Loyal")) }
+    val names get() = namesCache.get()
     val icons = listOf("⚖️", "🎯", "🔥", "😴", "👑", "⭐", "🩹", "😤", "💙")
-    val info = listOf(
-        "Ne iyi ne kötü; istikrarlı bir karakter.",
-        "Antrenmanda örnek; daha hızlı gelişir.",
-        "Kazanmak için yanıp tutuşur; hızlı gelişir ama yedekte kalmaya tahammülü yok.",
-        "Antrenmanı sevmez; gelişimi yavaştır.",
-        "Sahadayken takım arkadaşlarını yukarı çeker. İyi bir kaptan adayı.",
-        "Derbilerde ve kupa maçlarında daha iyi oynar.",
-        "Sakatlık riski yüksek.",
-        "Sert müdahaleler; kart görme riski yüksek.",
-        "Kulübüne bağlıdır; morali kolay bozulmaz.",
-    )
+    private val infoCache = LangCached { listOf(
+        L("Ne iyi ne kötü; istikrarlı bir karakter.", "Neither good nor bad; a steady character."),
+        L("Antrenmanda örnek; daha hızlı gelişir.", "A model in training; develops faster."),
+        L("Kazanmak için yanıp tutuşur; hızlı gelişir ama yedekte kalmaya tahammülü yok.", "Burns to win; develops fast but can't stand being on the bench."),
+        L("Antrenmanı sevmez; gelişimi yavaştır.", "Doesn't like training; develops slowly."),
+        L("Sahadayken takım arkadaşlarını yukarı çeker. İyi bir kaptan adayı.", "Lifts his teammates on the pitch. A good captain candidate."),
+        L("Derbilerde ve kupa maçlarında daha iyi oynar.", "Plays better in derbies and cup matches."),
+        L("Sakatlık riski yüksek.", "High injury risk."),
+        L("Sert müdahaleler; kart görme riski yüksek.", "Rough challenges; high risk of cards."),
+        L("Kulübüne bağlıdır; morali kolay bozulmaz.", "Loyal to his club; his morale doesn't drop easily."),
+    ) }
+    val info get() = infoCache.get()
 
     // Ağırlıklar: dengeli en yaygın
     private val weights = intArrayOf(34, 12, 10, 8, 6, 7, 8, 8, 7)

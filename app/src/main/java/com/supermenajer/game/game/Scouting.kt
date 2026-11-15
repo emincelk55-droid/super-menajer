@@ -12,7 +12,8 @@ import kotlin.random.Random
  */
 object Scouting {
     const val COST = 10_000L
-    val focusNames = listOf("Genç yetenek", "Hazır oyuncu", "Kelepir")
+    private val focusNamesCache = LangCached { listOf(L("Genç yetenek", "Young talent"), L("Hazır oyuncu", "Ready-made player"), L("Kelepir", "Bargain")) }
+    val focusNames get() = focusNamesCache.get()
 
     fun known(g: Game, p: Player): Boolean =
         p.teamId == g.userTeamId || p.loanFrom == g.userTeamId || p.id in g.scouted
@@ -46,11 +47,11 @@ object Scouting {
 
     /** Gözlemciyi gönder: ücret alınır, rapor ertesi gün gelir. Hata mesajı döner. */
     fun request(g: Game, p: Player): String? {
-        if (known(g, p)) return "Bu oyuncuyu zaten tanıyoruz."
-        if (requested(g, p)) return "Gözlemci zaten bu oyuncuyu izliyor."
+        if (known(g, p)) return L("Bu oyuncuyu zaten tanıyoruz.", "We already know this player.")
+        if (requested(g, p)) return L("Gözlemci zaten bu oyuncuyu izliyor.", "A scout is already watching this player.")
         val us = g.userTeam
         val cost = (COST * Perks.scoutCost(g)).toLong()
-        if (us.budget < cost) return "Gözlem için bütçe yetersiz."
+        if (us.budget < cost) return L("Gözlem için bütçe yetersiz.", "Not enough budget for scouting.")
         Economy.earn(us, Economy.SCOUTING, -cost)
         g.scoutQueue += p.id
         return null
@@ -67,13 +68,13 @@ object Scouting {
         val ab = ((p.overall - (str - 15)) / 5.0).coerceIn(0.5, 5.0)
         val po = ((p.potential - (str - 15)) / 5.0).coerceIn(0.5, 5.0)
         val verdict = when {
-            p.age <= 21 && p.potential >= str + 8 -> "Geleceğin yıldızı! Kaçırmamalıyız."
-            p.overall >= str + 3 -> "Takımı hemen bir üst seviyeye taşır."
-            p.overall >= str - 1 -> "İlk 11'imize katkı verir."
-            p.potential >= str + 2 -> "Gelişime açık, sabır isteyen bir yatırım."
-            else -> "Şu an seviyemizin altında."
+            p.age <= 21 && p.potential >= str + 8 -> L("Geleceğin yıldızı! Kaçırmamalıyız.", "A future star! We mustn't miss him.")
+            p.overall >= str + 3 -> L("Takımı hemen bir üst seviyeye taşır.", "Would take the team up a level immediately.")
+            p.overall >= str - 1 -> L("İlk 11'imize katkı verir.", "Would contribute to our starting XI.")
+            p.potential >= str + 2 -> L("Gelişime açık, sabır isteyen bir yatırım.", "Room to develop, an investment that needs patience.")
+            else -> L("Şu an seviyemizin altında.", "Currently below our level.")
         }
-        return "Yetenek ${stars(ab)} · Potansiyel ${stars(po)} · \"$verdict\""
+        return L("Yetenek ${stars(ab)} · Potansiyel ${stars(po)} · \"$verdict\"", "Ability ${stars(ab)} · Potential ${stars(po)} · \"$verdict\"")
     }
 
     /** Gün sonunda: bekleyen raporlar ve (lig haftalarında) gözlemcinin haftalık önerisi. */
@@ -82,8 +83,8 @@ object Scouting {
             val p = g.player(id) ?: continue
             g.scouted += id
             if (id !in g.shortlist) g.shortlist += id
-            val club = if (p.teamId >= 0) g.teamOrNull(p.teamId)?.name ?: "-" else "Serbest"
-            g.addNews("Gözlemci raporu: ${p.name}", "${p.age} yaş, ${p.pos.label}, $club. Güç ${p.overall}, potansiyel ${p.potential}. ${report(g, p)}")
+            val club = if (p.teamId >= 0) g.teamOrNull(p.teamId)?.name ?: "-" else L("Serbest", "Free agent")
+            g.addNews(L("Gözlemci raporu: ${p.name}", "Scout report: ${p.name}"), L("${p.age} yaş, ${p.pos.label}, $club. Güç ${p.overall}, potansiyel ${p.potential}. ${report(g, p)}", "${p.age} yrs, ${p.pos.label}, $club. Overall ${p.overall}, potential ${p.potential}. ${report(g, p)}"))
         }
         g.scoutQueue.clear()
         if (!leagueDay || g.fired) return
@@ -106,10 +107,10 @@ object Scouting {
         g.scouted += pick.id
         if (pick.id !in g.shortlist) g.shortlist += pick.id
         while (g.shortlist.size > 40) g.shortlist.removeAt(0)
-        val club = if (pick.teamId >= 0) g.teamOrNull(pick.teamId)?.name ?: "-" else "serbest oyuncu"
+        val club = if (pick.teamId >= 0) g.teamOrNull(pick.teamId)?.name ?: "-" else L("serbest oyuncu", "free agent")
         g.addNews(
-            "🔍 Gözlemci önerisi (${Leagues.flagOf(country).let { Generator.flag(it) }} $country)",
-            "${pick.name} · ${pick.age} yaş · ${pick.pos.label} · $club. ${report(g, pick)} Transfer → Gözlem listesi'nde.",
+            L("🔍 Gözlemci önerisi (${Leagues.flagOf(country).let { Generator.flag(it) }} $country)", "🔍 Scout suggestion (${Leagues.flagOf(country).let { Generator.flag(it) }} $country)"),
+            L("${pick.name} · ${pick.age} yaş · ${pick.pos.label} · $club. ${report(g, pick)} Transfer → Gözlem listesi'nde.", "${pick.name} · ${pick.age} yrs · ${pick.pos.label} · $club. ${report(g, pick)} See Transfers → Scouting list."),
         )
     }
 }

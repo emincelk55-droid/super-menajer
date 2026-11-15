@@ -229,7 +229,7 @@ object WorldGen {
         g.reindex()
         addForeignLeagues(g, rnd)
         g.worldUpgradePending = false
-        g.addNews("Dünya genişledi!", "Artık İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz ve Hollanda ligleri de var. Avrupa Kupası'na her büyük ligin ilk 4'ü katılıyor.")
+        g.addNews(L("Dünya genişledi!", "The world has grown!"), L("Artık İngiltere, İspanya, Almanya, İtalya, Fransa, Portekiz ve Hollanda ligleri de var. Avrupa Kupası'na her büyük ligin ilk 4'ü katılıyor.", "England, Spain, Germany, Italy, France, Portugal and the Netherlands now have leagues too. The top 4 of every major league qualify for the European Cup."))
     }
 
     fun teamsOf(g: Game, country: String): List<Team> = g.teams.filter { g.countryOf(it) == country && it.division != Leagues.LEGACY_EURO }

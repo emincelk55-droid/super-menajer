@@ -10,11 +10,12 @@ import kotlin.random.Random
  */
 object Tournament {
     val groupNames = listOf("A", "B", "C", "D")
-    private val koNames = listOf("Çeyrek Final", "Yarı Final", "Final")
+    private val koNamesCache = LangCached { listOf(L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final")) }
+    private val koNames get() = koNamesCache.get()
     /** Grup içi eşleşmeler (grubun 0-3 sıraları): her tur iki maç. */
     private val rounds = listOf(listOf(0 to 1, 2 to 3), listOf(0 to 2, 1 to 3), listOf(0 to 3, 1 to 2))
 
-    fun title(g: Game) = if (g.season % 2 == 0) "Avrupa Şampiyonası" else "Dünya Kupası"
+    fun title(g: Game) = if (g.season % 2 == 0) L("Avrupa Şampiyonası", "European Championship") else L("Dünya Kupası", "World Cup")
 
     /** Sezon bitti, milli takım var ve bu sezonun turnuvası oynanmadı. */
     fun needed(g: Game) = g.nationalTeam.isNotEmpty() && !g.fired && g.tourSeason != g.season
@@ -45,9 +46,9 @@ object Tournament {
         g.tourPts.clear(); g.tourGf.clear(); g.tourGa.clear(); g.tourAlive.clear(); g.tourLog.clear()
         val gi = g.tourTeams.indexOf(me) / 4
         g.addNews(
-            "🏆 ${title(g)} başlıyor!",
-            "Kura çekildi: ${National.name(me)} ${groupNames[gi]} grubunda — " +
-                group(g, gi).filter { it != me }.joinToString { National.name(it) } + " ile. İlk maç için DEVAM ET.",
+            L("🏆 ${title(g)} başlıyor!", "🏆 ${title(g)} begins!"),
+            L("Kura çekildi: ${National.name(me)} ${groupNames[gi]} grubunda — ", "The draw is made: ${National.name(me)} are in Group ${groupNames[gi]} — ") +
+                group(g, gi).filter { it != me }.joinToString { National.name(it) } + L(" ile. İlk maç için DEVAM ET.", " with. CONTINUE for the first match."),
         )
         startStage(g, rnd)
     }
@@ -60,7 +61,7 @@ object Tournament {
     }
 
     private fun stageName(g: Game, gi: Int = -1) =
-        if (g.tourStage <= 2) "${title(g)} · ${groupNames[gi]} Grubu ${g.tourStage + 1}. maç" else "${title(g)} · ${koNames[g.tourStage - 3]}"
+        if (g.tourStage <= 2) L("${title(g)} · ${groupNames[gi]} Grubu ${g.tourStage + 1}. maç", "${title(g)} · Group ${groupNames[gi]} match ${g.tourStage + 1}") else "${title(g)} · ${koNames[g.tourStage - 3]}"
 
     /** Aşamanın maçlarını kurar: diğerleri sonuçlanır, kullanıcının maçı bekletilir. */
     private fun startStage(g: Game, rnd: Random) {
@@ -124,7 +125,7 @@ object Tournament {
         g.tourLog += "${g.tourStage}|$line"
         g.natResults.add(0, "${g.season}|${p.kind}|$line|${when { won && (x != y || p.ko) -> 3; x == y -> 1; else -> 0 }}")
         while (g.natResults.size > 30) g.natResults.removeAt(g.natResults.lastIndex)
-        val who = if (scorers.isNotEmpty()) " Golcüler: ${scorers.joinToString()}." else ""
+        val who = if (scorers.isNotEmpty()) L(" Golcüler: ${scorers.joinToString()}.", " Scorers: ${scorers.joinToString()}.") else ""
         val rnd = Random.Default
         if (g.tourStage <= 2) {
             addGroup(g, a, b, ga.toInt(), gb.toInt())
@@ -150,10 +151,10 @@ object Tournament {
         g.tourStage = 3
         val me = g.nationalTeam
         if (me in g.tourAlive) {
-            g.addNews("🏆 Çeyrek finaldeyiz!", "${National.name(me)} gruptan çıktı. ${title(g)} çeyrek finali için DEVAM ET.")
+            g.addNews(L("🏆 Çeyrek finaldeyiz!", "🏆 We're in the quarter-finals!"), L("${National.name(me)} gruptan çıktı. ${title(g)} çeyrek finali için DEVAM ET.", "${National.name(me)} are through the group. CONTINUE for the ${title(g)} quarter-final."))
             startStage(g, rnd)
         } else {
-            g.addNews("🏆 Gruptan çıkamadık", "${National.name(me)} ${title(g)}'na grup aşamasında veda etti.")
+            g.addNews(L("🏆 Gruptan çıkamadık", "🏆 We didn't get out of the group"), L("${National.name(me)} ${title(g)}'na grup aşamasında veda etti.", "${National.name(me)} went out of the ${title(g)} at the group stage."))
             finishRest(g, rnd)
         }
     }
@@ -170,7 +171,7 @@ object Tournament {
         }
         val champ = g.tourAlive.firstOrNull() ?: return
         g.tourStage = 6
-        g.addNews("🏆 ${title(g)} sona erdi", "Şampiyon: ${National.name(champ)}. Yeni sezona hazır olduğunda DEVAM ET.")
+        g.addNews(L("🏆 ${title(g)} sona erdi", "🏆 ${title(g)} is over"), L("Şampiyon: ${National.name(champ)}. Yeni sezona hazır olduğunda DEVAM ET.", "Champions: ${National.name(champ)}. CONTINUE when you're ready for the new season."))
     }
 
     private fun champion(g: Game, me: String) {
@@ -180,13 +181,13 @@ object Tournament {
         g.trophies += "${g.season} ${title(g)} (${National.name(me)})"
         g.managerRep = (g.managerRep + 12).coerceAtMost(100)
         Perks.addXp(g, 150)
-        g.addNews("🏆 ŞAMPİYONUZ!", "${National.name(me)}, ${title(g)}'nı kazandı! Menajer olarak tarihe geçtin.")
+        g.addNews(L("🏆 ŞAMPİYONUZ!", "🏆 CHAMPIONS!"), L("${National.name(me)}, ${title(g)}'nı kazandı! Menajer olarak tarihe geçtin.", "${National.name(me)} have won the ${title(g)}! You've made history as manager."))
     }
 
     /** Aşama adı (ekran için). */
     fun stageText(g: Game): String = when (g.tourStage) {
         in 0..2 -> "Grup aşaması · ${g.tourStage + 1}. maç"
         in 3..5 -> koNames[g.tourStage - 3]
-        else -> "Tamamlandı · Şampiyon: ${g.tourAlive.firstOrNull()?.let { National.name(it) } ?: "-"}"
+        else -> L("Tamamlandı · Şampiyon: ${g.tourAlive.firstOrNull()?.let { National.name(it) } ?: "-"}", "Finished · Champions: ${g.tourAlive.firstOrNull()?.let { National.name(it) } ?: "-"}")
     }
 }

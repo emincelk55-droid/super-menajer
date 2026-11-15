@@ -234,6 +234,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Görsel yenileme: oyunun yazı tipi Barlow (SIL Open Font License); skorlar, başlıklar ve güç sayıları dar Barlow Condensed ile TV skor bandı havasında. Lisans: docs/licenses/Barlow-OFL.txt.
 - İkonlar: menü, üst çubuk, görev kısayolları, ana sayfa butonları, maç butonları ve kart başlıklarındaki emojiler her cihazda aynı görünen Material Symbols vektör ikonlarına dönüştü (Apache 2.0).
 - Ana menü ve yeni kariyer ekranında lig sayısı güncellendi (17 lig, 12 ülke).
+- 🌐 İngilizce dil desteği (Ayarlar → Dil / Language): arayüz, maç anlatımı, haberler, olay kartları, basın, transfer görüşmeleri, hedefler ve mevki kısaltmaları (GK, CB, LB, RB, DM, CM, AM, LW, RW, ST) iki dilli; ~3.400 metin. Telefon dili Türkçe değilse oyun İngilizce açılır. Metinler kaynakta L("türkçe", "english") olarak duruyor; çeviri araçları tools/i18n_extract.py ve tools/i18n_merge.py, çeviri tabloları tools/i18n/.
+
 
 ### v2.15
 - Taktik sahası: kartlar artık üst üste binmiyor (yalnız aynı hizadaki kartlar aralanır, gerekirse küçülür).

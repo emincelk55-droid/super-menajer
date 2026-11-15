@@ -12,20 +12,25 @@ import com.supermenajer.game.model.Team
  * oyuncu kendi mevkisinde ve özelliğine uygun rolde daha verimli oynar.
  */
 object Positions {
-    enum class Det(val code: String, val label: String) {
-        KL("KL", "Kaleci"),
-        SLB("SLB", "Sol bek"),
-        SGB("SĞB", "Sağ bek"),
-        STP("STP", "Stoper"),
-        DOS("DOS", "Defansif orta saha"),
-        MO("MO", "Merkez orta saha"),
-        OOS("OOS", "Ofansif orta saha"),
-        SLK("SLK", "Sol kanat"),
-        SGK("SĞK", "Sağ kanat"),
-        SF("SF", "Santrfor"),
+    enum class Det(private val codeTr: String, private val codeEn: String, private val labelTr: String, private val labelEn: String) {
+        KL("KL", "GK", "Kaleci", "Goalkeeper"),
+        SLB("SLB", "LB", "Sol bek", "Left back"),
+        SGB("SĞB", "RB", "Sağ bek", "Right back"),
+        STP("STP", "CB", "Stoper", "Centre back"),
+        DOS("DOS", "DM", "Defansif orta saha", "Defensive midfielder"),
+        MO("MO", "CM", "Merkez orta saha", "Central midfielder"),
+        OOS("OOS", "AM", "Ofansif orta saha", "Attacking midfielder"),
+        SLK("SLK", "LW", "Sol kanat", "Left winger"),
+        SGK("SĞK", "RW", "Sağ kanat", "Right winger"),
+        SF("SF", "ST", "Santrfor", "Striker");
+
+        /** Ekranda görünen kısaltma ve ad (dile göre). */
+        val code: String get() = L(codeTr, codeEn)
+        val label: String get() = L(labelTr, labelEn)
     }
 
-    val feet = listOf("Sağ ayaklı", "Sol ayaklı", "İki ayaklı")
+    private val feetCache = LangCached { listOf(L("Sağ ayaklı", "Right-footed"), L("Sol ayaklı", "Left-footed"), L("İki ayaklı", "Two-footed")) }
+    val feet get() = feetCache.get()
 
     private fun h(p: Player, salt: Int): Int {
         var x = (p.id.toLong() * 2246822519L + salt * 3266489917L) and 0x7fffffff

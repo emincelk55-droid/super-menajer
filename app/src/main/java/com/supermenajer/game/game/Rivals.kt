@@ -12,20 +12,22 @@ import kotlin.random.Random
 object Rivals {
     const val PRESS_KIND = 6
 
-    private val quotes = listOf(
-        "Bu sezon onlardan daha iyi bir takımız, sahada da göstereceğiz.",
-        "Onların hocası çok konuşuyor; biz konuşmayı sahaya bırakıyoruz.",
-        "Deplasmanda bile 3 puan için geliyoruz.",
-        "Savunmaları bizim hücum hattımıza dayanamaz.",
-        "Ligin en abartılan takımı onlar.",
-        "Geçen maçın rövanşını alacağız.",
-    )
+    private val quotesCache = LangCached { listOf(
+        L("Bu sezon onlardan daha iyi bir takımız, sahada da göstereceğiz.", "We're a better team than them this season, and we'll show it on the pitch."),
+        L("Onların hocası çok konuşuyor; biz konuşmayı sahaya bırakıyoruz.", "Their manager talks a lot; we let our football do the talking."),
+        L("Deplasmanda bile 3 puan için geliyoruz.", "Even away from home, we're coming for 3 points."),
+        L("Savunmaları bizim hücum hattımıza dayanamaz.", "Their defence can't cope with our attack."),
+        L("Ligin en abartılan takımı onlar.", "They're the most overrated team in the league."),
+        L("Geçen maçın rövanşını alacağız.", "We'll get revenge for the last game."),
+    ) }
+    private val quotes get() = quotesCache.get()
 
-    val answers = listOf(
-        "Sahada cevap vereceğiz.",
-        "Onlar konuşsun, biz kazanırız!",
-        "Saygı duyuyoruz, güçlü bir rakip.",
-    )
+    private val answersCache = LangCached { listOf(
+        L("Sahada cevap vereceğiz.", "We'll answer on the pitch."),
+        L("Onlar konuşsun, biz kazanırız!", "Let them talk, we'll win!"),
+        L("Saygı duyuyoruz, güçlü bir rakip.", "We respect them, they're a strong side."),
+    ) }
+    val answers get() = answersCache.get()
 
     /** Rakip sayılır mı: derbi ya da ligde güçlü/yakın bir takım. */
     private fun isRival(g: Game, opp: Team): Boolean {
@@ -44,22 +46,22 @@ object Rivals {
         if (!isRival(g, opp) || rnd.nextDouble() > 0.55) return
         g.lastJabWeek = f.week
         val (w, d, l) = h2h(g, mgr)
-        val rec = if (w + d + l > 0) " (Karşılaşmalarınız: $w G · $d B · $l M)" else ""
-        val text = "${opp.name} hocası $mgr: \"${quotes[rnd.nextInt(quotes.size)]}\"$rec. Ne cevap vereceksin?"
+        val rec = if (w + d + l > 0) L(" (Karşılaşmalarınız: $w G · $d B · $l M)", " (Your record: $w W · $d D · $l L)") else ""
+        val text = L("${opp.name} hocası $mgr: \"${quotes[rnd.nextInt(quotes.size)]}\"$rec. Ne cevap vereceksin?", "${opp.name} manager $mgr: \"${quotes[rnd.nextInt(quotes.size)]}\"$rec. How will you respond?")
         g.press = PressQuestion(text, answers, PRESS_KIND)
-        g.addNews("🎙️ $mgr'den laf sokma!", text)
+        g.addNews(L("🎙️ $mgr'den laf sokma!", "🎙️ A dig from $mgr!"), text)
     }
 
     /** Cevabın etkisi: (moral, rakip hırsı, taraftar). */
     fun answer(g: Game, index: Int): String {
         val (morale, rival, fans, fb) = when (index) {
-            1 -> listOf(4.0, 0.03, 3.0, "Oyuncular gaza geldi, taraftar bayıldı! Ama rakip de bu sözlerle hırslandı.")
-            2 -> listOf(0.0, -0.01, -1.0, "Centilmence bir cevap. Rakip biraz rehavete kapıldı.")
-            else -> listOf(2.0, 0.0, 1.0, "Sakin ve kendinden emin. Odak maçta.")
+            1 -> listOf(4.0, 0.03, 3.0, L("Oyuncular gaza geldi, taraftar bayıldı! Ama rakip de bu sözlerle hırslandı.", "The players are fired up and the fans loved it! But the opponent is also motivated by your words."))
+            2 -> listOf(0.0, -0.01, -1.0, L("Centilmence bir cevap. Rakip biraz rehavete kapıldı.", "A gentlemanly reply. The opponent got a little complacent."))
+            else -> listOf(2.0, 0.0, 1.0, L("Sakin ve kendinden emin. Odak maçta.", "Calm and confident. The focus is on the match."))
         }
         for (p in g.squad(g.userTeamId)) p.morale = (p.morale + (morale as Double)).coerceIn(5.0, 100.0)
         g.rivalBoost = rival as Double
-        if ((fans as Double) != 0.0) Fans.change(g, fans, "Basın atışması")
+        if ((fans as Double) != 0.0) Fans.change(g, fans, L("Basın atışması", "Press war"))
         g.press = null
         return fb as String
     }

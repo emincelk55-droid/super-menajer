@@ -12,14 +12,16 @@ object StaffLogic {
     const val COACH = 1
     const val PHYSIO = 2
     const val SCOUT = 3
-    val roleNames = listOf("Yardımcı antrenör", "Antrenör", "Fizyoterapist", "Gözlemci")
+    private val roleNamesCache = LangCached { listOf(L("Yardımcı antrenör", "Assistant manager"), L("Antrenör", "Coach"), L("Fizyoterapist", "Physio"), L("Gözlemci", "Scout")) }
+    val roleNames get() = roleNamesCache.get()
     val roleIcons = listOf("🧠", "🏋️", "🩺", "🔍")
-    val roleInfo = listOf(
-        "Takım konuşmalarının ve basın toplantılarının etkisini, rakip raporunun kalitesini belirler.",
-        "Oyuncuların antrenmanda gelişme hızını belirler.",
-        "Antrenman sakatlıklarını azaltır, sakat oyuncuları daha hızlı iyileştirir.",
-        "Rapor doğruluğunu ve haftalık öneri sayısını belirler. İyi gözlemci tanımadığın oyuncuları daha net görür.",
-    )
+    private val roleInfoCache = LangCached { listOf(
+        L("Takım konuşmalarının ve basın toplantılarının etkisini, rakip raporunun kalitesini belirler.", "Determines the impact of team talks and press conferences, and the quality of opposition reports."),
+        L("Oyuncuların antrenmanda gelişme hızını belirler.", "Determines how fast players develop in training."),
+        L("Antrenman sakatlıklarını azaltır, sakat oyuncuları daha hızlı iyileştirir.", "Reduces training injuries and helps injured players recover faster."),
+        L("Rapor doğruluğunu ve haftalık öneri sayısını belirler. İyi gözlemci tanımadığın oyuncuları daha net görür.", "Determines report accuracy and the number of weekly suggestions. A good scout sees unknown players more clearly."),
+    ) }
+    val roleInfo get() = roleInfoCache.get()
 
     fun wageFor(q: Int): Long = ((1_500 * 1.17.pow(q - 1)) / 500).roundToLong() * 500
 
@@ -62,15 +64,15 @@ object StaffLogic {
         val us = g.userTeam
         val old = of(g, s.role)
         val comp = (old?.wage ?: 0L) * 4
-        if (us.budget < comp) return "Eski çalışanın tazminatı (${money(comp)}) için bütçe yetersiz."
-        if (!Economy.fitsWages(g, us, s.wage, minusWage = old?.wage ?: 0L)) return "Maaş bütçesi bu maaşı kaldırmıyor (${money(s.wage)}/hafta)."
+        if (us.budget < comp) return L("Eski çalışanın tazminatı (${money(comp)}) için bütçe yetersiz.", "Not enough budget for the former employee's compensation (${money(comp)}).")
+        if (!Economy.fitsWages(g, us, s.wage, minusWage = old?.wage ?: 0L)) return L("Maaş bütçesi bu maaşı kaldırmıyor (${money(s.wage)}/hafta).", "The wage budget can't cover this wage (${money(s.wage)}/week).")
         if (comp > 0) Economy.earn(us, Economy.STAFF, -comp)
         g.staff.removeAll { it.role == s.role }
         g.staff += s
         g.staffMarket.remove(s)
         g.addNews(
-            "Teknik ekip",
-            "${s.name} ${roleNames[s.role].lowercase()} olarak göreve başladı (kalite ${s.quality}/20)." + (old?.let { " ${it.name} ile yollar ayrıldı." } ?: ""),
+            L("Teknik ekip", "Staff"),
+            L("${s.name} ${roleNames[s.role].lowercase()} olarak göreve başladı (kalite ${s.quality}/20).", "${s.name} has started as ${roleNames[s.role].lowercase()} (quality ${s.quality}/20).") + (old?.let { L(" ${it.name} ile yollar ayrıldı.", " Parted ways with ${it.name}.") } ?: ""),
         )
         return null
     }

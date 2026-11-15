@@ -64,17 +64,17 @@ private val nations get() = listOf(
 )
 
 private val reps get() = listOf(
-    "Amatör" to L("Hiç profesyonel deneyimin yok. Yönetim seni yakından izler.", "You have no professional experience. The board will watch you closely."),
-    "Eski futbolcu" to L("Futbol camiası seni tanıyor. Dengeli bir başlangıç.", "The football world knows you. A balanced start."),
-    "Ünlü" to L("Tanınmış bir isimsin. Yönetim sana daha fazla güvenir.", "You're a well-known name. The board trusts you more."),
+    L("Amatör", "Amateur") to L("Hiç profesyonel deneyimin yok. Yönetim seni yakından izler.", "You have no professional experience. The board will watch you closely."),
+    L("Eski futbolcu", "Former player") to L("Futbol camiası seni tanıyor. Dengeli bir başlangıç.", "The football world knows you. A balanced start."),
+    L("Ünlü", "Famous") to L("Tanınmış bir isimsin. Yönetim sana daha fazla güvenir.", "You're a well-known name. The board trusts you more."),
 )
 
 /** Kulübün mali durumu (bütçeye göre). */
 fun financeText(t: Team): Pair<String, Color> = when {
-    t.budget >= 60_000_000 -> "Zengin" to Green
-    t.budget >= 15_000_000 -> "Güvende" to Green
-    t.budget >= 3_000_000 -> "Dengeli" to Gold
-    else -> "Kısıtlı" to Red
+    t.budget >= 60_000_000 -> L("Zengin", "Rich") to Green
+    t.budget >= 15_000_000 -> L("Güvende", "Secure") to Green
+    t.budget >= 3_000_000 -> L("Dengeli", "Balanced") to Gold
+    else -> L("Kısıtlı", "Tight") to Red
 }
 
 fun repStars(rep: Int): Int = when { rep >= 84 -> 5; rep >= 72 -> 4; rep >= 63 -> 3; rep >= 52 -> 2; else -> 1 }
@@ -255,7 +255,7 @@ private fun TeamStep(
                     Tile(country == c, Modifier.width(78.dp).height(54.dp), onClick = { onCountry(c) }) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(Generator.flag(Leagues.flagOf(c)), fontSize = 20.sp)
-                            Text(c, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(Leagues.countryName(c), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }

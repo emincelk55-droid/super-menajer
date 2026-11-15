@@ -6,16 +6,17 @@ import com.supermenajer.game.model.Game
 object Missions {
     class M(val id: String, val title: String, val target: Int, val xp: Int)
 
-    val pool = listOf(
-        M("streak3", "3 maç üst üste kazan", 3, 60),
-        M("bigwin", "Bir maçı 3 farkla kazan", 1, 40),
-        M("clean3", "3 maçı gol yemeden bitir", 3, 50),
-        M("youth5", "21 yaş altı oyuncuları 5 maç ilk 11'de oynat", 5, 50),
-        M("goals20", "Sezonda 20 gol at", 20, 50),
-        M("sign1", "Bir transfer yap", 1, 30),
-        M("derby", "Bir derbi kazan", 1, 60),
-        M("top3", "Lig sıralamasında ilk 3'e gir", 1, 80),
-    )
+    private val poolCache = LangCached { listOf(
+        M("streak3", L("3 maç üst üste kazan", "Win 3 matches in a row"), 3, 60),
+        M("bigwin", L("Bir maçı 3 farkla kazan", "Win a match by 3 goals"), 1, 40),
+        M("clean3", L("3 maçı gol yemeden bitir", "Keep 3 clean sheets"), 3, 50),
+        M("youth5", L("21 yaş altı oyuncuları 5 maç ilk 11'de oynat", "Start under-21 players in 5 matches"), 5, 50),
+        M("goals20", L("Sezonda 20 gol at", "Score 20 goals in the season"), 20, 50),
+        M("sign1", L("Bir transfer yap", "Make a signing"), 1, 30),
+        M("derby", L("Bir derbi kazan", "Win a derby"), 1, 60),
+        M("top3", L("Lig sıralamasında ilk 3'e gir", "Reach the top 3 in the league"), 1, 80),
+    ) }
+    val pool get() = poolCache.get()
 
     fun ensure(g: Game, rnd: kotlin.random.Random = kotlin.random.Random.Default) {
         if (g.missionSeason == g.season && g.missions.isNotEmpty()) return
@@ -43,8 +44,8 @@ object Missions {
                 Perks.addXp(g, xp)
                 val prize = 250_000L * (xp / 20)
                 Economy.earn(g.userTeam, Economy.BOARD, prize)
-                g.addNews("🎯 Görev tamamlandı: ${c[1]}", "+$xp XP ve yönetimden ${money(prize)} ödül!")
-                Social.post(g, "Görev başarıyla tamamlandı: ${c[1]}! 👏")
+                g.addNews(L("🎯 Görev tamamlandı: ${c[1]}", "🎯 Task complete: ${c[1]}"), L("+$xp XP ve yönetimden ${money(prize)} ödül!", "+$xp XP and a ${money(prize)} reward from the board!"))
+                Social.post(g, L("Görev başarıyla tamamlandı: ${c[1]}! 👏", "Task completed: ${c[1]}! 👏"))
             }
             c.joinToString("|")
         }.toMutableList()

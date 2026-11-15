@@ -13,9 +13,9 @@ object Reserves {
 
     /** A2'ye gönderilebilir mi (kadroda en az 18 A takım oyuncusu kalmalı). */
     fun canSend(g: Game, p: Player): String? = when {
-        p.teamId != g.userTeamId -> "Oyuncu takımında değil."
-        p.reserve -> "Zaten A2 takımında."
-        g.squad(g.userTeamId).count { !it.reserve } <= 18 -> "A takımda en az 18 oyuncu kalmalı."
+        p.teamId != g.userTeamId -> L("Oyuncu takımında değil.", "The player isn't in your team.")
+        p.reserve -> L("Zaten A2 takımında.", "Already in the B team.")
+        g.squad(g.userTeamId).count { !it.reserve } <= 18 -> L("A takımda en az 18 oyuncu kalmalı.", "At least 18 players must stay in the first team.")
         else -> null
     }
 

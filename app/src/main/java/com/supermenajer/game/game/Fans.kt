@@ -14,12 +14,12 @@ import kotlin.random.Random
  */
 object Fans {
     fun mood(v: Double): String = when {
-        v >= 85 -> "🔥 Coşkulu"
-        v >= 70 -> "😃 Mutlu"
-        v >= 55 -> "🙂 Memnun"
-        v >= 40 -> "😐 Kararsız"
-        v >= 25 -> "😠 Huzursuz"
-        else -> "🤬 Öfkeli"
+        v >= 85 -> L("🔥 Coşkulu", "🔥 Ecstatic")
+        v >= 70 -> L("😃 Mutlu", "😃 Happy")
+        v >= 55 -> L("🙂 Memnun", "🙂 Content")
+        v >= 40 -> L("😐 Kararsız", "😐 Undecided")
+        v >= 25 -> L("😠 Huzursuz", "😠 Restless")
+        else -> L("🤬 Öfkeli", "🤬 Furious")
     }
 
     fun change(g: Game, delta: Double, reason: String) {
@@ -63,20 +63,20 @@ object Fans {
                 val upset = if (diff < -3) 2.0 else 0.0
                 val heavy = if (gd >= 3) 2.0 else 0.0
                 (3.0 + upset + heavy) * m to when {
-                    derby -> "Derbi zaferi: ${opp.name}"
-                    upset > 0 -> "Sürpriz galibiyet: ${opp.name}"
-                    gd >= 3 -> "Farklı galibiyet: ${opp.name}"
-                    else -> "Galibiyet: ${opp.name}"
+                    derby -> L("Derbi zaferi: ${opp.name}", "Derby win: ${opp.name}")
+                    upset > 0 -> L("Sürpriz galibiyet: ${opp.name}", "Upset win: ${opp.name}")
+                    gd >= 3 -> L("Farklı galibiyet: ${opp.name}", "Big win: ${opp.name}")
+                    else -> L("Galibiyet: ${opp.name}", "Win: ${opp.name}")
                 }
             }
-            gd == 0 -> (if (diff > 3) -1.5 else 0.5) * m to "Beraberlik: ${opp.name}"
+            gd == 0 -> (if (diff > 3) -1.5 else 0.5) * m to L("Beraberlik: ${opp.name}", "Draw: ${opp.name}")
             else -> {
                 val heavy = if (gd <= -3) 3.0 else 0.0
                 val shock = if (diff > 3) 1.5 else 0.0
                 -(3.0 + heavy + shock) * m to when {
-                    derby -> "Derbi yenilgisi: ${opp.name}"
-                    gd <= -3 -> "Ağır yenilgi: ${opp.name}"
-                    else -> "Yenilgi: ${opp.name}"
+                    derby -> L("Derbi yenilgisi: ${opp.name}", "Derby defeat: ${opp.name}")
+                    gd <= -3 -> L("Ağır yenilgi: ${opp.name}", "Heavy defeat: ${opp.name}")
+                    else -> L("Yenilgi: ${opp.name}", "Defeat: ${opp.name}")
                 }
             }
         }
@@ -93,28 +93,28 @@ object Fans {
         g.confidence = (g.confidence + (g.fans - 50) / 50.0 * 0.4).coerceIn(0.0, 100.0)
         if (g.fans < 22 && rnd.nextDouble() < 0.25) {
             g.confidence = (g.confidence - 2).coerceAtLeast(0.0)
-            g.addNews("📢 Taraftar protestosu", "${us.name} taraftarları stat önünde yönetimi ve teknik direktörü protesto etti. Yönetim tedirgin!")
+            g.addNews(L("📢 Taraftar protestosu", "📢 Fan protest"), L("${us.name} taraftarları stat önünde yönetimi ve teknik direktörü protesto etti. Yönetim tedirgin!", "${us.name} fans protested against the board and the manager outside the stadium. The board is uneasy!"))
         } else if (g.fans >= 88 && rnd.nextDouble() < 0.15) {
-            g.addNews("🎉 Taraftar coştu", "${us.name} taraftarları şehirde konvoy yaptı! Tribünler tıklım tıklım, sponsorlar da memnun.")
+            g.addNews(L("🎉 Taraftar coştu", "🎉 The fans are ecstatic"), L("${us.name} taraftarları şehirde konvoy yaptı! Tribünler tıklım tıklım, sponsorlar da memnun.", "${us.name} fans held a convoy through the city! The stands are packed and the sponsors are pleased."))
         }
     }
 
     /** Transferler: yıldız satışı taraftarı kızdırır, büyük transfer coşturur. */
     fun sold(g: Game, p: Player) {
         val top = g.squad(g.userTeamId).plus(p).sortedByDescending { it.overall }.take(3)
-        if (p in top) change(g, -6.0, "Yıldız satışı: ${p.name}")
+        if (p in top) change(g, -6.0, L("Yıldız satışı: ${p.name}", "Star sale: ${p.name}"))
     }
 
     fun bought(g: Game, p: Player) {
         val str = Lineups.strength(g, g.userTeam)
-        if (p.overall >= str + 2) change(g, 4.0 + ((p.overall - str - 2) * 0.5).coerceAtMost(4.0), "Yıldız transferi: ${p.name}")
+        if (p.overall >= str + 2) change(g, 4.0 + ((p.overall - str - 2) * 0.5).coerceAtMost(4.0), L("Yıldız transferi: ${p.name}", "Star signing: ${p.name}"))
     }
 
     /** Sezon sonu: kupalar, hedef, düşme/yükselme. */
     fun seasonEnd(g: Game, titles: Int, metObjective: Boolean, missedBadly: Boolean) {
-        if (titles > 0) change(g, 10.0 * titles, "Kupa sevinci ($titles)")
-        if (g.userTeamId in g.euroQualified) change(g, 5.0, "Avrupa bileti")
-        if (metObjective) change(g, 5.0, "Sezon hedefi tuttu") else if (missedBadly) change(g, -8.0, "Hayal kırıklığı yaratan sezon")
+        if (titles > 0) change(g, 10.0 * titles, L("Kupa sevinci ($titles)", "Trophy celebrations ($titles)"))
+        if (g.userTeamId in g.euroQualified) change(g, 5.0, L("Avrupa bileti", "European qualification"))
+        if (metObjective) change(g, 5.0, L("Sezon hedefi tuttu", "Season objective achieved")) else if (missedBadly) change(g, -8.0, L("Hayal kırıklığı yaratan sezon", "A disappointing season"))
     }
 
     fun reset(g: Game) {

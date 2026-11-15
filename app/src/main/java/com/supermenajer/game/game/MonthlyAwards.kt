@@ -12,7 +12,8 @@ object MonthlyAwards {
     const val YOUNG = "genç"
     const val MANAGER = "menajer"
 
-    private val months = listOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
+    private val monthsCache = LangCached { listOf(L("Ocak", "January"), L("Şubat", "February"), L("Mart", "March"), L("Nisan", "April"), L("Mayıs", "May"), L("Haziran", "June"), L("Temmuz", "July"), L("Ağustos", "August"), L("Eylül", "September"), L("Ekim", "October"), L("Kasım", "November"), L("Aralık", "December")) }
+    private val months get() = monthsCache.get()
 
     class Award(val season: Int, val month: String, val kind: String, val id: Int, val text: String)
 
@@ -54,10 +55,10 @@ object MonthlyAwards {
         if (rows.isEmpty()) return
         val out = mutableListOf<Award>()
         rows.maxByOrNull { it.rating + it.goals * 0.08 + it.assists * 0.05 }?.let { r ->
-            out += Award(g.season, monthName, PLAYER, r.id, "${r.apps} maç · ${r.goals} gol · ${r.assists} asist · %.2f ort.".format(r.rating))
+            out += Award(g.season, monthName, PLAYER, r.id, L("${r.apps} maç · ${r.goals} gol · ${r.assists} asist · %.2f ort.", "${r.apps} apps · ${r.goals} goals · ${r.assists} assists · %.2f avg.").format(r.rating))
         }
         rows.filter { (g.player(it.id)?.age ?: 99) <= 21 }.maxByOrNull { it.rating + it.goals * 0.08 }?.let { r ->
-            out += Award(g.season, monthName, YOUNG, r.id, "${r.apps} maç · ${r.goals} gol · %.2f ort.".format(r.rating))
+            out += Award(g.season, monthName, YOUNG, r.id, L("${r.apps} maç · ${r.goals} gol · %.2f ort.", "${r.apps} apps · ${r.goals} goals · %.2f avg.").format(r.rating))
         }
         // Ayın menajeri: o ay ligde en çok puan toplayan takım
         val pts = HashMap<Int, Int>()
@@ -70,7 +71,7 @@ object MonthlyAwards {
         }
         pts.maxByOrNull { it.value }?.let { (tid, p) ->
             val mgr = if (tid == g.userTeamId) g.managerName else g.managers[tid] ?: "-"
-            out += Award(g.season, monthName, MANAGER, tid, "$mgr · ${g.team(tid).name} · ayda $p puan")
+            out += Award(g.season, monthName, MANAGER, tid, L("$mgr · ${g.team(tid).name} · ayda $p puan", "$mgr · ${g.team(tid).name} · $p points this month"))
         }
         for (a in out) {
             g.monthAwards += listOf(a.season, a.month, a.kind, a.id, a.text).joinToString("|") { it.toString().replace("|", " ") }
@@ -79,10 +80,10 @@ object MonthlyAwards {
             if (a.kind == MANAGER) {
                 g.managerRep = (g.managerRep + 2).coerceAtMost(100)
                 g.confidence = (g.confidence + 3).coerceAtMost(100.0)
-                g.addNews("🏅 $monthName ayının menajeri: ${g.managerName}!", "Ligde ayın en başarılı teknik direktörü seçildin (${a.text}). Yönetim ve taraftar çok memnun.")
+                g.addNews(L("🏅 $monthName ayının menajeri: ${g.managerName}!", "🏅 Manager of the Month for $monthName: ${g.managerName}!"), L("Ligde ayın en başarılı teknik direktörü seçildin (${a.text}). Yönetim ve taraftar çok memnun.", "You were named the league's most successful manager of the month (${a.text}). The board and fans are delighted."))
             } else g.player(a.id)?.let { p ->
                 p.morale = (p.morale + 8).coerceAtMost(100.0)
-                g.addNews("🏅 $monthName ayının ${if (a.kind == PLAYER) "oyuncusu" else "genç oyuncusu"}: ${p.name}", "${a.text}. Tebrikler!")
+                g.addNews(L("🏅 $monthName ayının ${if (a.kind == PLAYER) "oyuncusu" else "genç oyuncusu"}: ${p.name}", "🏅 ${if (a.kind == PLAYER) "Player" else "Young Player"} of the Month for $monthName: ${p.name}"), L("${a.text}. Tebrikler!", "${a.text}. Congratulations!"))
             }
         }
         while (g.monthAwards.size > 60) g.monthAwards.removeAt(0)

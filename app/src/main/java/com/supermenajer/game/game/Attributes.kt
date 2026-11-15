@@ -33,56 +33,56 @@ object Attributes {
         val def = p.defending.toDouble()
         val phy = p.physical.toDouble()
         val mental = Group(
-            "ZİHİNSEL",
+            L("ZİHİNSEL", "MENTAL"),
             listOf(
-                a("Agresiflik", phy * 0.5 + def * 0.3 + 10 + if (trait == Traits.HOTHEAD) 18 else 0),
-                a("Karar Alma", (pas + dri + def) / 3 + exp),
-                a("Yaratıcılık", pas * 0.6 + dri * 0.4),
-                a("Liderlik", 30 + exp * 2 + if (trait == Traits.LEADER) 35 else 0),
-                a("Pozisyon Alma", if (p.pos == Pos.FW) sho * 0.8 + exp else def * 0.8 + exp + 5),
-                a("Soğukkanlılık", sho * 0.5 + 30 + exp + if (trait == Traits.BIG_GAME) 12 else 0),
-                a("Takım Oyunu", pas * 0.5 + def * 0.3 + 12 + if (trait == Traits.PRO || trait == Traits.LOYAL) 10 else 0),
-                a("Çalışkanlık", phy * 0.4 + 35 + when (trait) { Traits.PRO -> 18; Traits.LAZY -> -18; else -> 0 }),
+                a(L("Agresiflik", "Aggression"), phy * 0.5 + def * 0.3 + 10 + if (trait == Traits.HOTHEAD) 18 else 0),
+                a(L("Karar Alma", "Decisions"), (pas + dri + def) / 3 + exp),
+                a(L("Yaratıcılık", "Creativity"), pas * 0.6 + dri * 0.4),
+                a(L("Liderlik", "Leadership"), 30 + exp * 2 + if (trait == Traits.LEADER) 35 else 0),
+                a(L("Pozisyon Alma", "Positioning"), if (p.pos == Pos.FW) sho * 0.8 + exp else def * 0.8 + exp + 5),
+                a(L("Soğukkanlılık", "Composure"), sho * 0.5 + 30 + exp + if (trait == Traits.BIG_GAME) 12 else 0),
+                a(L("Takım Oyunu", "Teamwork"), pas * 0.5 + def * 0.3 + 12 + if (trait == Traits.PRO || trait == Traits.LOYAL) 10 else 0),
+                a(L("Çalışkanlık", "Work Rate"), phy * 0.4 + 35 + when (trait) { Traits.PRO -> 18; Traits.LAZY -> -18; else -> 0 }),
             ),
         )
         val physical = Group(
-            "FİZİKSEL",
+            L("FİZİKSEL", "PHYSICAL"),
             listOf(
-                a("Hız", pace),
-                a("Hızlanma", pace * 0.8 + dri * 0.2),
-                a("Çeviklik", dri * 0.5 + pace * 0.5),
-                a("Dayanıklılık", phy * 0.7 + 22 - (p.age - 28).coerceAtLeast(0) * 2.0),
-                a("Güç", phy),
-                a("Zıplama", phy * 0.8 + 8),
+                a(L("Hız", "Pace"), pace),
+                a(L("Hızlanma", "Acceleration"), pace * 0.8 + dri * 0.2),
+                a(L("Çeviklik", "Agility"), dri * 0.5 + pace * 0.5),
+                a(L("Dayanıklılık", "Stamina"), phy * 0.7 + 22 - (p.age - 28).coerceAtLeast(0) * 2.0),
+                a(L("Güç", "Strength"), phy),
+                a(L("Zıplama", "Jumping"), phy * 0.8 + 8),
             ),
         )
         val tech = if (p.pos == Pos.GK) {
             val gk = p.goalkeeping.toDouble()
             Group(
-                "KALECİLİK",
+                L("KALECİLİK", "GOALKEEPING"),
                 listOf(
-                    a("Refleks", gk),
-                    a("Bire Bir", gk * 0.8 + pace * 0.2),
-                    a("Hava Hakimiyeti", gk * 0.6 + phy * 0.4),
-                    a("Elle Oyun", gk * 0.9),
-                    a("Ayakla Oyun", pas * 0.7 + 10),
-                    a("Degaj", pas * 0.5 + phy * 0.3 + 15),
-                    a("İletişim", gk * 0.5 + exp * 2 + 25),
+                    a(L("Refleks", "Reflexes"), gk),
+                    a(L("Bire Bir", "One on Ones"), gk * 0.8 + pace * 0.2),
+                    a(L("Hava Hakimiyeti", "Aerial Reach"), gk * 0.6 + phy * 0.4),
+                    a(L("Elle Oyun", "Handling"), gk * 0.9),
+                    a(L("Ayakla Oyun", "Kicking"), pas * 0.7 + 10),
+                    a(L("Degaj", "Throwing"), pas * 0.5 + phy * 0.3 + 15),
+                    a(L("İletişim", "Communication"), gk * 0.5 + exp * 2 + 25),
                 ),
             )
         } else {
             Group(
-                "TEKNİK",
+                L("TEKNİK", "TECHNICAL"),
                 listOf(
-                    a("Bitiricilik", sho),
-                    a("Uzun Şut", sho * 0.7 + pas * 0.3),
-                    a("Pas", pas),
-                    a("Orta Yapma", pas * 0.6 + dri * 0.4 - (if (p.pos == Pos.DF && Positions.det(p) == Positions.Det.STP) 15 else 0)),
-                    a("Top Sürme", dri),
-                    a("İlk Kontrol", dri * 0.5 + pas * 0.5),
-                    a("Top Kapma", def),
-                    a("Markaj", def * 0.8 + phy * 0.2),
-                    a("Kafa", phy * 0.6 + def * 0.2 + sho * 0.2),
+                    a(L("Bitiricilik", "Finishing"), sho),
+                    a(L("Uzun Şut", "Long Shots"), sho * 0.7 + pas * 0.3),
+                    a(L("Pas", "Passing"), pas),
+                    a(L("Orta Yapma", "Crossing"), pas * 0.6 + dri * 0.4 - (if (p.pos == Pos.DF && Positions.det(p) == Positions.Det.STP) 15 else 0)),
+                    a(L("Top Sürme", "Dribbling"), dri),
+                    a(L("İlk Kontrol", "First Touch"), dri * 0.5 + pas * 0.5),
+                    a(L("Top Kapma", "Tackling"), def),
+                    a(L("Markaj", "Marking"), def * 0.8 + phy * 0.2),
+                    a(L("Kafa", "Heading"), phy * 0.6 + def * 0.2 + sho * 0.2),
                 ),
             )
         }

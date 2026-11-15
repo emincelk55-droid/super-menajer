@@ -4,12 +4,14 @@ import com.supermenajer.game.model.Game
 
 /** Zorluk seviyesi: 0 Kolay, 1 Normal, 2 Zor. Yeni kariyerde seçilir. */
 object Difficulty {
-    val names = listOf("Kolay", "Normal", "Zor")
-    val descriptions = listOf(
-        "Daha fazla bütçe, sabırlı yönetim, maçlarda küçük avantaj.",
-        "Dengeli deneyim.",
-        "Kısıtlı bütçe, sabırsız yönetim, rakipler daha zorlu.",
-    )
+    private val namesCache = LangCached { listOf(L("Kolay", "Easy"), L("Normal", "Normal"), L("Zor", "Hard")) }
+    val names get() = namesCache.get()
+    private val descriptionsCache = LangCached { listOf(
+        L("Daha fazla bütçe, sabırlı yönetim, maçlarda küçük avantaj.", "More budget, a patient board, a small edge in matches."),
+        L("Dengeli deneyim.", "A balanced experience."),
+        L("Kısıtlı bütçe, sabırsız yönetim, rakipler daha zorlu.", "Tight budget, an impatient board, tougher opponents."),
+    ) }
+    val descriptions get() = descriptionsCache.get()
 
     /** Olumsuz sonuçlarda güven kaybı çarpanı. */
     fun patience(g: Game): Double = when (g.difficulty) { 0 -> 0.6; 2 -> 1.35; else -> 1.0 }

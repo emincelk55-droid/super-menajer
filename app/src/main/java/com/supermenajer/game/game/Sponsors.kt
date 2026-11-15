@@ -21,14 +21,17 @@ object Sponsors {
     const val SHIRT = 0
     const val STADIUM = 1
     const val KIT = 2
-    val slotNames = listOf("Forma sponsoru", "Stadyum isim hakkı", "Malzeme sponsoru")
+    private val slotNamesCache = LangCached { listOf(L("Forma sponsoru", "Shirt sponsor"), L("Stadyum isim hakkı", "Stadium naming rights"), L("Malzeme sponsoru", "Kit supplier")) }
+    val slotNames get() = slotNamesCache.get()
     val slotIcons = listOf("👕", "🏟️", "👟")
-    val styleNames = listOf("Garantili", "Dengeli", "Performans")
-    val styleInfo = listOf(
-        "Yüksek sabit ödeme, prim yok. Uzun ve güvenli.",
-        "Orta sabit ödeme, galibiyet ve kupa primi.",
-        "Düşük sabit ödeme, yüksek galibiyet ve kupa primi. Kazanırsan çok kazanırsın!",
-    )
+    private val styleNamesCache = LangCached { listOf(L("Garantili", "Guaranteed"), L("Dengeli", "Balanced"), L("Performans", "Performance")) }
+    val styleNames get() = styleNamesCache.get()
+    private val styleInfoCache = LangCached { listOf(
+        L("Yüksek sabit ödeme, prim yok. Uzun ve güvenli.", "High fixed payment, no bonuses. Long and safe."),
+        L("Orta sabit ödeme, galibiyet ve kupa primi.", "Medium fixed payment, win and cup bonuses."),
+        L("Düşük sabit ödeme, yüksek galibiyet ve kupa primi. Kazanırsan çok kazanırsın!", "Low fixed payment, high win and cup bonuses. Win and you earn big!"),
+    ) }
+    val styleInfo get() = styleInfoCache.get()
     private val slotBase = listOf(2_500_000.0, 1_500_000.0, 1_000_000.0)
 
     /** Gerçek markalara benzer (birebir aynı olmayan) sponsor isimleri. */
@@ -98,25 +101,25 @@ object Sponsors {
             }
             any = true
         }
-        if (any) g.addNews("💼 Sponsor teklifleri", "Boş sponsorluk alanların için yeni teklifler geldi. Kulüp → Sponsorlar'dan değerlendirebilirsin.")
+        if (any) g.addNews(L("💼 Sponsor teklifleri", "💼 Sponsor offers"), L("Boş sponsorluk alanların için yeni teklifler geldi. Kulüp → Sponsorlar'dan değerlendirebilirsin.", "New offers have arrived for your empty sponsorship slots. You can review them in Club → Sponsors."))
     }
 
-    fun defaultStadiumName(t: Team) = t.name.substringBefore(" ") + " Arena"
+    fun defaultStadiumName(t: Team) = t.name.substringBefore(" ") + L(" Arena", " Arena")
 
     /** Teklifi imzalar. Hata mesajı döner. */
     fun sign(g: Game, offer: Sponsor): String? {
-        if (offer !in g.sponsorOffers) return "Bu teklif artık geçerli değil."
-        if (current(g, offer.slot) != null) return "Bu alanda zaten bir sponsorun var."
+        if (offer !in g.sponsorOffers) return L("Bu teklif artık geçerli değil.", "This offer is no longer valid.")
+        if (current(g, offer.slot) != null) return L("Bu alanda zaten bir sponsorun var.", "You already have a sponsor in this slot.")
         g.sponsors += offer
         g.sponsorOffers.removeAll { it.slot == offer.slot }
         val us = g.userTeam
-        if (offer.slot == STADIUM) us.stadiumName = "${offer.name} Arena"
+        if (offer.slot == STADIUM) us.stadiumName = L("${offer.name} Arena", "${offer.name} Arena")
         if (g.sponsors.size >= 3) Career.unlock(g, "sponsors")
         g.addNews(
-            "🤝 Sponsorluk anlaşması",
-            "${offer.name} ile ${offer.yearsLeft} sezonluk ${slotNames[offer.slot].lowercase()} anlaşması imzalandı. Sezonluk ${money(offer.base)}" +
-                (if (offer.winBonus > 0) ", galibiyet başına ${money(offer.winBonus)}" else "") +
-                (if (offer.titleBonus > 0) ", kupa başına ${money(offer.titleBonus)}" else "") + ".",
+            L("🤝 Sponsorluk anlaşması", "🤝 Sponsorship deal"),
+            L("${offer.name} ile ${offer.yearsLeft} sezonluk ${slotNames[offer.slot].lowercase()} anlaşması imzalandı. Sezonluk ${money(offer.base)}", "A ${offer.yearsLeft}-season ${slotNames[offer.slot].lowercase()} deal has been signed with ${offer.name}. ${money(offer.base)} per season") +
+                (if (offer.winBonus > 0) L(", galibiyet başına ${money(offer.winBonus)}", ", ${money(offer.winBonus)} per win") else "") +
+                (if (offer.titleBonus > 0) L(", kupa başına ${money(offer.titleBonus)}", ", ${money(offer.titleBonus)} per trophy") else "") + ".",
         )
         return null
     }
@@ -146,7 +149,7 @@ object Sponsors {
         val bonus = g.sponsors.sumOf { it.titleBonus } * titles
         if (bonus <= 0) return
         Economy.earn(g.userTeam, Economy.SPONSOR, bonus)
-        g.addNews("🏆 Sponsor primi", "Sponsorlarımız $titles kupa için toplam ${money(bonus)} prim ödedi!")
+        g.addNews(L("🏆 Sponsor primi", "🏆 Sponsor bonus"), L("Sponsorlarımız $titles kupa için toplam ${money(bonus)} prim ödedi!", "Our sponsors paid a total bonus of ${money(bonus)} for $titles trophies!"))
     }
 
     /** Yeni sezon: sözleşme süreleri azalır, bitenler ayrılır. */
@@ -155,7 +158,7 @@ object Sponsors {
         if (ended.isEmpty()) return
         g.sponsors.removeAll(ended.toSet())
         if (ended.any { it.slot == STADIUM }) g.userTeam.stadiumName = defaultStadiumName(g.userTeam)
-        g.addNews("Sponsorluk sona erdi", "${ended.joinToString { it.name }} ile sözleşme bitti. Yeni teklifler sezon başında geliyor.")
+        g.addNews(L("Sponsorluk sona erdi", "Sponsorship ended"), L("${ended.joinToString { it.name }} ile sözleşme bitti. Yeni teklifler sezon başında geliyor.", "The contract with ${ended.joinToString { it.name }} has ended. New offers arrive at the start of the season."))
     }
 
     /** Takım değişince sözleşmeler eski kulüpte kalır. */

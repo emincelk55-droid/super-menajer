@@ -173,6 +173,7 @@ private fun SettingsDialog() {
                             )
                         }
                     }
+                    Text(L("Bazı adlar (ligler, roller) oyun yeniden açılınca değişir. Kayıttaki eski haberler yazıldıkları dilde kalır.", "Some names (leagues, roles) change after restarting the game. Old news in your save stays in the language it was written in."), color = TextDim, fontSize = 10.sp, lineHeight = 13.sp)
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = { GameRepo.save(force = true); saved = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (saved) L("✓ Kaydedildi", "✓ Saved") else L("💾 Oyunu kaydet", "💾 Save game"))
@@ -228,10 +229,10 @@ private fun ClubStatusCard(g: Game) {
     val pos = g.position(t.id)
     val target = Season.objectiveTarget(t.expected)
     val (status, col) = when {
-        t.played < 4 -> "Sezon yeni başladı" to TextDim
-        pos <= target -> "Hedef yolunda ✓" to Green
-        pos <= target + 3 -> "Hedefin biraz gerisinde" to Gold
-        else -> "Yönetim endişeli!" to Red
+        t.played < 4 -> L("Sezon yeni başladı", "Season just started") to TextDim
+        pos <= target -> L("Hedef yolunda ✓", "On track ✓") to Green
+        pos <= target + 3 -> L("Hedefin biraz gerisinde", "Slightly behind target") to Gold
+        else -> L("Yönetim endişeli!", "The board is worried!") to Red
     }
     SectionCard(L("Kulübün durumu", "Club status")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -498,10 +499,10 @@ internal fun SeasonEndCard(g: Game) {
         if (lg != null && lg.tier == 1 && Leagues.second(lg.country) != null && pos >= 16) Text(L("⬇️ Küme düştük...", "⬇️ We were relegated..."), color = Red, fontWeight = FontWeight.Bold)
         if (lg != null && lg.tier == 2 && pos <= 3) Text(L("⬆️ ${Leagues.top(lg.country).name.uppercase()}'NE YÜKSELDİK!", "⬆️ PROMOTED TO ${Leagues.top(lg.country).name.uppercase()}!"), color = Gold, fontWeight = FontWeight.Bold)
         val (msg, col) = when {
-            pos == 1 -> "Efsane sezon! Taraftar seni omuzlarda taşıyor! 🎉" to Gold
-            pos <= target -> "Yönetim hedefi (${Season.objectiveText(t)}) tuttu. Başkan çok memnun! 👏" to Green
-            pos <= target + 3 -> "Hedefin biraz gerisinde kaldık. Yönetim yeni sezonda daha fazlasını bekliyor." to Gold
-            else -> "Hedefin çok gerisinde kaldık. Yönetim sabırsızlanıyor... 😬" to Red
+            pos == 1 -> L("Efsane sezon! Taraftar seni omuzlarda taşıyor! 🎉", "A legendary season! The fans are carrying you on their shoulders! 🎉") to Gold
+            pos <= target -> L("Yönetim hedefi (${Season.objectiveText(t)}) tuttu. Başkan çok memnun! 👏", "Board objective (${Season.objectiveText(t)}) achieved. The chairman is delighted! 👏") to Green
+            pos <= target + 3 -> L("Hedefin biraz gerisinde kaldık. Yönetim yeni sezonda daha fazlasını bekliyor.", "We fell slightly short of the target. The board expects more next season.") to Gold
+            else -> L("Hedefin çok gerisinde kaldık. Yönetim sabırsızlanıyor... 😬", "We fell well short of the target. The board is growing impatient... 😬") to Red
         }
         Spacer(Modifier.height(6.dp))
         Text(msg, color = col)
@@ -569,10 +570,10 @@ fun BoardCard(g: Game) {
     val pos = g.position(t.id)
     val target = Season.objectiveTarget(t.expected)
     val (status, col) = when {
-        t.played == 0 -> "Sezon başlamadı" to TextDim
-        pos <= target -> "Hedef yolunda ✓" to Green
-        pos <= target + 3 -> "Hedefin biraz gerisinde" to Gold
-        else -> "Yönetim endişeli!" to Red
+        t.played == 0 -> L("Sezon başlamadı", "Season not started") to TextDim
+        pos <= target -> L("Hedef yolunda ✓", "On track ✓") to Green
+        pos <= target + 3 -> L("Hedefin biraz gerisinde", "Slightly behind target") to Gold
+        else -> L("Yönetim endişeli!", "The board is worried!") to Red
     }
     SectionCard(L("Yönetim", "Board")) {
         Row(verticalAlignment = Alignment.CenterVertically) {

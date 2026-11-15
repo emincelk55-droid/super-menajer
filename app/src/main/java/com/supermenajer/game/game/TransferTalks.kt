@@ -18,7 +18,8 @@ object TransferTalks {
     const val DONE = 2
     const val FAILED = 3
 
-    val roleNames = listOf("Yıldız oyuncu", "İlk 11 oyuncusu", "Rotasyon", "Yedek", "Genç yetenek")
+    private val roleNamesCache = LangCached { listOf(L("Yıldız oyuncu", "Star player"), L("İlk 11 oyuncusu", "First-team regular"), L("Rotasyon", "Rotation"), L("Yedek", "Backup"), L("Genç yetenek", "Young talent")) }
+    val roleNames get() = roleNamesCache.get()
 
     class Line(val ours: Boolean, val who: String, val text: String)
 
@@ -43,7 +44,7 @@ object TransferTalks {
     private fun r25k(v: Double) = (v / 25_000).roundToLong().coerceAtLeast(1) * 25_000
     private fun r500(v: Double) = (v / 500).roundToLong().coerceAtLeast(1) * 500
 
-    fun sellerName(g: Game, p: Player) = if (p.teamId >= 0) g.team(p.teamId).name else "Serbest"
+    fun sellerName(g: Game, p: Player) = if (p.teamId >= 0) g.team(p.teamId).name else L("Serbest", "Free agent")
 
     /** Oyuncunun takımımızdaki beklenen rolü. */
     fun expectedRole(g: Game, p: Player): Int {
@@ -73,18 +74,18 @@ object TransferTalks {
         if (p.teamId < 0) {
             n.stage = AGENT
             n.bonus = r25k(p.demandWage * 6.0)
-            n.log += Line(false, "Menajer", "Merhaba hocam. ${p.name} serbest ve birkaç kulüpten ilgi görüyor. Haftalık ${money(p.demandWage)} civarı ve iyi bir imza parası bekliyoruz.")
+            n.log += Line(false, L("Menajer", "Manager"), L("Merhaba hocam. ${p.name} serbest ve birkaç kulüpten ilgi görüyor. Haftalık ${money(p.demandWage)} civarı ve iyi bir imza parası bekliyoruz.", "Hello boss. ${p.name} is a free agent and has interest from several clubs. We're looking for around ${money(p.demandWage)} a week and a good signing bonus."))
             return n
         }
         val seller = g.team(p.teamId)
         n.fee = r25k(asking * 0.85)
         val key = p.id in seller.lineup
         n.log += Line(
-            false, "${seller.name} sportif direktörü",
+            false, L("${seller.name} sportif direktörü", "${seller.name} sporting director"),
             when {
-                p.listed -> "${p.name} satış listemizde. Makul bir teklif gelirse görüşürüz."
-                key -> "${p.name} takımımızın önemli bir parçası. Onu bırakmak için çok iyi bir teklif görmemiz gerek."
-                else -> "${p.name} için teklifinizi dinliyoruz. Rakamı duyalım."
+                p.listed -> L("${p.name} satış listemizde. Makul bir teklif gelirse görüşürüz.", "${p.name} is on our transfer list. If a reasonable offer comes, we'll talk.")
+                key -> L("${p.name} takımımızın önemli bir parçası. Onu bırakmak için çok iyi bir teklif görmemiz gerek.", "${p.name} is an important part of our team. We'd need to see a very good offer to let him go.")
+                else -> L("${p.name} için teklifinizi dinliyoruz. Rakamı duyalım.", "We're listening to your offer for ${p.name}. Let's hear the figure.")
             },
         )
         return n
@@ -95,31 +96,31 @@ object TransferTalks {
         val p = n.player
         if (p.teamId < 0) return
         val seller = g.team(p.teamId)
-        val dir = "${seller.name} sportif direktörü"
+        val dir = L("${seller.name} sportif direktörü", "${seller.name} sporting director")
         val us = g.userTeam
         if (n.loan) {
-            n.log += Line(true, "Sen", "${p.name}'i sezon sonuna kadar kiralamak istiyoruz. Maaşının tamamını biz ödeyeceğiz.")
+            n.log += Line(true, L("Sen", "You"), L("${p.name}'i sezon sonuna kadar kiralamak istiyoruz. Maaşının tamamını biz ödeyeceğiz.", "We'd like to take ${p.name} on loan until the end of the season. We'll pay all of his wages."))
             val ok = p.id !in seller.lineup && p.age <= 25 && g.squad(seller.id).size > 20
             if (ok) {
                 n.agreedFee = 0
                 n.stage = AGENT
-                n.log += Line(false, dir, "Oynama süresi bulacaksa olur. Kiralamayı kabul ediyoruz, oyuncuyla konuşabilirsiniz.")
+                n.log += Line(false, dir, L("Oynama süresi bulacaksa olur. Kiralamayı kabul ediyoruz, oyuncuyla konuşabilirsiniz.", "If he'll get playing time, fine. We accept the loan, you can talk to the player."))
                 agentOpening(g, n)
             } else {
                 n.clubPatience--
-                n.log += Line(false, dir, if (p.id in seller.lineup) "Kendisi ilk 11'imizde, kiralık vermeyiz." else "Bu oyuncuyu kiralık vermeyi düşünmüyoruz.")
-                if (n.clubPatience <= 0) fail(n, dir, "Görüşmeleri burada bitirelim.")
+                n.log += Line(false, dir, if (p.id in seller.lineup) L("Kendisi ilk 11'imizde, kiralık vermeyiz.", "He's in our starting XI, we won't loan him out.") else L("Bu oyuncuyu kiralık vermeyi düşünmüyoruz.", "We're not thinking of loaning this player out."))
+                if (n.clubPatience <= 0) fail(n, dir, L("Görüşmeleri burada bitirelim.", "Let's end the talks here."))
             }
             return
         }
         val terms = buildString {
             append("${money(n.fee)}")
-            if (n.installments) append(", yarısı peşin yarısı gelecek sezon")
-            if (n.sellOn > 0) append(", sonraki satıştan %${n.sellOn} pay")
+            if (n.installments) append(L(", yarısı peşin yarısı gelecek sezon", ", half upfront and half next season"))
+            if (n.sellOn > 0) append(L(", sonraki satıştan %${n.sellOn} pay", ", ${n.sellOn}% of the next sale"))
         }
-        n.log += Line(true, "Sen", "$terms teklif ediyoruz.")
+        n.log += Line(true, L("Sen", "You"), L("$terms teklif ediyoruz.", "We're offering $terms."))
         if (us.budget < if (n.installments) n.fee / 2 else n.fee) {
-            n.log += Line(false, "Mali direktörün", "Hocam bu rakam için bütçemiz yetmiyor.")
+            n.log += Line(false, L("Mali direktörün", "Your finance director"), L("Hocam bu rakam için bütçemiz yetmiyor.", "Boss, our budget can't stretch to that figure."))
             return
         }
         val asking = GameRepo.askingPrice(p).toDouble()
@@ -128,7 +129,7 @@ object TransferTalks {
             eff >= asking || (n.counterFee != null && n.fee >= n.counterFee!!) -> {
                 n.agreedFee = n.fee
                 n.stage = AGENT
-                n.log += Line(false, dir, listOf("Anlaştık! Oyuncuyla görüşmenize izin veriyoruz.", "Teklifinizi kabul ediyoruz. Şimdi menajeriyle konuşabilirsiniz.", "Tamam, el sıkışalım. Oyuncunun kararı artık.").random())
+                n.log += Line(false, dir, listOf(L("Anlaştık! Oyuncuyla görüşmenize izin veriyoruz.", "Deal! You may speak to the player."), L("Teklifinizi kabul ediyoruz. Şimdi menajeriyle konuşabilirsiniz.", "We accept your offer. You can now talk to his agent."), L("Tamam, el sıkışalım. Oyuncunun kararı artık.", "OK, let's shake hands. It's the player's decision now.")).random())
                 agentOpening(g, n)
             }
             eff >= asking * 0.8 -> {
@@ -136,13 +137,13 @@ object TransferTalks {
                 val need = r25k(asking / ((1 + 0.04 * n.sellOn / 10.0) * (if (n.installments) 0.95 else 1.0)))
                 val c = r25k((n.fee + need) / 2.0).coerceAtLeast(n.fee + 25_000)
                 n.counterFee = c
-                n.log += Line(false, dir, listOf("Yaklaştınız ama yeterli değil. ${money(c)} olursa anlaşırız.", "${money(c)} bizim son rakamımıza yakın. Düşünün.", "Bu teklifle olmaz. ${money(c)} verirseniz masadan kalkmayız.").random())
-                if (n.clubPatience <= 0) fail(n, dir, "Sabrımız tükendi, görüşmeleri bitiriyoruz.")
+                n.log += Line(false, dir, listOf(L("Yaklaştınız ama yeterli değil. ${money(c)} olursa anlaşırız.", "You're close but it's not enough. At ${money(c)} we have a deal."), L("${money(c)} bizim son rakamımıza yakın. Düşünün.", "${money(c)} is close to our final figure. Think about it."), L("Bu teklifle olmaz. ${money(c)} verirseniz masadan kalkmayız.", "Not with this offer. Pay ${money(c)} and we'll stay at the table.")).random())
+                if (n.clubPatience <= 0) fail(n, dir, L("Sabrımız tükendi, görüşmeleri bitiriyoruz.", "Our patience has run out, we're ending the talks."))
             }
             else -> {
                 n.clubPatience -= 2
-                n.log += Line(false, dir, listOf("Bu teklif ciddi değil.", "Şaka mı yapıyorsunuz? Oyuncunun değerinin çok altında.", "Bu rakamı konuşmayız bile.").random())
-                if (n.clubPatience <= 0) fail(n, dir, "Görüşmeleri kesiyoruz.")
+                n.log += Line(false, dir, listOf(L("Bu teklif ciddi değil.", "This offer isn't serious."), L("Şaka mı yapıyorsunuz? Oyuncunun değerinin çok altında.", "Are you joking? That's far below the player's value."), L("Bu rakamı konuşmayız bile.", "We won't even discuss that figure.")).random())
+                if (n.clubPatience <= 0) fail(n, dir, L("Görüşmeleri kesiyoruz.", "We're breaking off talks."))
             }
         }
     }
@@ -154,8 +155,8 @@ object TransferTalks {
         n.wage = p.demandWage
         n.years = preferredYears(p).first
         n.log += Line(
-            false, "Menajer",
-            "Müvekkilim ${g.userTeam.name}'a gelmeye sıcak bakıyor. Haftalık ${money(p.demandWage)}, ${preferredYears(p).first}-${preferredYears(p).last} yıllık sözleşme ve kendisine '${roleNames[exp]}' rolü bekliyor.",
+            false, L("Menajer", "Manager"),
+            L("Müvekkilim ${g.userTeam.name}'a gelmeye sıcak bakıyor. Haftalık ${money(p.demandWage)}, ${preferredYears(p).first}-${preferredYears(p).last} yıllık sözleşme ve kendisine '${roleNames[exp]}' rolü bekliyor.", "My client is keen on joining ${g.userTeam.name}. He expects ${money(p.demandWage)} a week, a ${preferredYears(p).first}-${preferredYears(p).last} year contract and the '${roleNames[exp]}' role."),
         )
     }
 
@@ -180,14 +181,14 @@ object TransferTalks {
     fun agentOffer(g: Game, n: Negotiation) {
         val p = n.player
         val us = g.userTeam
-        n.log += Line(true, "Sen", "Haftalık ${money(n.wage)}, ${n.years} yıl, imza parası ${money(n.bonus)}, rolü: ${roleNames[n.role]}.")
+        n.log += Line(true, L("Sen", "You"), L("Haftalık ${money(n.wage)}, ${n.years} yıl, imza parası ${money(n.bonus)}, rolü: ${roleNames[n.role]}.", "${money(n.wage)} a week, ${n.years} years, signing bonus ${money(n.bonus)}, role: ${roleNames[n.role]}."))
         if (!Economy.fitsWages(g, us, n.wage)) {
-            n.log += Line(false, "Mali direktörün", "Bu maaş limitimizi aşıyor (${money(Economy.squadWages(g, us.id))} + ${money(n.wage)} > ${money(us.wageBudget)}). Önce satış yap ya da transfer bütçesinden maaşa kaydır.")
+            n.log += Line(false, L("Mali direktörün", "Your finance director"), L("Bu maaş limitimizi aşıyor (${money(Economy.squadWages(g, us.id))} + ${money(n.wage)} > ${money(us.wageBudget)}). Önce satış yap ya da transfer bütçesinden maaşa kaydır.", "This wage exceeds our limit (${money(Economy.squadWages(g, us.id))} + ${money(n.wage)} > ${money(us.wageBudget)}). Sell first or shift money from the transfer budget to wages."))
             return
         }
         val upfront = (if (n.installments) n.agreedFee / 2 else n.agreedFee) + n.bonus
         if (us.budget < upfront) {
-            n.log += Line(false, "Mali direktörün", "Bonservis ve imza parası için bütçe yetmiyor.")
+            n.log += Line(false, L("Mali direktörün", "Your finance director"), L("Bonservis ve imza parası için bütçe yetmiyor.", "Not enough budget for the fee and signing bonus."))
             return
         }
         val sc = agentScore(g, n)
@@ -197,13 +198,13 @@ object TransferTalks {
                 n.agentPatience--
                 val need = r500(n.wage + (1.02 - sc) * p.demandWage)
                 n.counterWage = need
-                n.log += Line(false, "Menajer", listOf("Biraz daha çıkmanız lazım. Haftalık ${money(need)} olursa imzalarız.", "Müvekkilim ${money(need)}/hafta altına imza atmaz.", "Yakınız. ${money(need)} haftalık ile anlaşma tamam.").random())
-                if (n.agentPatience <= 0) fail(n, "Menajer", "Başka kulüplerle görüşeceğiz, iyi günler.")
+                n.log += Line(false, L("Menajer", "Manager"), listOf(L("Biraz daha çıkmanız lazım. Haftalık ${money(need)} olursa imzalarız.", "You need to go a little higher. At ${money(need)} a week we'll sign."), L("Müvekkilim ${money(need)}/hafta altına imza atmaz.", "My client won't sign for less than ${money(need)}/week."), L("Yakınız. ${money(need)} haftalık ile anlaşma tamam.", "We're close. ${money(need)} a week and it's a deal.")).random())
+                if (n.agentPatience <= 0) fail(n, L("Menajer", "Manager"), L("Başka kulüplerle görüşeceğiz, iyi günler.", "We'll talk to other clubs, good day."))
             }
             else -> {
                 n.agentPatience -= 2
-                n.log += Line(false, "Menajer", listOf("Bu teklif müvekkilime hakaret.", "Bu şartlarla görüşmeye devam edemeyiz.", "Hocam bu rakamlar ligin altında.").random())
-                if (n.agentPatience <= 0) fail(n, "Menajer", "Görüşmeleri bitiriyoruz.")
+                n.log += Line(false, L("Menajer", "Manager"), listOf(L("Bu teklif müvekkilime hakaret.", "This offer is an insult to my client."), L("Bu şartlarla görüşmeye devam edemeyiz.", "We can't continue talks on these terms."), L("Hocam bu rakamlar ligin altında.", "Boss, these figures are below the league level.")).random())
+                if (n.agentPatience <= 0) fail(n, L("Menajer", "Manager"), L("Görüşmeleri bitiriyoruz.", "We're ending the talks."))
             }
         }
     }
@@ -226,7 +227,7 @@ object TransferTalks {
             p.salary = n.wage
             p.squadRole = n.role
             p.morale = 80.0
-            g.addNews("Kiralık transfer!", "${p.name} sezon sonuna kadar kiralık olarak ${us.name}'da. (${fromName})")
+            g.addNews(L("Kiralık transfer!", "Loan signing!"), L("${p.name} sezon sonuna kadar kiralık olarak ${us.name}'da. (${fromName})", "${p.name} is at ${us.name} on loan until the end of the season. (${fromName})"))
         } else {
             if (fromId >= 0) {
                 val seller = g.team(fromId)
@@ -249,14 +250,14 @@ object TransferTalks {
             Career.signing(g, p.name, n.agreedFee)
             Dynamics.newSigning(g)
             g.addNews(
-                "✍️ Transfer!",
-                "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${if (fromId >= 0) "${money(n.agreedFee)} bonservisle $fromName'dan" else "serbest olarak"} ${us.name}'a imza attı. " +
-                    "${n.years} yıllık sözleşme, haftalık ${money(n.wage)}" + (if (n.installments) " · taksitli ödeme" else "") + ".",
+                L("✍️ Transfer!", "✍️ Transfer!"),
+                L("${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${if (fromId >= 0) "${money(n.agreedFee)} bonservisle $fromName'dan" else "serbest olarak"} ${us.name}'a imza attı. ", "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) signed for ${us.name} ${if (fromId >= 0) "from $fromName for ${money(n.agreedFee)}" else "on a free"}. ") +
+                    L("${n.years} yıllık sözleşme, haftalık ${money(n.wage)}", "${n.years}-year contract, ${money(n.wage)} a week") + (if (n.installments) L(" · taksitli ödeme", " · paid in instalments") else "") + ".",
             )
         }
         Roles.ensureNumbers(g, us)
         n.stage = DONE
-        n.log += Line(false, "Menajer", "Anlaştık! ${p.name} imzayı atıyor. 🎉 Forma numarası: ${p.number}")
+        n.log += Line(false, L("Menajer", "Manager"), L("Anlaştık! ${p.name} imzayı atıyor. 🎉 Forma numarası: ${p.number}", "Deal! ${p.name} is signing. 🎉 Shirt number: ${p.number}"))
         GameRepo.afterTransfer()
     }
 
@@ -267,7 +268,7 @@ object TransferTalks {
         val cut = price * p.sellOnPct / 100
         g.teamOrNull(sellerId)?.let { Economy.earn(it, Economy.SALES, -cut) }
         Economy.earn(club, Economy.SALES, cut)
-        if (sellerId == g.userTeamId) g.addNews("Sonraki satıştan pay", "${p.name} satışından ${club.name}'a %${p.sellOnPct} pay (${money(cut)}) ödendi.")
+        if (sellerId == g.userTeamId) g.addNews(L("Sonraki satıştan pay", "Sell-on fee"), L("${p.name} satışından ${club.name}'a %${p.sellOnPct} pay (${money(cut)}) ödendi.", "${club.name} received ${p.sellOnPct}% (${money(cut)}) from the sale of ${p.name}."))
         p.sellOnClub = -1
         p.sellOnPct = 0
     }

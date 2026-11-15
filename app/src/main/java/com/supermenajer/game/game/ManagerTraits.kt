@@ -13,14 +13,15 @@ import com.supermenajer.game.model.Game
 object ManagerTraits {
     class Trait(val id: String, val icon: String, val name: String, val how: String, val effect: String, val need: Int, val stat: String)
 
-    val all = listOf(
-        Trait("youth", "🌱", "Genç Dostu", "21 yaş altı oyunculara 60 kez forma ver", "Gençler %8 daha hızlı gelişir", 60, "u21"),
-        Trait("attack", "⚔️", "Hücum Ustası", "Lig maçlarında 3+ gol attığın 8 maç", "Takımın hücumu %1,5 güçlü", 8, "goalfest"),
-        Trait("wall", "🧱", "Savunma Ustası", "Gol yemeden biten 15 maç", "Takımın savunması %1,5 güçlü", 15, "clean"),
-        Trait("derby", "🔥", "Derbi Kralı", "3 derbi kazan", "Derbilerde takım %3 güçlü", 3, "derbyWin"),
-        Trait("comeback", "🔄", "Geri Dönüş Ustası", "Geriye düştüğün 5 maçı kazan", "Gerideyken son 20 dakikada hücum %4 güçlü", 5, "comeback"),
-        Trait("cup", "🏆", "Kupa Adamı", "Kupa ve Avrupa maçlarında 12 galibiyet", "Kupa maçlarında takım %2 güçlü", 12, "cupWin"),
-    )
+    private val allCache = LangCached { listOf(
+        Trait("youth", "🌱", L("Genç Dostu", "Youth Friendly"), L("21 yaş altı oyunculara 60 kez forma ver", "Give under-21 players 60 appearances"), L("Gençler %8 daha hızlı gelişir", "Youngsters develop 8% faster"), 60, "u21"),
+        Trait("attack", "⚔️", L("Hücum Ustası", "Attack Master"), L("Lig maçlarında 3+ gol attığın 8 maç", "8 league matches where you scored 3+ goals"), L("Takımın hücumu %1,5 güçlü", "Team attack 1.5% stronger"), 8, "goalfest"),
+        Trait("wall", "🧱", L("Savunma Ustası", "Defence Master"), L("Gol yemeden biten 15 maç", "15 clean sheets"), L("Takımın savunması %1,5 güçlü", "Team defence 1.5% stronger"), 15, "clean"),
+        Trait("derby", "🔥", L("Derbi Kralı", "Derby King"), L("3 derbi kazan", "Win 3 derbies"), L("Derbilerde takım %3 güçlü", "Team 3% stronger in derbies"), 3, "derbyWin"),
+        Trait("comeback", "🔄", L("Geri Dönüş Ustası", "Comeback King"), L("Geriye düştüğün 5 maçı kazan", "Win 5 matches after going behind"), L("Gerideyken son 20 dakikada hücum %4 güçlü", "Attack 4% stronger in the last 20 minutes when behind"), 5, "comeback"),
+        Trait("cup", "🏆", L("Kupa Adamı", "Cup Man"), L("Kupa ve Avrupa maçlarında 12 galibiyet", "12 wins in cup and European matches"), L("Kupa maçlarında takım %2 güçlü", "Team 2% stronger in cup matches"), 12, "cupWin"),
+    ) }
+    val all get() = allCache.get()
 
     fun has(g: Game, id: String) = id in g.traitsEarned
 
@@ -46,7 +47,7 @@ object ManagerTraits {
         for (t in all) {
             if (t.id !in g.traitsEarned && progress(g, t) >= t.need) {
                 g.traitsEarned += t.id
-                g.addNews("${t.icon} Yeni menajer özelliği: ${t.name}", "${t.how} hedefini tamamladın. Etkisi: ${t.effect}. (Kulüp → Menajer profilinde)")
+                g.addNews(L("${t.icon} Yeni menajer özelliği: ${t.name}", "${t.icon} New manager trait: ${t.name}"), L("${t.how} hedefini tamamladın. Etkisi: ${t.effect}. (Kulüp → Menajer profilinde)", "You completed the goal: ${t.how}. Effect: ${t.effect}. (Club → Manager profile)"))
             }
         }
     }

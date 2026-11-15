@@ -19,10 +19,10 @@ object ManagerMarket {
     }
 
     fun securityText(s: Double) = when {
-        s >= 70 -> "Güvende"
-        s >= 45 -> "Sağlam"
-        s >= 25 -> "Baskı altında"
-        else -> "Koltuğu sallanıyor"
+        s >= 70 -> L("Güvende", "Secure")
+        s >= 45 -> L("Sağlam", "Stable")
+        s >= 25 -> L("Baskı altında", "Under pressure")
+        else -> L("Koltuğu sallanıyor", "Job at risk")
     }
 
     /** Lig haftası sonunda: sonuçlara göre koltuk güvencesi, kovulmalar ve boş koltukların dolması. */
@@ -35,7 +35,7 @@ object ManagerMarket {
             val name = Generator.personName(rnd, g.flagOf(t)).first
             g.managers[t.id] = name
             g.mgrSecurity[t.id] = 65.0
-            if (t.division == g.userTeam.division) g.addNews("Yeni teknik direktör", "${t.name}, $name ile anlaştı.")
+            if (t.division == g.userTeam.division) g.addNews(L("Yeni teknik direktör", "New manager"), L("${t.name}, $name ile anlaştı.", "${t.name} have appointed $name."))
         }
         g.vacancies.removeAll(filled.toSet())
         if (leagueWeek < 6) return
@@ -56,19 +56,19 @@ object ManagerMarket {
 
     private fun fire(g: Game, teamId: Int, rnd: Random) {
         val t = g.team(teamId)
-        val old = g.managers[teamId] ?: "Teknik direktör"
-        g.managers[teamId] = "Geçici: " + Generator.personName(rnd, g.flagOf(t)).first
+        val old = g.managers[teamId] ?: L("Teknik direktör", "Manager")
+        g.managers[teamId] = L("Geçici: ", "Caretaker: ") + Generator.personName(rnd, g.flagOf(t)).first
         g.mgrSecurity[teamId] = 50.0
         g.vacancies += Vacancy(teamId, g.date + 21)
         if (t.division == g.userTeam.division || t.reputation >= 78) {
-            g.addNews("🔥 Hoca kovuldu", "${t.name}, kötü sonuçlar nedeniyle $old ile yollarını ayırdı. Koltuk boş — Kulüp → Hoca Pazarı'ndan başvurabilirsin.")
+            g.addNews(L("🔥 Hoca kovuldu", "🔥 Manager sacked"), L("${t.name}, kötü sonuçlar nedeniyle $old ile yollarını ayırdı. Koltuk boş — Kulüp → Hoca Pazarı'ndan başvurabilirsin.", "${t.name} have parted ways with $old after poor results. The job is vacant — you can apply from Club → Managers."))
         }
     }
 
     /** Boş koltuğa başvuru. Başarı itibara ve kulübün büyüklüğüne bağlı. */
     fun apply(g: Game, teamId: Int, rnd: Random = Random.Default): String {
-        val v = g.vacancies.firstOrNull { it.teamId == teamId } ?: return "Bu koltuk artık boş değil."
-        if (v.applied) return "Bu işe zaten başvurdun."
+        val v = g.vacancies.firstOrNull { it.teamId == teamId } ?: return L("Bu koltuk artık boş değil.", "This job is no longer vacant.")
+        if (v.applied) return L("Bu işe zaten başvurdun.", "You've already applied for this job.")
         v.applied = true
         val t = g.team(teamId)
         val gap = t.reputation - (g.managerRep + 25)
@@ -77,10 +77,10 @@ object ManagerMarket {
             g.vacancies.remove(v)
             g.jobOffers = mutableListOf(teamId)
             g.careerOffer = true
-            g.addNews("İş teklifi!", "${t.name} başvurunu olumlu karşıladı ve sana teknik direktörlük teklif etti. Ana sayfadan karar ver.")
-            "${t.name} seni istiyor! Ana sayfadan teklifi kabul edebilirsin."
+            g.addNews(L("İş teklifi!", "Job offer!"), L("${t.name} başvurunu olumlu karşıladı ve sana teknik direktörlük teklif etti. Ana sayfadan karar ver.", "${t.name} responded positively to your application and offered you the manager's job. Decide on the home screen."))
+            L("${t.name} seni istiyor! Ana sayfadan teklifi kabul edebilirsin.", "${t.name} want you! You can accept the offer on the home screen.")
         } else {
-            "${t.name} başka adaylarla devam etmeyi tercih etti."
+            L("${t.name} başka adaylarla devam etmeyi tercih etti.", "${t.name} chose to go with other candidates.")
         }
     }
 }

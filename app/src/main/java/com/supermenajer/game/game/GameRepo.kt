@@ -132,7 +132,8 @@ object GameRepo {
         bump()
     }
 
-    private val importantWords = listOf("teklif", "sakatl", "talep", "kovul", "kariyer", "inşaat tamamlandı", "altyapı seçmeleri", "sözleşme", "protesto", "ödül", "şampiyon")
+    private val importantWords = listOf("teklif", "sakatl", "talep", "kovul", "kariyer", "inşaat tamamlandı", "altyapı seçmeleri", "sözleşme", "protesto", "ödül", "şampiyon",
+        "offer", "injur", "request", "sacked", "job offer", "construction complete", "youth intake", "contract", "protest", "award", "champion")
 
     /**
      * Takvimde bir gün ilerler. Durulması gereken bir şey olduysa true döner:
@@ -216,39 +217,39 @@ object GameRepo {
                 while (autoRunning && game === g && steps++ < 3000) {
                     val newSeason = AutoPilot.step(log, Random)
                     if (steps % 4 == 0) problems += Invariants.check(g)
-                    autoStatus = "🤖 Otopilot · ${GameCalendar.format(g.date)} · ${log.wins}G ${log.draws}B ${log.losses}M"
+                    autoStatus = L("🤖 Otopilot · ${GameCalendar.format(g.date)} · ${log.wins}G ${log.draws}B ${log.losses}M", "🤖 Autopilot · ${GameCalendar.format(g.date)} · ${log.wins}W ${log.draws}D ${log.losses}L")
                     bump()
                     if (newSeason || (days > 0 && g.date - startDate >= days) || g.season != startSeason) break
                     kotlinx.coroutines.delay(15)
                 }
             } catch (e: Throwable) {
-                problems += "ÇÖKME: ${e::class.simpleName}: ${e.message}"
+                problems += L("ÇÖKME: ${e::class.simpleName}: ${e.message}", "CRASH: ${e::class.simpleName}: ${e.message}")
             }
             autoRunning = false
             autoStatus = ""
             if (game !== g) return@launch
             val body = buildString {
-                append("Otopilot ${g.date - startDate} gün oynadı. Maçlar: ${log.matches} (${log.wins}G ${log.draws}B ${log.losses}M). ")
-                append("Alış ${log.bought}, satış ${log.sold}, sözleşme uzatma ${log.renewed}, olay kararı ${log.events}. ")
-                if (log.actions.isNotEmpty()) append("Son işler: " + log.actions.takeLast(5).joinToString(" · ") + ". ")
-                append(if (problems.isEmpty()) "Tutarlılık denetimi: sorun yok ✓" else "Bulunan sorunlar (${problems.size}): " + problems.take(8).joinToString(" | "))
+                append(L("Otopilot ${g.date - startDate} gün oynadı. Maçlar: ${log.matches} (${log.wins}G ${log.draws}B ${log.losses}M). ", "Autopilot played ${g.date - startDate} days. Matches: ${log.matches} (${log.wins}W ${log.draws}D ${log.losses}L). "))
+                append(L("Alış ${log.bought}, satış ${log.sold}, sözleşme uzatma ${log.renewed}, olay kararı ${log.events}. ", "Bought ${log.bought}, sold ${log.sold}, contract extensions ${log.renewed}, event decisions ${log.events}. "))
+                if (log.actions.isNotEmpty()) append(L("Son işler: ", "Latest actions: ") + log.actions.takeLast(5).joinToString(" · ") + ". ")
+                append(if (problems.isEmpty()) L("Tutarlılık denetimi: sorun yok ✓", "Consistency check: no problems ✓") else L("Bulunan sorunlar (${problems.size}): ", "Problems found (${problems.size}): ") + problems.take(8).joinToString(" | "))
             }
-            g.addNews("🤖 Test modu raporu", body)
+            g.addNews(L("🤖 Test modu raporu", "🤖 Test mode report"), body)
             save(force = true)
             bump()
         }
     }
 
     fun continueLabel(g: Game): String = when {
-        autoRunning -> "🤖 DURDUR"
-        advancing -> "⏸ DURDUR"
-        g.fired -> "TEKLİFLER"
-        g.pendingEvent != null -> "⚡ KARAR VER"
-        g.natPending.isNotEmpty() -> "MİLLİ MAÇ ▶"
-        g.seasonOver && Tournament.needed(g) -> "TURNUVA ▶"
-        g.seasonOver -> "YENİ SEZON ▶"
-        g.todayUserFixture() != null -> "MAÇA ÇIK ▶"
-        else -> "DEVAM ▶"
+        autoRunning -> L("🤖 DURDUR", "🤖 STOP")
+        advancing -> L("⏸ DURDUR", "⏸ STOP")
+        g.fired -> L("TEKLİFLER", "OFFERS")
+        g.pendingEvent != null -> L("⚡ KARAR VER", "⚡ DECIDE")
+        g.natPending.isNotEmpty() -> L("MİLLİ MAÇ ▶", "INTERNATIONAL ▶")
+        g.seasonOver && Tournament.needed(g) -> L("TURNUVA ▶", "TOURNAMENT ▶")
+        g.seasonOver -> L("YENİ SEZON ▶", "NEW SEASON ▶")
+        g.todayUserFixture() != null -> L("MAÇA ÇIK ▶", "KICK OFF ▶")
+        else -> L("DEVAM ▶", "CONTINUE ▶")
     }
 
     fun init(d: File) {
@@ -320,7 +321,7 @@ object GameRepo {
         val f = slotFile(n)
         if (!f.exists()) return@map SlotInfo(n, false, "", "", "", 0)
         val m = runCatching { metaFile(n).readText().split("|") }.getOrNull()
-        if (m == null || m.size < 5) SlotInfo(n, true, "Kayıtlı kariyer", "", "", 0xFF2E7D32)
+        if (m == null || m.size < 5) SlotInfo(n, true, L("Kayıtlı kariyer", "Saved career"), "", "", 0xFF2E7D32)
         else SlotInfo(n, true, m[0], m[1], m[2] + " · " + m[3], m[4].toLongOrNull() ?: 0xFF2E7D32)
     }
 
@@ -338,8 +339,8 @@ object GameRepo {
     private fun meta(g: Game): String {
         val t = g.userTeam
         val date = if (g.date > 0) GameCalendar.format(g.date) else "${g.season}"
-        val pos = if (t.played > 0) " · ${g.position(t.id)}. sıra" else ""
-        return listOf(t.name, g.managerName, "${g.season}-${(g.season + 1) % 100} sezonu$pos", date, t.color1.toString()).joinToString("|") { it.replace("|", " ") }
+        val pos = if (t.played > 0) L(" · ${g.position(t.id)}. sıra", " · ${g.position(t.id)}. place") else ""
+        return listOf(t.name, g.managerName, L("${g.season}-${(g.season + 1) % 100} sezonu$pos", "${g.season}-${(g.season + 1) % 100} season$pos"), date, t.color1.toString()).joinToString("|") { it.replace("|", " ") }
     }
 
     private var lastSave = 0L
@@ -417,8 +418,8 @@ object GameRepo {
                 if (!b.exists()) continue
                 g = read(b) ?: continue
                 val date = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale("tr")).format(java.util.Date(b.lastModified()))
-                restoredNote = "Kayıt dosyası bozulmuştu; $date tarihli yedekten geri yüklendi."
-                g.addNews("🛟 Kayıt kurtarıldı", restoredNote!!)
+                restoredNote = L("Kayıt dosyası bozulmuştu; $date tarihli yedekten geri yüklendi.", "The save file was corrupted; it was restored from the backup dated $date.")
+                g.addNews(L("🛟 Kayıt kurtarıldı", "🛟 Save recovered"), restoredNote!!)
                 break
             }
         }
@@ -442,7 +443,7 @@ object GameRepo {
         g.introDone = !intro
         advancing = false
         advanceJob?.cancel()
-        g.managerName = manager.ifBlank { "Menajer" }
+        g.managerName = manager.ifBlank { L("Menajer", "Manager") }
         g.userTeamId = teamId
         Season.start(g)
         StaffLogic.hireDefaults(g)
@@ -451,13 +452,13 @@ object GameRepo {
         // İtibar: ünlü menajere yönetim daha çok güvenir
         g.confidence = (g.confidence + (rep.coerceIn(0, 2) - 1) * 6).coerceIn(0.0, 100.0)
         g.addNews(
-            "Hoş geldin hocam!",
-            "${t.name} yönetimi seni yeni teknik direktör olarak açıkladı. Yönetimin bu sezonki hedefi: ${Season.objectiveText(t)}. Bütçen: ${money(t.budget)}.",
+            L("Hoş geldin hocam!", "Welcome, boss!"),
+            L("${t.name} yönetimi seni yeni teknik direktör olarak açıkladı. Yönetimin bu sezonki hedefi: ${Season.objectiveText(t)}. Bütçen: ${money(t.budget)}.", "The ${t.name} board has announced you as the new manager. The board's objective this season: ${Season.objectiveText(t)}. Your budget: ${money(t.budget)}."),
         )
         if (intro) {
-            g.addNews("Hazırlık maçları", "Yardımcı antrenörün, kadroyu tanıman için hazırlık dönemi boyunca 3 hazırlık maçı oynayabileceğini hatırlatıyor. Ana sayfadaki maç hazırlığı kartından ayarlayabilirsin.")
-            g.addNews("Kaptanını seçmek ister misin?", "Takımın kaptanı ve duran top kullanıcıları şu an otomatik seçiliyor. Taktik → Talimatlar → Takım görevleri bölümünden kendin belirleyebilirsin. Kaptan, soyunma odasının morali ve uyumu üzerinde etkilidir.")
-            g.addNews("Takım raporu hazır", teamReport(g))
+            g.addNews(L("Hazırlık maçları", "Friendlies"), L("Yardımcı antrenörün, kadroyu tanıman için hazırlık dönemi boyunca 3 hazırlık maçı oynayabileceğini hatırlatıyor. Ana sayfadaki maç hazırlığı kartından ayarlayabilirsin.", "Your assistant reminds you that you can play 3 friendlies during pre-season to get to know the squad. Set them up from the match preparation card on the home screen."))
+            g.addNews(L("Kaptanını seçmek ister misin?", "Would you like to choose your captain?"), L("Takımın kaptanı ve duran top kullanıcıları şu an otomatik seçiliyor. Taktik → Talimatlar → Takım görevleri bölümünden kendin belirleyebilirsin. Kaptan, soyunma odasının morali ve uyumu üzerinde etkilidir.", "The team captain and set-piece takers are currently picked automatically. You can choose them yourself under Tactics → Instructions → Team duties. The captain influences dressing room morale and chemistry."))
+            g.addNews(L("Takım raporu hazır", "Squad report ready"), teamReport(g))
         }
         game = g
         tab = 0
@@ -476,11 +477,11 @@ object GameRepo {
         val worst = avg.minBy { it.value }
         val stars = sq.sortedByDescending { it.overall }.take(3).joinToString { "${it.name} (${it.overall})" }
         val young = sq.filter { it.age <= 21 }.maxByOrNull { it.potential }
-        val assistant = StaffLogic.of(g, StaffLogic.ASSISTANT)?.name ?: "Yardımcı antrenörün"
-        return "$assistant hazırladığı raporu sunuyor. Kadronun en güçlü bölgesi ${best.key.label.lowercase()} (ortalama ${best.value.toInt()}), " +
-            "en zayıf bölgesi ${worst.key.label.lowercase()} (ortalama ${worst.value.toInt()}). Öne çıkan oyuncular: $stars." +
-            (young?.let { " Geleceğin yıldızı olabilir: ${it.name} (${it.age} yaş)." } ?: "") +
-            " Önerisi: ${worst.key.label.lowercase()} bölgesine takviye ve ${t.formation} dizilişiyle başlamak."
+        val assistant = StaffLogic.of(g, StaffLogic.ASSISTANT)?.name ?: L("Yardımcı antrenörün", "Your assistant manager")
+        return L("$assistant hazırladığı raporu sunuyor. Kadronun en güçlü bölgesi ${best.key.label.lowercase()} (ortalama ${best.value.toInt()}), ", "$assistant presents his report. The squad's strongest area is ${best.key.label.lowercase()} (average ${best.value.toInt()}), ") +
+            L("en zayıf bölgesi ${worst.key.label.lowercase()} (ortalama ${worst.value.toInt()}). Öne çıkan oyuncular: $stars.", "the weakest is ${worst.key.label.lowercase()} (average ${worst.value.toInt()}). Standout players: $stars.") +
+            (young?.let { L(" Geleceğin yıldızı olabilir: ${it.name} (${it.age} yaş).", " A possible future star: ${it.name} (${it.age} yrs).") } ?: "") +
+            L(" Önerisi: ${worst.key.label.lowercase()} bölgesine takviye ve ${t.formation} dizilişiyle başlamak.", " His advice: strengthen ${worst.key.label.lowercase()} and start with a ${t.formation}.")
     }
 
     fun playMatch(live: Boolean) {
@@ -577,7 +578,7 @@ object GameRepo {
         if (launched.isFailure) { busy = null; work(); then(); save(force = true); bump() }
     }
 
-    fun skipToNextMatchAsync() = runBusy("Maç gününe ilerleniyor...", { skipCore() })
+    fun skipToNextMatchAsync() = runBusy(L("Maç gününe ilerleniyor...", "Moving to match day..."), { skipCore() })
 
     fun quickMatchAsync() {
         val g = game ?: return
@@ -591,7 +592,7 @@ object GameRepo {
         if (sim.nat != null || sim.twoPlayer) { finishMatch(); return }
         val g = game ?: return
         if (sim.fixture.played) return
-        runBusy("Diğer maçlar oynanıyor...", {
+        runBusy(L("Diğer maçlar oynanıyor...", "Other matches being played..."), {
             sim.runToEnd()
             sim.applyToGame()
             Season.matchNews(g, sim)
@@ -629,7 +630,7 @@ object GameRepo {
     fun answerPress(q: com.supermenajer.game.model.PressQuestion, index: Int): String {
         val g = game ?: return ""
         val msg = Press.answer(g, q, index)
-        g.addNews("Basın toplantısı", "\"${q.answers.getOrElse(index) { "" }}\" — $msg")
+        g.addNews(L("Basın toplantısı", "Press conference"), "\"${q.answers.getOrElse(index) { "" }}\" — $msg")
         changed()
         return msg
     }
@@ -651,20 +652,20 @@ object GameRepo {
     /** Birebir konuşma: 0 övgü, 1 eleştiri, 2 forma sözü. Haftada bir. */
     fun talkToPlayer(p: Player, kind: Int): String {
         val g = game ?: return ""
-        if (!canTalk(p)) return "${p.name} ile bu hafta zaten konuştun."
+        if (!canTalk(p)) return L("${p.name} ile bu hafta zaten konuştun.", "You've already talked to ${p.name} this week.")
         p.lastTalk = talkStamp(g)
         val r = Random.nextDouble()
         val good = p.apps == 0 || p.avgRating >= 6.8
         val (delta, msg) = when (kind) {
-            0 -> if (good) 6.0 to "${p.name} övgülerin için teşekkür etti, çok motive." else 2.0 to "${p.name} övgüne biraz şaşırdı ama memnun."
+            0 -> if (good) 6.0 to L("${p.name} övgülerin için teşekkür etti, çok motive.", "${p.name} thanked you for the praise, he's very motivated.") else 2.0 to L("${p.name} övgüne biraz şaşırdı ama memnun.", "${p.name} was a little surprised by the praise but pleased.")
             1 -> when {
-                p.apps >= 3 && p.avgRating < 6.4 && r < 0.6 -> 5.0 to "${p.name} mesajı aldı: \"Daha çok çalışacağım hocam.\""
-                p.apps >= 3 && p.avgRating < 6.4 -> -6.0 to "${p.name} eleştirine sert tepki gösterdi."
-                else -> -8.0 to "${p.name} eleştiriyi haksız buldu ve kırıldı."
+                p.apps >= 3 && p.avgRating < 6.4 && r < 0.6 -> 5.0 to L("${p.name} mesajı aldı: \"Daha çok çalışacağım hocam.\"", "${p.name} got the message: \"I'll work harder, boss.\"")
+                p.apps >= 3 && p.avgRating < 6.4 -> -6.0 to L("${p.name} eleştirine sert tepki gösterdi.", "${p.name} reacted angrily to your criticism.")
+                else -> -8.0 to L("${p.name} eleştiriyi haksız buldu ve kırıldı.", "${p.name} found the criticism unfair and is hurt.")
             }
             else -> {
                 p.promised = true
-                10.0 to "${p.name} sözüne güveniyor. Gelecek hafta ilk 11'de olmazsa çok kırılacak!"
+                10.0 to L("${p.name} sözüne güveniyor. Gelecek hafta ilk 11'de olmazsa çok kırılacak!", "${p.name} trusts your word. If he's not in the starting XI next week he'll be very hurt!")
             }
         }
         p.morale = (p.morale + delta).coerceIn(5.0, 100.0)
@@ -675,25 +676,25 @@ object GameRepo {
 
     /** Genç oyuncuyu kiralık gönder (oynayarak gelişir). Hata mesajı döner. */
     fun loanOut(p: Player): String? {
-        val g = game ?: return "Oyun yok"
+        val g = game ?: return L("Oyun yok", "No game")
         val us = g.userTeam
-        if (p.teamId != us.id) return "Oyuncu takımında değil."
-        if (p.loanFrom >= 0) return "Kiralık oyuncu tekrar kiralanamaz."
-        if (p.age > 23) return "Sadece 23 yaş ve altı oyuncular kiralık gönderilebilir."
-        if (!Season.transferWindowOpen(g)) return "Transfer dönemi kapalı."
-        if (g.squad(us.id).size <= 18) return "Kadro çok dar, kiralık gönderemezsin."
+        if (p.teamId != us.id) return L("Oyuncu takımında değil.", "The player isn't in your team.")
+        if (p.loanFrom >= 0) return L("Kiralık oyuncu tekrar kiralanamaz.", "A loan player can't be loaned out again.")
+        if (p.age > 23) return L("Sadece 23 yaş ve altı oyuncular kiralık gönderilebilir.", "Only players aged 23 and under can be loaned out.")
+        if (!Season.transferWindowOpen(g)) return L("Transfer dönemi kapalı.", "The transfer window is closed.")
+        if (g.squad(us.id).size <= 18) return L("Kadro çok dar, kiralık gönderemezsin.", "The squad is too thin, you can't loan anyone out.")
         val country = g.userCountry
         val clubs = g.teams.filter { t ->
             t.id != us.id && t.division != com.supermenajer.game.model.Leagues.LEGACY_EURO &&
                 g.squad(t.id).size < 28 && p.overall >= Lineups.strength(g, t) - 3 && t.reputation < us.reputation
         }
         val club = clubs.filter { g.countryOf(it) == country }.randomOrNull() ?: clubs.randomOrNull()
-            ?: return "Oyuncuyu düzenli oynatacak bir kulüp bulunamadı."
+            ?: return L("Oyuncuyu düzenli oynatacak bir kulüp bulunamadı.", "No club was found that would play him regularly.")
         us.lineup.replaceAll { if (it == p.id) -1 else it }
         g.movePlayer(p, club.id)
         p.loanFrom = us.id
         Lineups.validate(g, us)
-        g.addNews("Kiralık", "${p.name} sezon sonuna kadar kiralık olarak ${club.name} (${g.leagueName(club)}) takımına gitti. Düzenli oynayıp gelişecek.")
+        g.addNews(L("Kiralık", "Loan"), L("${p.name} sezon sonuna kadar kiralık olarak ${club.name} (${g.leagueName(club)}) takımına gitti. Düzenli oynayıp gelişecek.", "${p.name} has gone on loan to ${club.name} (${g.leagueName(club)}) until the end of the season. He'll play regularly and develop."))
         selectedPlayer = null
         changed()
         return null
@@ -705,7 +706,7 @@ object GameRepo {
         g.teamOrNull(p.teamId)?.lineup?.replaceAll { if (it == p.id) -1 else it }
         g.movePlayer(p, g.userTeamId)
         p.loanFrom = -1
-        g.addNews("Kiralıktan geri çağrıldı", "${p.name} takıma geri döndü.")
+        g.addNews(L("Kiralıktan geri çağrıldı", "Recalled from loan"), L("${p.name} takıma geri döndü.", "${p.name} is back with the team."))
         changed()
     }
 
@@ -713,7 +714,7 @@ object GameRepo {
         val g = game ?: return ""
         val err = Scouting.request(g, p)
         changed()
-        return err ?: "Gözlemci yola çıktı. Rapor yarın gelecek (${money(Scouting.COST)})."
+        return err ?: L("Gözlemci yola çıktı. Rapor yarın gelecek (${money(Scouting.COST)}).", "The scout is on his way. The report arrives tomorrow (${money(Scouting.COST)}).")
     }
 
     fun setScout(country: String, focus: Int) {
@@ -727,21 +728,21 @@ object GameRepo {
         val g = game ?: return ""
         val err = StaffLogic.hire(g, st)
         changed()
-        return err ?: "${st.name} göreve başladı!"
+        return err ?: L("${st.name} göreve başladı!", "${st.name} has started work!")
     }
 
     fun startProject(type: Int, seatOption: Int = 0): String {
         val g = game ?: return ""
         val err = Facilities.start(g, type, seatOption)
         changed()
-        return err ?: "İnşaat başladı!"
+        return err ?: L("İnşaat başladı!", "Construction started!")
     }
 
     fun signSponsor(s: com.supermenajer.game.model.Sponsor): String {
         val g = game ?: return ""
         val err = Sponsors.sign(g, s)
         changed()
-        return err ?: "Anlaşma imzalandı: ${s.name}!"
+        return err ?: L("Anlaşma imzalandı: ${s.name}!", "Deal signed: ${s.name}!")
     }
 
     fun setTicketPrice(i: Int) {
@@ -754,7 +755,7 @@ object GameRepo {
         val g = game ?: return
         g.jobOffers.clear()
         g.careerOffer = false
-        g.addNews("Teklif reddedildi", "${g.userTeam.name} ile devam ediyorsun. Taraftar sadakatini alkışlıyor!")
+        g.addNews(L("Teklif reddedildi", "Offer declined"), L("${g.userTeam.name} ile devam ediyorsun. Taraftar sadakatini alkışlıyor!", "You're staying with ${g.userTeam.name}. The fans applaud your loyalty!"))
         g.confidence = (g.confidence + 5).coerceAtMost(100.0)
         changed()
     }
@@ -763,7 +764,7 @@ object GameRepo {
         val g = game ?: return
         Season.takeJob(g, teamId)
         StaffLogic.hireDefaults(g)
-        g.addNews("Yeni teknik ekip", "${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kulüp → Teknik Ekip ekranından değişiklik yapabilirsin.")
+        g.addNews(L("Yeni teknik ekip", "New staff"), L("${g.userTeam.name}'nin teknik ekibiyle çalışacaksın. Kulüp → Teknik Ekip ekranından değişiklik yapabilirsin.", "You'll work with the ${g.userTeam.name} staff. You can make changes on the Club → Staff screen."))
         tab = 0
         changed()
     }
@@ -872,8 +873,8 @@ object GameRepo {
         val price = p.releaseClause
         completeBuy(p, price)
         p.releaseClause = 0
-        g.addNews("💥 Serbest kalma bedeli ödendi", "${p.name} için ${money(price)} tutarındaki serbest kalma bedeli yatırıldı.")
-        return "${p.name} artık bizim oyuncumuz!"
+        g.addNews(L("💥 Serbest kalma bedeli ödendi", "💥 Release clause paid"), L("${p.name} için ${money(price)} tutarındaki serbest kalma bedeli yatırıldı.", "The ${money(price)} release clause for ${p.name} has been paid."))
+        return L("${p.name} artık bizim oyuncumuz!", "${p.name} is now our player!")
     }
 
     fun signPreContract(p: Player): String { val g = game ?: return ""; val m = Contracts.signPre(g, p); changed(); return m }
@@ -905,7 +906,7 @@ object GameRepo {
             Reserves.canSend(g, p)?.let { return it }
             removeFromLineup(p)
             p.reserve = true
-            g.addNews("A2 takımı", "${p.name} A2 takımına gönderildi." + if (p.age >= 24) " Oyuncu bu karardan pek hoşnut değil." else "")
+            g.addNews(L("A2 takımı", "B team"), L("${p.name} A2 takımına gönderildi.", "${p.name} has been sent to the B team.") + if (p.age >= 24) L(" Oyuncu bu karardan pek hoşnut değil.", " The player isn't happy with this decision.") else "")
         } else {
             p.reserve = false
         }
@@ -916,18 +917,18 @@ object GameRepo {
     fun takeNationalJob(code: String): String? {
         val g = game ?: return null
         val need = National.requiredRep(g, code)
-        if (g.managerRep < need) return "${National.name(code)} federasyonu en az $need itibarlı bir menajer istiyor (senin: ${g.managerRep})."
+        if (g.managerRep < need) return L("${National.name(code)} federasyonu en az $need itibarlı bir menajer istiyor (senin: ${g.managerRep}).", "The ${National.name(code)} federation wants a manager with at least $need reputation (yours: ${g.managerRep}).")
         g.nationalTeam = code
         g.natSquad.clear()
         g.natPoints = 0
-        g.addNews("🌍 Milli takım görevi", "${National.name(code)} Futbol Federasyonu seni kulüp görevine ek olarak milli takımın başına getirdi.")
+        g.addNews(L("🌍 Milli takım görevi", "🌍 National team job"), L("${National.name(code)} Futbol Federasyonu seni kulüp görevine ek olarak milli takımın başına getirdi.", "The ${National.name(code)} Football Federation has appointed you national team manager alongside your club job."))
         changed()
         return null
     }
 
     fun resignNational() {
         val g = game ?: return
-        g.addNews("🌍 Milli takımdan ayrıldın", "${National.name(g.nationalTeam)} milli takımındaki görevini bıraktın.")
+        g.addNews(L("🌍 Milli takımdan ayrıldın", "🌍 You left the national team"), L("${National.name(g.nationalTeam)} milli takımındaki görevini bıraktın.", "You've stepped down from the ${National.name(g.nationalTeam)} national team."))
         g.nationalTeam = ""
         g.natPending = ""
         g.natSquad.clear()
@@ -962,15 +963,15 @@ object GameRepo {
         val g = game ?: return ""
         val n = name.trim()
         val s = short.trim().uppercase()
-        if (n.length < 3) return "Kulüp adı en az 3 harf olmalı."
-        if (s.length != 3 || !s.all { it.isLetter() }) return "Kısa ad 3 harf olmalı."
-        if (g.teams.any { it.id != g.userTeamId && (it.short == s || it.name.equals(n, ignoreCase = true)) }) return "Bu ad ya da kısa ad başka bir kulübün."
+        if (n.length < 3) return L("Kulüp adı en az 3 harf olmalı.", "The club name must be at least 3 letters.")
+        if (s.length != 3 || !s.all { it.isLetter() }) return L("Kısa ad 3 harf olmalı.", "The short name must be 3 letters.")
+        if (g.teams.any { it.id != g.userTeamId && (it.short == s || it.name.equals(n, ignoreCase = true)) }) return L("Bu ad ya da kısa ad başka bir kulübün.", "That name or short name belongs to another club.")
         val t = g.userTeam
         val old = t.name
         t.name = n; t.short = s
-        if (old != n) g.addNews("Kulübün yeni adı: $n", "$old artık $n ($s) adıyla anılacak. Taraftarlar yeni kimliği konuşuyor.")
+        if (old != n) g.addNews(L("Kulübün yeni adı: $n", "The club's new name: $n"), L("$old artık $n ($s) adıyla anılacak. Taraftarlar yeni kimliği konuşuyor.", "$old will now be known as $n ($s). The fans are talking about the new identity."))
         changed()
-        return "Kaydedildi: $n ($s)"
+        return L("Kaydedildi: $n ($s)", "Saved: $n ($s)")
     }
 
     fun boardRequest(kind: Int): String { val g = game ?: return ""; val m = Career.request(g, kind); changed(); return m }
@@ -1096,7 +1097,7 @@ object GameRepo {
     fun toggleListed(p: Player): String {
         p.listed = !p.listed
         changed()
-        return if (p.listed) "${p.name} satış listesine kondu. Kulüplerden teklif gelince gelen kutuna düşer." else "${p.name} satış listesinden çıkarıldı."
+        return if (p.listed) L("${p.name} satış listesine kondu. Kulüplerden teklif gelince gelen kutuna düşer.", "${p.name} has been put on the transfer list. Offers from clubs will arrive in your inbox.") else L("${p.name} satış listesinden çıkarıldı.", "${p.name} has been taken off the transfer list.")
     }
 
     /** Transfer bütçesinden maaş bütçesine (veya tersine) aktarım. Mesaj döner. */
@@ -1109,27 +1110,27 @@ object GameRepo {
 
     /** Transfere engel bir durum varsa açıklamasını döner. */
     fun transferBlock(p: Player): String? {
-        val g = game ?: return "Oyun yok"
+        val g = game ?: return L("Oyun yok", "No game")
         val us = g.userTeam
-        if (p.teamId == us.id) return "Oyuncu zaten senin takımında."
-        if (p.loanFrom >= 0) return "${p.name} şu an kiralık oynuyor."
-        if (p.teamId >= 0 && !Season.transferWindowOpen(g)) return "Transfer dönemi kapalı. Şu an sadece serbest oyuncu alabilirsin."
-        if (g.squad(us.id).size >= 34) return "Kadro dolu (en fazla 34 oyuncu)."
+        if (p.teamId == us.id) return L("Oyuncu zaten senin takımında.", "The player is already in your team.")
+        if (p.loanFrom >= 0) return L("${p.name} şu an kiralık oynuyor.", "${p.name} is currently out on loan.")
+        if (p.teamId >= 0 && !Season.transferWindowOpen(g)) return L("Transfer dönemi kapalı. Şu an sadece serbest oyuncu alabilirsin.", "The transfer window is closed. You can only sign free agents right now.")
+        if (g.squad(us.id).size >= 34) return L("Kadro dolu (en fazla 34 oyuncu).", "The squad is full (max 34 players).")
         if (!Economy.fitsWages(g, us, p.demandWage)) {
-            return "Maaş bütçesi yetersiz: ${money(Economy.squadWages(g, us.id))} + ${money(p.demandWage)} > ${money(us.wageBudget)}/hafta. Önce oyuncu satmalısın."
+            return L("Maaş bütçesi yetersiz: ${money(Economy.squadWages(g, us.id))} + ${money(p.demandWage)} > ${money(us.wageBudget)}/hafta. Önce oyuncu satmalısın.", "Not enough wage budget: ${money(Economy.squadWages(g, us.id))} + ${money(p.demandWage)} > ${money(us.wageBudget)}/week. You need to sell players first.")
         }
-        if (p.teamId >= 0 && g.squad(p.teamId).size <= 18) return "${g.team(p.teamId).name} kadrosu dar olduğu için satmıyor."
+        if (p.teamId >= 0 && g.squad(p.teamId).size <= 18) return L("${g.team(p.teamId).name} kadrosu dar olduğu için satmıyor.", "${g.team(p.teamId).name} won't sell because their squad is too thin.")
         val level = Lineups.strength(g, us)
         if (p.teamId >= 0) {
             val seller = g.team(p.teamId)
             if (p.overall >= level + 6 && (us.reputation < seller.reputation || us.division > seller.division)) {
-                return "${p.name} daha büyük bir kulüpte oynamak istiyor, takımımıza gelmeye sıcak bakmıyor."
+                return L("${p.name} daha büyük bir kulüpte oynamak istiyor, takımımıza gelmeye sıcak bakmıyor.", "${p.name} wants to play for a bigger club and isn't keen on joining us.")
             }
         } else if (p.overall >= level + 10) {
-            return "${p.name} daha iddialı bir takım arıyor."
+            return L("${p.name} daha iddialı bir takım arıyor.", "${p.name} is looking for a more ambitious team.")
         }
         val tries = talks[p.id]?.first ?: 0
-        if (tries >= 3) return "Kulüp görüşmeleri kesti. Bir süre bu oyuncu için teklif yapamazsın."
+        if (tries >= 3) return L("Kulüp görüşmeleri kesti. Bir süre bu oyuncu için teklif yapamazsın.", "The club broke off talks. You can't bid for this player for a while.")
         return null
     }
 
@@ -1140,10 +1141,10 @@ object GameRepo {
     }
 
     fun offerFor(p: Player, offer: Long): Reply {
-        val g = game ?: return Reply.Rejected("Oyun yok")
+        val g = game ?: return Reply.Rejected(L("Oyun yok", "No game"))
         transferBlock(p)?.let { return Reply.Rejected(it) }
         val us = g.userTeam
-        if (us.budget < offer) return Reply.Rejected("Bütçe yetersiz.")
+        if (us.budget < offer) return Reply.Rejected(L("Bütçe yetersiz.", "Not enough budget."))
         val asking = askingPrice(p)
         val counter = counterFor(p)
         val (tries, _) = talks[p.id] ?: (0 to 0L)
@@ -1154,7 +1155,7 @@ object GameRepo {
         }
         if (p.teamId < 0) {
             talks[p.id] = (tries + 1) to 0L
-            return Reply.Rejected("${p.name} bu imza parasını az buldu.")
+            return Reply.Rejected(L("${p.name} bu imza parasını az buldu.", "${p.name} thought this signing bonus was too low."))
         }
         val seller = g.team(p.teamId).name
         if (offer >= asking * 0.8) {
@@ -1163,7 +1164,7 @@ object GameRepo {
             return Reply.Counter(c)
         }
         talks[p.id] = (tries + 1) to (counter ?: 0L)
-        return Reply.Rejected("$seller teklifi reddetti: \"Bu rakam ciddi değil.\"")
+        return Reply.Rejected(L("$seller teklifi reddetti: \"Bu rakam ciddi değil.\"", "$seller rejected the offer: \"That's not a serious figure.\""))
     }
 
     private fun completeBuy(p: Player, price: Long) {
@@ -1174,7 +1175,7 @@ object GameRepo {
             Economy.earn(seller, Economy.SALES, price)
             seller.lineup.replaceAll { if (it == p.id) -1 else it }
             seller.name
-        } else "serbest oyuncu"
+        } else L("serbest oyuncu", "free agent")
         Economy.earn(us, Economy.BUYS, -price)
         g.logTransfer(p, g.teamOrNull(p.teamId), us, price)
         Missions.progress(g, "sign1", 1)
@@ -1184,7 +1185,7 @@ object GameRepo {
         p.morale = 80.0
         p.salary = p.demandWage
         p.contractYears = if (p.age >= 30) 2 else 4
-        g.addNews("Transfer!", "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${money(price)} karşılığında $sellerName → ${us.name}.")
+        g.addNews(L("Transfer!", "Transfer!"), L("${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) ${money(price)} karşılığında $sellerName → ${us.name}.", "${p.name} (${p.age}, ${p.pos.label}, ${p.overall}) $sellerName → ${us.name} for ${money(price)}."))
         changed()
     }
 
@@ -1202,13 +1203,13 @@ object GameRepo {
 
     /** Satışı yapar; teklif bekletildiyse koşullar yeniden denetlenir. Olmazsa nedenini döner. */
     private fun sellPlayer(p: Player, buyer: Team, price: Long): String? {
-        val g = game ?: return "Oyun yok"
+        val g = game ?: return L("Oyun yok", "No game")
         val us = g.userTeam
-        if (p.teamId != us.id) return "Oyuncu artık takımında değil."
+        if (p.teamId != us.id) return L("Oyuncu artık takımında değil.", "The player is no longer in your team.")
         val stale = when {
-            !Season.transferWindowOpen(g) -> "Transfer dönemi kapandı, teklif geçersiz."
-            buyer.budget < price -> "${buyer.name} artık bu parayı ödeyemiyor, teklif geri çekildi."
-            g.squad(us.id).size <= 16 -> "Kadro çok dar, satış yapılamaz."
+            !Season.transferWindowOpen(g) -> L("Transfer dönemi kapandı, teklif geçersiz.", "The transfer window has closed, the offer is void.")
+            buyer.budget < price -> L("${buyer.name} artık bu parayı ödeyemiyor, teklif geri çekildi.", "${buyer.name} can no longer afford it, the offer has been withdrawn.")
+            g.squad(us.id).size <= 16 -> L("Kadro çok dar, satış yapılamaz.", "The squad is too thin, the sale can't go through.")
             else -> null
         }
         if (stale != null) {
@@ -1231,7 +1232,7 @@ object GameRepo {
         p.contractYears = 4
         g.offers.removeAll { it.playerId == p.id }
         Lineups.validate(g, us)
-        g.addNews("Satış", "${p.name}, ${money(price)} karşılığında ${buyer.name} takımına satıldı.")
+        g.addNews(L("Satış", "Sale"), L("${p.name}, ${money(price)} karşılığında ${buyer.name} takımına satıldı.", "${p.name} has been sold to ${buyer.name} for ${money(price)}."))
         selectedPlayer = null
         changed()
         return null
@@ -1239,17 +1240,17 @@ object GameRepo {
 
     /** Sözleşme uzatma. Hata mesajı döner; başarılıysa null. */
     fun renewContract(p: Player, years: Int): String? {
-        val g = game ?: return "Oyun yok"
+        val g = game ?: return L("Oyun yok", "No game")
         val us = g.userTeam
-        if (p.teamId != us.id) return "Oyuncu takımında değil."
-        val demand = Economy.renewalDemand(g, p) ?: return "${p.name} kulüpte mutlu değil ve sözleşme uzatmak istemiyor."
+        if (p.teamId != us.id) return L("Oyuncu takımında değil.", "The player isn't in your team.")
+        val demand = Economy.renewalDemand(g, p) ?: return L("${p.name} kulüpte mutlu değil ve sözleşme uzatmak istemiyor.", "${p.name} isn't happy at the club and doesn't want to extend his contract.")
         if (!Economy.fitsWages(g, us, demand, minusWage = p.wage)) {
-            return "Maaş bütçesi yetmiyor (${money(us.wageBudget)}/hafta). Önce başka bir oyuncu satmalısın."
+            return L("Maaş bütçesi yetmiyor (${money(us.wageBudget)}/hafta). Önce başka bir oyuncu satmalısın.", "The wage budget isn't enough (${money(us.wageBudget)}/week). You need to sell another player first.")
         }
         p.salary = demand
         p.contractYears = years + 1
         p.morale = (p.morale + 8).coerceAtMost(100.0)
-        g.addNews("Sözleşme uzatıldı", "${p.name} ile $years yıllık yeni sözleşme imzalandı (${money(demand)}/hafta).")
+        g.addNews(L("Sözleşme uzatıldı", "Contract extended"), L("${p.name} ile $years yıllık yeni sözleşme imzalandı (${money(demand)}/hafta).", "A new $years-year contract has been signed with ${p.name} (${money(demand)}/week)."))
         changed()
         return null
     }
@@ -1257,7 +1258,7 @@ object GameRepo {
     fun acceptIncoming(o: IncomingOffer): String? {
         val g = game ?: return null
         val p = g.player(o.playerId) ?: return null
-        val buyer = g.teamOrNull(o.teamId) ?: run { g.offers.remove(o); changed(); return "Teklif yapan kulüp bulunamadı." }
+        val buyer = g.teamOrNull(o.teamId) ?: run { g.offers.remove(o); changed(); return L("Teklif yapan kulüp bulunamadı.", "No bidding club found.") }
         return sellPlayer(p, buyer, o.price)
     }
 
@@ -1275,10 +1276,10 @@ object GameRepo {
         val ask = r25k(o.price * 1.2)
         val msg = if (buyer.budget >= ask && Random.nextDouble() < 0.5) {
             o.price = ask
-            "${buyer.name} yeni rakamı kabul etti: ${money(ask)}. Satışı onaylayabilirsin."
+            L("${buyer.name} yeni rakamı kabul etti: ${money(ask)}. Satışı onaylayabilirsin.", "${buyer.name} accepted the new figure: ${money(ask)}. You can approve the sale.")
         } else {
             g.offers.remove(o)
-            "${buyer.name} masadan kalktı."
+            L("${buyer.name} masadan kalktı.", "${buyer.name} walked away from the table.")
         }
         changed()
         return msg

@@ -20,8 +20,10 @@ object Season {
     const val LEAGUE_WEEKS = 34
     private val cupAfterWeek = listOf(5, 11, 17, 24, 31)
 
-    val trainingNames = listOf("Dengeli", "Hücum", "Savunma", "Fizik", "Gençler")
-    val intensityNames = listOf("Hafif", "Normal", "Yoğun")
+    private val trainingNamesCache = LangCached { listOf(L("Dengeli", "Balanced"), L("Hücum", "Attacking"), L("Savunma", "Defending"), L("Fizik", "Physical"), L("Gençler", "Youth")) }
+    val trainingNames get() = trainingNamesCache.get()
+    private val intensityNamesCache = LangCached { listOf(L("Hafif", "Light"), L("Normal", "Normal"), L("Yoğun", "Intense")) }
+    val intensityNames get() = intensityNamesCache.get()
 
     fun buildCalendar(): MutableList<Day> {
         val c = mutableListOf<Day>()
@@ -140,8 +142,8 @@ object Season {
                 val take = (t.budget - cap) / 2
                 Economy.earn(t, Economy.BOARD_SHARE, -take)
                 if (t.id == g.userTeamId) g.addNews(
-                    "Yönetim fazla bütçeyi kullandı",
-                    "Kasada liginin çok üstünde para birikmişti. Yönetim ${money(take)} tutarını borç ödemesi ve kulüp yatırımları için aldı. Kalan transfer bütçen: ${money(t.budget)}. İpucu: parayı biriktirmek yerine kadroya yatırım yap.",
+                    L("Yönetim fazla bütçeyi kullandı", "The board used the surplus budget"),
+                    L("Kasada liginin çok üstünde para birikmişti. Yönetim ${money(take)} tutarını borç ödemesi ve kulüp yatırımları için aldı. Kalan transfer bütçen: ${money(t.budget)}. İpucu: parayı biriktirmek yerine kadroya yatırım yap.", "Far more money than the league norm had piled up in the bank. The board took ${money(take)} for debt repayment and club investments. Your remaining transfer budget: ${money(t.budget)}. Tip: invest in the squad rather than hoarding money."),
                 )
             }
         }
@@ -347,7 +349,7 @@ object Season {
         val us = g.userTeamId
         g.fixtures.firstOrNull { it.comp == comp && it.round == round && it.involves(us) }?.let {
             val opp = g.team(if (it.home == us) it.away else it.home)
-            g.addNews("Kupa kurası", "${Comp.name(comp)} ${Comp.cupRounds[round]} turunda rakibimiz: ${opp.name}.")
+            g.addNews(L("Kupa kurası", "Cup draw"), L("${Comp.name(comp)} ${Comp.cupRounds[round]} turunda rakibimiz: ${opp.name}.", "Our opponent in the ${Comp.name(comp)} ${Comp.cupRounds[round]}: ${opp.name}."))
         }
     }
 
@@ -369,13 +371,13 @@ object Season {
         val lg = Leagues.of(t.division)
         val tier = lg?.tier ?: 1
         val hasLower = lg != null && Leagues.second(lg.country) != null
-        val topName = lg?.let { Leagues.top(it.country).name } ?: "üst lig"
+        val topName = lg?.let { Leagues.top(it.country).name } ?: L("üst lig", "top division")
         return when (objectiveTarget(t.expected)) {
-            1 -> if (tier == 1) "Şampiyonluk" else "Şampiyon olarak yükselmek"
-            3 -> if (tier == 1) "İlk 3" else "$topName'e yükselmek (ilk 3)"
-            6 -> "İlk 6"
-            10 -> "İlk 10"
-            else -> if (tier == 1 && hasLower) "Ligde kalmak" else "Orta sıralar (ilk 15)"
+            1 -> if (tier == 1) L("Şampiyonluk", "Title") else L("Şampiyon olarak yükselmek", "Promotion as champions")
+            3 -> if (tier == 1) L("İlk 3", "Top 3") else L("$topName'e yükselmek (ilk 3)", "Promotion to $topName (top 3)")
+            6 -> L("İlk 6", "Top 6")
+            10 -> L("İlk 10", "Top 10")
+            else -> if (tier == 1 && hasLower) L("Ligde kalmak", "Avoid relegation") else L("Orta sıralar (ilk 15)", "Mid-table (top 15)")
         }
     }
 
@@ -387,9 +389,9 @@ object Season {
     }
 
     fun windowText(g: Game): String = when {
-        transferWindowOpen(g) -> "Transfer dönemi AÇIK" + if (!g.seasonOver) " (${if (g.leagueWeekAt(g.week - 1) < 4) "4" else "19"}. haftaya kadar)" else ""
-        g.leagueWeekAt(g.week - 1) < 16 -> "Transfer dönemi kapalı · Ara transfer 17. haftada açılır"
-        else -> "Transfer dönemi kapalı · Sezon sonunda açılır"
+        transferWindowOpen(g) -> L("Transfer dönemi AÇIK", "Transfer window OPEN") + if (!g.seasonOver) L(" (${if (g.leagueWeekAt(g.week - 1) < 4) "4" else "19"}. haftaya kadar)", " (until week ${if (g.leagueWeekAt(g.week - 1) < 4) "4" else "19"})") else ""
+        g.leagueWeekAt(g.week - 1) < 16 -> L("Transfer dönemi kapalı · Ara transfer 17. haftada açılır", "Transfer window closed · The mid-season window opens in week 17")
+        else -> L("Transfer dönemi kapalı · Sezon sonunda açılır", "Transfer window closed · Opens at the end of the season")
     }
 
     /** Günün kalan maçlarını hızlıca oynatır. */
@@ -419,35 +421,35 @@ object Season {
         val h = sim.home
         val a = sim.away
         val score = "${h.team.name} ${h.goals} - ${a.goals} ${a.team.name}" +
-            if (sim.penHome >= 0) " (Penaltılar ${sim.penHome}-${sim.penAway})" else ""
+            if (sim.penHome >= 0) L(" (Penaltılar ${sim.penHome}-${sim.penAway})", " (Penalties ${sim.penHome}-${sim.penAway})") else ""
         val won = if (sim.isCup) sim.cupWinner()?.id == us.team.id else us.goals > them.goals
         val euro = sim.fixture.comp == Comp.EURO
         if (sim.home === us) us.team.lastAttendance = sim.fixture.attendance
         Career.afterMatch(g, us.goals, them.goals, them.team.name, us.goals > them.goals, Talks.isDerby(g, sim.fixture), Comp.isLeague(sim.fixture.comp))
         val title = when {
-            euro && sim.isCup && won -> "Avrupa'da tur atladık!"
-            euro && sim.isCup -> "Avrupa'ya veda ettik"
-            euro && us.goals > them.goals -> "Avrupa'da galibiyet!"
-            euro && us.goals == them.goals -> "Avrupa'da beraberlik"
-            euro -> "Avrupa'da mağlubiyet"
-            sim.isCup && won -> "Kupada tur atladık!"
-            sim.isCup -> "Kupaya veda ettik"
-            us.goals - them.goals >= 3 -> "Farklı galibiyet!"
-            us.goals > them.goals -> "Galibiyet!"
-            us.goals == them.goals -> "Beraberlik"
-            else -> "Mağlubiyet"
+            euro && sim.isCup && won -> L("Avrupa'da tur atladık!", "Through in Europe!")
+            euro && sim.isCup -> L("Avrupa'ya veda ettik", "Out of Europe")
+            euro && us.goals > them.goals -> L("Avrupa'da galibiyet!", "A European win!")
+            euro && us.goals == them.goals -> L("Avrupa'da beraberlik", "A European draw")
+            euro -> L("Avrupa'da mağlubiyet", "A European defeat")
+            sim.isCup && won -> L("Kupada tur atladık!", "Through in the cup!")
+            sim.isCup -> L("Kupaya veda ettik", "Out of the cup")
+            us.goals - them.goals >= 3 -> L("Farklı galibiyet!", "A big win!")
+            us.goals > them.goals -> L("Galibiyet!", "Victory!")
+            us.goals == them.goals -> L("Beraberlik", "Draw")
+            else -> L("Mağlubiyet", "Defeat")
         }
         val scorers = us.used.filter { it.goals > 0 }.joinToString { if (it.goals > 1) "${it.p.name} (${it.goals})" else it.p.name }
         val motm = sim.manOfTheMatch()
         val body = buildString {
             append(score)
-            if (scorers.isNotEmpty()) append(". Gollerimiz: $scorers")
-            motm?.let { append(". Maçın oyuncusu: ${it.p.name} (${"%.1f".format(it.rating)})") }
+            if (scorers.isNotEmpty()) append(L(". Gollerimiz: $scorers", ". Our scorers: $scorers"))
+            motm?.let { append(L(". Maçın oyuncusu: ${it.p.name} (${"%.1f".format(it.rating)})", ". Player of the match: ${it.p.name} (${"%.1f".format(it.rating)})")) }
         }
         g.addNews(title, body)
         for (m in us.used) {
-            if (m.injured) g.addNews("Sakatlık", "${m.p.name} sakatlandı ve yaklaşık ${m.injWeeks - 1} hafta forma giyemeyecek.")
-            if (m.red) g.addNews("Kırmızı kart", "${m.p.name} kırmızı kart nedeniyle cezalı duruma düştü.")
+            if (m.injured) g.addNews(L("Sakatlık", "Injury"), L("${m.p.name} sakatlandı ve yaklaşık ${m.injWeeks - 1} hafta forma giyemeyecek.", "${m.p.name} is injured and will be out for about ${m.injWeeks - 1} weeks."))
+            if (m.red) g.addNews(L("Kırmızı kart", "Red card"), L("${m.p.name} kırmızı kart nedeniyle cezalı duruma düştü.", "${m.p.name} is suspended after a red card."))
         }
         // Yönetim güveni
         val t = us.team
@@ -509,7 +511,7 @@ object Season {
                 ManagerMarket.weekly(g, d.number, rnd)
                 if (d.number % 6 == 0) {
                     val leader = g.table(g.userTeam.division).first()
-                    g.addNews("Lig lideri", "${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.")
+                    g.addNews(L("Lig lideri", "League leaders"), L("${d.number}. hafta sonunda ${leader.name} ${leader.points} puanla zirvede.", "After week ${d.number}, ${leader.name} are top with ${leader.points} points."))
                 }
             }
             else -> {
@@ -575,7 +577,7 @@ object Season {
                 val risk = when (intensity) { 0 -> 0.002; 2 -> 0.012; else -> 0.005 } * (if (mine) physioRisk else 1.0) * Facilities.medicalRisk(team) * Traits.injuryFactor(p)
                 if (rnd.nextDouble() < risk) {
                     p.injuredWeeks = rnd.nextInt(1, 4)
-                    if (team.id == g.userTeamId) g.addNews("Antrenmanda sakatlık", "${p.name} antrenmanda sakatlandı (${p.injuredWeeks} hafta).")
+                    if (team.id == g.userTeamId) g.addNews(L("Antrenmanda sakatlık", "Training injury"), L("${p.name} antrenmanda sakatlandı (${p.injuredWeeks} hafta).", "${p.name} was injured in training (${p.injuredWeeks} weeks)."))
                 }
             }
         }
@@ -592,7 +594,7 @@ object Season {
                 p.promised = false
                 if (!starting) {
                     p.morale = (p.morale - 12).coerceAtLeast(5.0)
-                    g.addNews("Söz tutulmadı", "${p.name} verdiğin forma sözünü tutmadığın için çok kırgın.")
+                    g.addNews(L("Söz tutulmadı", "Promise broken"), L("${p.name} verdiğin forma sözünü tutmadığın için çok kırgın.", "${p.name} is very hurt that you didn't keep your playing-time promise."))
                 }
             }
             if (!p.available) continue
@@ -604,10 +606,10 @@ object Season {
             if (!starting && p.squadRole in 0..1) p.morale = (p.morale - 2.5 * Traits.moraleSensitivity(p)).coerceAtLeast(5.0)
             if (!p.wantsAway && p.morale < 25 && p.overall >= str - 4) {
                 p.wantsAway = true
-                g.addNews("Transfer talebi!", "${p.name} forma bulamamaktan mutsuz ve kulüpten ayrılmak istiyor. Onunla konuşabilir, oynatabilir ya da satabilirsin.")
+                g.addNews(L("Transfer talebi!", "Transfer request!"), L("${p.name} forma bulamamaktan mutsuz ve kulüpten ayrılmak istiyor. Onunla konuşabilir, oynatabilir ya da satabilirsin.", "${p.name} is unhappy about his lack of playing time and wants to leave. You can talk to him, play him or sell him."))
             } else if (p.wantsAway && p.morale > 45) {
                 p.wantsAway = false
-                g.addNews("Mutlu son", "${p.name} transfer talebini geri çekti.")
+                g.addNews(L("Mutlu son", "Happy ending"), L("${p.name} transfer talebini geri çekti.", "${p.name} has withdrawn his transfer request."))
             }
         }
     }
@@ -620,7 +622,7 @@ object Season {
             val club = g.teamOrNull(p.teamId)
             club?.lineup?.replaceAll { if (it == p.id) -1 else it }
             if (home != null) {
-                if (home.id == g.userTeamId) g.addNews("Kiralıktan dönüş", "${p.name} kiralık dönemini tamamlayıp döndü (${p.apps} maç, ${p.goals} gol). Güç: ${p.startOvr} → ${p.overall}.")
+                if (home.id == g.userTeamId) g.addNews(L("Kiralıktan dönüş", "Back from loan"), L("${p.name} kiralık dönemini tamamlayıp döndü (${p.apps} maç, ${p.goals} gol). Güç: ${p.startOvr} → ${p.overall}.", "${p.name} is back after his loan spell (${p.apps} apps, ${p.goals} goals). Overall: ${p.startOvr} → ${p.overall}."))
                 g.movePlayer(p, home.id)
             }
             p.loanFrom = -1
@@ -636,10 +638,10 @@ object Season {
             val t = g.team(w)
             Economy.earn(t, Comp.name(comp), 3_000_000L)
             t.reputation = (t.reputation + 2).coerceAtMost(95)
-            if (Leagues.cupCountry(comp) == g.userCountry) g.addNews("${Comp.name(comp)} sahibini buldu!", "${t.name} kupayı müzesine götürdü! 🏆")
+            if (Leagues.cupCountry(comp) == g.userCountry) g.addNews(L("${Comp.name(comp)} sahibini buldu!", "${Comp.name(comp)} has a winner!"), L("${t.name} kupayı müzesine götürdü! 🏆", "${t.name} take the trophy home! 🏆"))
             if (w == g.userTeamId) {
                 g.confidence = (g.confidence + 15).coerceAtMost(100.0)
-                g.addNews("KUPA BİZİM!", "Tebrikler hocam! ${Comp.name(comp)}'nı kazandık! Taraftar sokaklarda!")
+                g.addNews(L("KUPA BİZİM!", "THE CUP IS OURS!"), L("Tebrikler hocam! ${Comp.name(comp)}'nı kazandık! Taraftar sokaklarda!", "Congratulations, boss! We've won the ${Comp.name(comp)}! The fans are on the streets!"))
             }
         } else {
             drawCup(g, comp, round + 1, winners.map { g.team(it) }, rnd)
@@ -733,7 +735,7 @@ object Season {
             p.contractYears = rnd.nextInt(2, 6)
             val local = g.countryOf(buyer) == g.userCountry || (from != null && g.countryOf(from) == g.userCountry)
             if ((local && (p.overall >= 66 || price >= 1_000_000)) || price >= 15_000_000) {
-                g.addNews("Transfer", "${p.name} (${p.overall}) → ${buyer.name}" + (from?.let { " · ${it.name} kasasına ${money(price)} girdi" } ?: " · serbest oyuncu olarak imzaladı"))
+                g.addNews(L("Transfer", "Transfer"), "${p.name} (${p.overall}) → ${buyer.name}" + (from?.let { L(" · ${it.name} kasasına ${money(price)} girdi", " · ${money(price)} to ${it.name}") } ?: L(" · serbest oyuncu olarak imzaladı", " · signed as a free agent")))
             }
         }
     }
@@ -744,7 +746,7 @@ object Season {
         if (g.fired) return
         MonthlyAwards.check(g)
         if (Career.isDeadlineDay(g)) {
-            g.addNews("📺 Transfer döneminin son günü!", "Kulüpler son dakika transferleri için kolları sıvadı. Gece yarısı pencere kapanıyor!")
+            g.addNews(L("📺 Transfer döneminin son günü!", "📺 Transfer deadline day!"), L("Kulüpler son dakika transferleri için kolları sıvadı. Gece yarısı pencere kapanıyor!", "Clubs are rolling up their sleeves for last-minute deals. The window closes at midnight!"))
             repeat(3) { aiTransfers(g, rnd) }
             repeat(2) { makeIncomingOffer(g, rnd) }
         }
@@ -775,7 +777,7 @@ object Season {
                 g.squad(it.id).size < 28 && Economy.fitsWages(g, it, p.demandWage)
         }.randomOrNull(rnd) ?: return
         g.offers += IncomingOffer(p.id, buyer.id, price, g.week)
-        g.addNews("Transfer teklifi!", "${buyer.name} (${g.countryOf(buyer)}), ${p.name} için ${money(price)} teklif etti. Ana sayfadan yanıt verebilirsin.")
+        g.addNews(L("Transfer teklifi!", "Transfer offer!"), L("${buyer.name} (${g.countryOf(buyer)}), ${p.name} için ${money(price)} teklif etti. Ana sayfadan yanıt verebilirsin.", "${buyer.name} (${g.countryOf(buyer)}) have offered ${money(price)} for ${p.name}. You can respond on the home screen."))
     }
 
     private fun fire(g: Game, rnd: Random) {
@@ -786,7 +788,7 @@ object Season {
         g.jobOffers = pool.filter { it.reputation in (cur.reputation - 20)..(cur.reputation - 3) }
             .shuffled(rnd).take(4).map { it.id }.toMutableList()
         if (g.jobOffers.isEmpty()) g.jobOffers = pool.sortedBy { it.reputation }.take(4).map { it.id }.toMutableList()
-        g.addNews("KOVULDUN!", "${cur.name} yönetimi kötü sonuçlar nedeniyle yollarını seninle ayırdı. Masada yeni teklifler var.")
+        g.addNews(L("KOVULDUN!", "YOU'RE SACKED!"), L("${cur.name} yönetimi kötü sonuçlar nedeniyle yollarını seninle ayırdı. Masada yeni teklifler var.", "The ${cur.name} board has parted ways with you after poor results. New offers are on the table."))
     }
 
     fun takeJob(g: Game, teamId: Int) {
@@ -812,7 +814,7 @@ object Season {
         Facilities.ensure(g.userTeam)
         Sponsors.refreshOffers(g)
         Lineups.validate(g, g.userTeam)
-        g.addNews("Yeni görev", "$old macerası bitti. Artık ${g.userTeam.name} teknik direktörüsün! Hedef: ${objectiveText(g.userTeam)}.")
+        g.addNews(L("Yeni görev", "New job"), L("$old macerası bitti. Artık ${g.userTeam.name} teknik direktörüsün! Hedef: ${objectiveText(g.userTeam)}.", "The $old adventure is over. You're now the ${g.userTeam.name} manager! Objective: ${objectiveText(g.userTeam)}."))
     }
 
     private fun seasonEnd(g: Game) {
@@ -833,14 +835,14 @@ object Season {
             }
         }
         g.addNews(
-            "Yeni sezon bütçesi",
-            "Yönetim sezon sonu ödeneği olarak ${money(us.budget - budgetBefore)} ayırdı. Transfer bütçen: ${money(us.budget)}. Ayrıntılar ana sayfadaki mali raporda.",
+            L("Yeni sezon bütçesi", "New season budget"),
+            L("Yönetim sezon sonu ödeneği olarak ${money(us.budget - budgetBefore)} ayırdı. Transfer bütçen: ${money(us.budget)}. Ayrıntılar ana sayfadaki mali raporda.", "The board has allocated ${money(us.budget - budgetBefore)} as the end-of-season grant. Transfer budget: ${money(us.budget)}. Details in the financial report on the home screen."),
         )
         val myLeague = g.table(us.division)
         val userPos = g.position(us.id)
         val leagueTeams = myLeague.map { it.id }.toSet()
         val top = g.players.filter { it.teamId in leagueTeams }.maxByOrNull { it.goals }
-        val topText = top?.let { "${it.name} (${it.goals} gol)" } ?: "-"
+        val topText = top?.let { L("${it.name} (${it.goals} gol)", "${it.name} (${it.goals} goals)") } ?: "-"
         val country = g.userCountry
         val lower = Leagues.second(country)?.let { g.table(it.id) }
         val cupComp = Leagues.of(us.division)?.cupComp ?: Comp.CUP
@@ -853,16 +855,16 @@ object Season {
             leagueName = Leagues.of(us.division)?.name ?: "",
             awards = awards,
         )
-        if (awards.isNotEmpty()) g.addNews("🏅 Sezonun ödülleri", awards)
+        if (awards.isNotEmpty()) g.addNews(L("🏅 Sezonun ödülleri", "🏅 Season awards"), awards)
         g.euroQualified = Leagues.topLeagues.filter { it.euroSlots > 0 && g.divisionTeams(it.id).isNotEmpty() }.flatMap { lg -> g.table(lg.id).take(lg.euroSlots).map { it.id } }.toMutableList()
-        if (us.id in g.euroQualified) g.addNews("AVRUPA'DAYIZ!", "${us.name} gelecek sezon Avrupa Kupası'nda mücadele edecek!")
+        if (us.id in g.euroQualified) g.addNews(L("AVRUPA'DAYIZ!", "WE'RE IN EUROPE!"), L("${us.name} gelecek sezon Avrupa Kupası'nda mücadele edecek!", "${us.name} will play in the European Cup next season!"))
         val topLeague = g.table(Leagues.top(country).id)
         val summary = buildString {
-            append("${g.season} ${Leagues.top(country).name} şampiyonu ${topLeague.first().name}! Gol kralı: $topText.")
-            if (lower != null) append(" Düşenler: ${topLeague.takeLast(3).joinToString { it.name }}. Yükselenler: ${lower.take(3).joinToString { it.name }}.")
+            append(L("${g.season} ${Leagues.top(country).name} şampiyonu ${topLeague.first().name}! Gol kralı: $topText.", "${topLeague.first().name} are ${g.season} ${Leagues.top(country).name} champions! Top scorer: $topText."))
+            if (lower != null) append(L(" Düşenler: ${topLeague.takeLast(3).joinToString { it.name }}. Yükselenler: ${lower.take(3).joinToString { it.name }}.", " Relegated: ${topLeague.takeLast(3).joinToString { it.name }}. Promoted: ${lower.take(3).joinToString { it.name }}."))
         }
-        g.addNews("Sezon sona erdi", summary)
-        if (myLeague.first().id == us.id) g.addNews("ŞAMPİYONUZ!", "Tebrikler hocam! ${us.name} ${Leagues.of(us.division)?.name} şampiyonu!")
+        g.addNews(L("Sezon sona erdi", "Season over"), summary)
+        if (myLeague.first().id == us.id) g.addNews(L("ŞAMPİYONUZ!", "CHAMPIONS!"), L("Tebrikler hocam! ${us.name} ${Leagues.of(us.division)?.name} şampiyonu!", "Congratulations, boss! ${us.name} are ${Leagues.of(us.division)?.name} champions!"))
         val target = objectiveTarget(us.expected)
         g.confidence = (g.confidence + when {
             userPos <= target -> 25.0
@@ -872,7 +874,7 @@ object Season {
         Fans.seasonEnd(g, titles, userPos <= target, userPos > target + 3)
         Career.seasonEnd(
             g, myLeague.first().id == us.id, g.cupWinners[cupComp] == us.id, g.euroWinner == us.id,
-            userPos <= target, userPos > target + 3, Leagues.of(us.division)?.name ?: "Lig", Comp.name(cupComp),
+            userPos <= target, userPos > target + 3, Leagues.of(us.division)?.name ?: L("Lig", "League"), Comp.name(cupComp),
         )
         careerOffers(g, userPos, target)
     }
@@ -887,10 +889,10 @@ object Season {
         val table = g.table(div)
         val coach = table.withIndex().maxByOrNull { (i, t) -> (t.expected - (i + 1)) * 10 + (if (i == 0) 15 else 0) }?.value
         val parts = mutableListOf<String>()
-        potY?.let { parts += "Yılın oyuncusu: ${it.name} (${g.teamOrNull(it.teamId)?.short ?: "-"}, ${"%.2f".format(it.avgRating)})" }
-        top?.let { parts += "Gol kralı: ${it.name} (${it.goals})" }
-        young?.let { parts += "Yılın genç oyuncusu: ${it.name} (${it.age})" }
-        coach?.let { parts += "Yılın teknik direktörü: " + if (it.id == g.userTeamId) "${g.managerName} (${it.name}) 🎉" else "${it.name} hocası" }
+        potY?.let { parts += L("Yılın oyuncusu: ${it.name} (${g.teamOrNull(it.teamId)?.short ?: "-"}, ${"%.2f".format(it.avgRating)})", "Player of the year: ${it.name} (${g.teamOrNull(it.teamId)?.short ?: "-"}, ${"%.2f".format(it.avgRating)})") }
+        top?.let { parts += L("Gol kralı: ${it.name} (${it.goals})", "Top scorer: ${it.name} (${it.goals})") }
+        young?.let { parts += L("Yılın genç oyuncusu: ${it.name} (${it.age})", "Young player of the year: ${it.name} (${it.age})") }
+        coach?.let { parts += L("Yılın teknik direktörü: ", "Manager of the year: ") + if (it.id == g.userTeamId) "${g.managerName} (${it.name}) 🎉" else L("${it.name} hocası", "${it.name} manager") }
         return parts.joinToString(" · ")
     }
 
@@ -902,7 +904,7 @@ object Season {
         if (bigger.isEmpty() || Random.nextDouble() > 0.6) return
         g.jobOffers = bigger.shuffled().take(2).map { it.id }.toMutableList()
         g.careerOffer = true
-        g.addNews("Kariyer teklifi!", "Başarın göz kamaştırdı: ${g.jobOffers.joinToString { g.team(it).name }} seni teknik direktör olarak istiyor. Ana sayfadan karar ver.")
+        g.addNews(L("Kariyer teklifi!", "Job offer!"), L("Başarın göz kamaştırdı: ${g.jobOffers.joinToString { g.team(it).name }} seni teknik direktör olarak istiyor. Ana sayfadan karar ver.", "Your success has dazzled: ${g.jobOffers.joinToString { g.team(it).name }} want you as manager. Decide on the home screen."))
     }
 
     fun newSeason(g: Game, rnd: Random = Random.Default) {
@@ -918,14 +920,14 @@ object Season {
             val up = g.table(second.id).take(3)
             down.forEach { it.division = second.id; it.reputation = (it.reputation - 4).coerceAtLeast(30) }
             up.forEach { it.division = top.id; it.reputation = (it.reputation + 4).coerceAtMost(95) }
-            if (us in down) Fans.change(g, -15.0, "Küme düşme")
-            if (us in up) { Fans.change(g, 15.0, "Şampiyonluk yükselişi"); Career.unlock(g, "promotion") }
-            if (us in down) g.addNews("Küme düştük", "${us.name} gelecek sezon ${second.name}'nde mücadele edecek. Hemen geri dönmeliyiz!")
-            if (us in up) g.addNews("YÜKSELDİK!", "${us.name} artık ${top.name}'nde! Tarihi bir başarı hocam!")
+            if (us in down) Fans.change(g, -15.0, L("Küme düşme", "Relegation"))
+            if (us in up) { Fans.change(g, 15.0, L("Şampiyonluk yükselişi", "Promoted as champions")); Career.unlock(g, "promotion") }
+            if (us in down) g.addNews(L("Küme düştük", "We've been relegated"), L("${us.name} gelecek sezon ${second.name}'nde mücadele edecek. Hemen geri dönmeliyiz!", "${us.name} will play in ${second.name} next season. We must bounce straight back!"))
+            if (us in up) g.addNews(L("YÜKSELDİK!", "PROMOTED!"), L("${us.name} artık ${top.name}'nde! Tarihi bir başarı hocam!", "${us.name} are now in ${top.name}! A historic achievement, boss!"))
         }
         returnLoans(g)
         // Eski kayıtlar: sonradan eklenen ligler yeni sezonla kurulur
-        if (WorldGen.addMissingLeagues(g, rnd)) g.addNews("🌍 Yeni ligler", "Belçika, İskoçya, Brezilya ve Arjantin ligleri bu sezondan itibaren oyunda! Gözlemcilerin yeni yeteneklere bakabilir.")
+        if (WorldGen.addMissingLeagues(g, rnd)) g.addNews(L("🌍 Yeni ligler", "🌍 New leagues"), L("Belçika, İskoçya, Brezilya ve Arjantin ligleri bu sezondan itibaren oyunda! Gözlemcilerin yeni yeteneklere bakabilir.", "The Belgian, Scottish, Brazilian and Argentine leagues are in the game from this season! Your scouts can look for new talent."))
         Economy.processContracts(g, rnd)
 
         // Dünya dengesi: yıldız (80+) sayısı başlangıca göre azaldıysa gençler biraz hızlı, arttıysa biraz yavaş gelişir.
@@ -969,7 +971,7 @@ object Season {
             p.yellowCards = 0; p.suspended = 0; p.fitness = 100.0
         }
         g.retiring.clear()
-        for (p in retired) if (p.teamId == g.userTeamId) g.addNews("Jübile", "${p.name} ${p.age} yaşında futbolu bıraktı.")
+        for (p in retired) if (p.teamId == g.userTeamId) g.addNews(L("Jübile", "Retirement"), L("${p.name} ${p.age} yaşında futbolu bıraktı.", "${p.name} has retired at the age of ${p.age}."))
         // Kulübümüzde iz bırakanlar efsaneler listesine girer
         for (p in retired) {
             val (apps, goals) = Legends.atClub(g, p, g.userTeam.name)
@@ -998,7 +1000,7 @@ object Season {
                 } else {
                     val y = Generator.youth(g, t, pos, rnd)
                     g.addPlayer(y)
-                    if (t.id == g.userTeamId) g.addNews("Altyapıdan yeni yetenek", "${y.name} (${y.age}, ${pos.label}) A takıma yükseldi. Potansiyeli: ${y.potential}.")
+                    if (t.id == g.userTeamId) g.addNews(L("Altyapıdan yeni yetenek", "New academy talent"), L("${y.name} (${y.age}, ${pos.label}) A takıma yükseldi. Potansiyeli: ${y.potential}.", "${y.name} (${y.age}, ${pos.label}) has joined the first team. Potential: ${y.potential}."))
                 }
                 sq = g.squad(t.id)
             }
@@ -1031,6 +1033,6 @@ object Season {
         g.season++
         start(g, rnd)
         boardSweep(g)
-        g.addNews("Yeni sezon", "${g.season} sezonu başlıyor! Yönetimin hedefi: ${objectiveText(g.userTeam)}. Transfer dönemi açık.")
+        g.addNews(L("Yeni sezon", "New season"), L("${g.season} sezonu başlıyor! Yönetimin hedefi: ${objectiveText(g.userTeam)}. Transfer dönemi açık.", "The ${g.season} season begins! Board objective: ${objectiveText(g.userTeam)}. The transfer window is open."))
     }
 }

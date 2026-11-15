@@ -243,9 +243,11 @@ object Comp {
         isCup(c) -> Leagues.cupName(c)
         else -> Leagues.of(c)?.name ?: L("Lig", "League")
     }
-    val cupRounds get() = listOf(L("Son 32", "Round of 32"), L("Son 16", "Round of 16"), L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final"))
+    private val cupRoundsCache = com.supermenajer.game.game.LangCached { listOf(L("Son 32", "Round of 32"), L("Son 16", "Round of 16"), L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final")) }
+    val cupRounds get() = cupRoundsCache.get()
     /** 0-5 grup maçları, 6 son 16, 7 çeyrek final, 8 yarı final, 9 final */
-    val euroRounds get() = listOf(L("Grup 1. maç", "Group matchday 1"), L("Grup 2. maç", "Group matchday 2"), L("Grup 3. maç", "Group matchday 3"), L("Grup 4. maç", "Group matchday 4"), L("Grup 5. maç", "Group matchday 5"), L("Grup 6. maç", "Group matchday 6"), L("Son 16", "Round of 16"), L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final"))
+    private val euroRoundsCache = com.supermenajer.game.game.LangCached { listOf(L("Grup 1. maç", "Group matchday 1"), L("Grup 2. maç", "Group matchday 2"), L("Grup 3. maç", "Group matchday 3"), L("Grup 4. maç", "Group matchday 4"), L("Grup 5. maç", "Group matchday 5"), L("Grup 6. maç", "Group matchday 6"), L("Son 16", "Round of 16"), L("Çeyrek Final", "Quarter-final"), L("Yarı Final", "Semi-final"), L("Final", "Final")) }
+    val euroRounds get() = euroRoundsCache.get()
     const val EURO_KO = 6
     fun roundName(comp: Int, round: Int) = if (comp == EURO) euroRounds[round] else cupRounds[round]
 
@@ -300,9 +302,13 @@ object Inbox {
     const val MATCH = 1
     const val TRANSFER = 2
     const val CLUB = 3
-    val names get() = listOf(L("Tümü", "All"), L("Maç", "Match"), L("Transfer", "Transfer"), L("Kulüp", "Club"))
-    private val clubWords = listOf("sponsor", "inşaat", "taraftar", "yönetim", "bütçe", "teknik ekip", "altyapı", "güncelleme", "kovul", "kariyer", "görev", "stad", "yardımcı antrenör", "hoş geldin", "avrupa'dayız", "ödül", "tesis")
-    private val transferWords = listOf("transfer", "satış", "teklif", "kiralık", "gözlemci", "sözleşme", "serbest", "jübile", "ayrıl")
+    private val namesCache = com.supermenajer.game.game.LangCached { listOf(L("Tümü", "All"), L("Maç", "Match"), L("Transfer", "Transfer"), L("Kulüp", "Club")) }
+    val names get() = namesCache.get()
+    // Türkçe ve İngilizce başlık anahtar kelimeleri (haberler yazıldıkları dilde kalır)
+    private val clubWords = listOf("sponsor", "inşaat", "taraftar", "yönetim", "bütçe", "teknik ekip", "altyapı", "güncelleme", "kovul", "kariyer", "görev", "stad", "yardımcı antrenör", "hoş geldin", "avrupa'dayız", "ödül", "tesis",
+        "construction", "fan", "board", "budget", "staff", "academy", "youth intake", "sacked", "job", "task", "stadium", "assistant", "welcome", "in europe", "award", "facility", "camp")
+    private val transferWords = listOf("transfer", "satış", "teklif", "kiralık", "gözlemci", "sözleşme", "serbest", "jübile", "ayrıl",
+        "sale", "offer", "loan", "scout", "contract", "free", "retire", "signing", "pre-contract")
     fun categorize(title: String): Int {
         val t = title.lowercase()
         return when {

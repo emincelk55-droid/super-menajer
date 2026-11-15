@@ -9,16 +9,17 @@ import com.supermenajer.game.model.Game
 object Perks {
     class Perk(val id: String, val icon: String, val name: String, val desc: String, val max: Int = 3)
 
-    val all = listOf(
-        Perk("nego", "🤝", "Pazarlık ustası", "Bonservis istekleri seviye başına %5 düşer, menajerler daha kolay ikna olur."),
-        Perk("youth", "🌱", "Genç geliştirici", "21 yaş altı oyuncular ve bireysel antrenman seviye başına %10 daha hızlı gelişir."),
-        Perk("tactic", "🧠", "Taktik dehası", "Maçlarda takımın seviye başına %1 daha güçlü."),
-        Perk("motiv", "📣", "Motivasyoncu", "Takım konuşmaları ve kenar çizgisi seviye başına %15 daha etkili."),
-        Perk("econ", "💰", "Ekonomist", "Bilet ve sponsor gelirleri seviye başına %5 artar."),
-        Perk("scout", "🔭", "Gözlemci ağı", "Gözlemci ücreti seviye başına %25 düşer, 2. seviyeden itibaren haftalık ek öneri."),
-        Perk("disc", "🧱", "Disiplin", "Oyuncularının faul ve kart riski seviye başına %10 azalır."),
-        Perk("pr", "🎙️", "Halkla ilişkiler", "Taraftarı memnun eden olaylar seviye başına %15 daha etkili, protesto riski azalır."),
-    )
+    private val allCache = LangCached { listOf(
+        Perk("nego", "🤝", L("Pazarlık ustası", "Master negotiator"), L("Bonservis istekleri seviye başına %5 düşer, menajerler daha kolay ikna olur.", "Transfer fee demands drop 5% per level and agents are easier to convince.")),
+        Perk("youth", "🌱", L("Genç geliştirici", "Youth developer"), L("21 yaş altı oyuncular ve bireysel antrenman seviye başına %10 daha hızlı gelişir.", "Under-21 players and individual training develop 10% faster per level.")),
+        Perk("tactic", "🧠", L("Taktik dehası", "Tactical genius"), L("Maçlarda takımın seviye başına %1 daha güçlü.", "Your team is 1% stronger in matches per level.")),
+        Perk("motiv", "📣", L("Motivasyoncu", "Motivator"), L("Takım konuşmaları ve kenar çizgisi seviye başına %15 daha etkili.", "Team talks and touchline shouts are 15% more effective per level.")),
+        Perk("econ", "💰", L("Ekonomist", "Economist"), L("Bilet ve sponsor gelirleri seviye başına %5 artar.", "Ticket and sponsor income rises 5% per level.")),
+        Perk("scout", "🔭", L("Gözlemci ağı", "Scouting network"), L("Gözlemci ücreti seviye başına %25 düşer, 2. seviyeden itibaren haftalık ek öneri.", "Scouting fees drop 25% per level, an extra weekly suggestion from level 2.")),
+        Perk("disc", "🧱", L("Disiplin", "Discipline"), L("Oyuncularının faul ve kart riski seviye başına %10 azalır.", "Your players' foul and card risk drops 10% per level.")),
+        Perk("pr", "🎙️", L("Halkla ilişkiler", "Public relations"), L("Taraftarı memnun eden olaylar seviye başına %15 daha etkili, protesto riski azalır.", "Events that please the fans are 15% more effective per level, lower protest risk.")),
+    ) }
+    val all get() = allCache.get()
 
     fun lvl(g: Game, id: String): Int = g.perks[id] ?: 0
 
@@ -45,15 +46,15 @@ object Perks {
         val before = level(g.managerXp)
         g.managerXp += amount
         val after = level(g.managerXp)
-        if (after > before) g.addNews("⬆️ Menajer seviyesi $after", "Deneyim kazandın ve bir yetenek puanı aldın! Kulüp → Yetenekler'den harca.")
+        if (after > before) g.addNews(L("⬆️ Menajer seviyesi $after", "⬆️ Manager level $after"), L("Deneyim kazandın ve bir yetenek puanı aldın! Kulüp → Yetenekler'den harca.", "You gained experience and earned a skill point! Spend it in Club → Skills."))
     }
 
     fun upgrade(g: Game, id: String): String {
         val p = all.firstOrNull { it.id == id } ?: return ""
-        if (points(g) <= 0) return "Yetenek puanın yok. Maç kazanarak deneyim topla."
-        if (lvl(g, id) >= p.max) return "${p.name} zaten en üst seviyede."
+        if (points(g) <= 0) return L("Yetenek puanın yok. Maç kazanarak deneyim topla.", "No skill points. Win matches to gain experience.")
+        if (lvl(g, id) >= p.max) return L("${p.name} zaten en üst seviyede.", "${p.name} is already at the top level.")
         g.perks[id] = lvl(g, id) + 1
-        return "${p.icon} ${p.name} seviye ${lvl(g, id)}!"
+        return L("${p.icon} ${p.name} seviye ${lvl(g, id)}!", "${p.icon} ${p.name} level ${lvl(g, id)}!")
     }
 
     // ---- Etkiler ----

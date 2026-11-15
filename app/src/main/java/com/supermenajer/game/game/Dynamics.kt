@@ -10,7 +10,8 @@ import kotlin.math.roundToInt
  * sosyal gruplar ve takım uyumu. Etkili oyuncuların morali gruplarına yayılır; uyum maç performansını etkiler.
  */
 object Dynamics {
-    val tierNames = listOf("👑 Takım liderleri", "⭐ Etkili oyuncular", "🙂 Diğer oyuncular")
+    private val tierNamesCache = LangCached { listOf(L("👑 Takım liderleri", "👑 Team leaders"), L("⭐ Etkili oyuncular", "⭐ Influential players"), L("🙂 Diğer oyuncular", "🙂 Other players")) }
+    val tierNames get() = tierNamesCache.get()
 
     fun influence(g: Game, t: Team, p: Player): Double {
         var s = p.overall * 0.6 + (p.age - 18).coerceIn(0, 14) * 2.2 + p.apps * 0.3
@@ -30,11 +31,11 @@ object Dynamics {
     fun groupOf(g: Game, t: Team, p: Player): String {
         val home = g.flagOf(t)
         return when {
-            p.nation == home -> "Yerli oyuncular"
-            p.nation in setOf("BR", "AR", "CO", "UY", "ES", "PT", "US") -> "Latin oyuncular"
-            p.nation in setOf("SN", "NG", "CI", "GH", "CM", "MA", "DZ") -> "Afrikalı oyuncular"
-            p.nation in setOf("JP", "KR") -> "Asyalı oyuncular"
-            else -> "Avrupalı oyuncular"
+            p.nation == home -> L("Yerli oyuncular", "Local players")
+            p.nation in setOf("BR", "AR", "CO", "UY", "ES", "PT", "US") -> L("Latin oyuncular", "Latin players")
+            p.nation in setOf("SN", "NG", "CI", "GH", "CM", "MA", "DZ") -> L("Afrikalı oyuncular", "African players")
+            p.nation in setOf("JP", "KR") -> L("Asyalı oyuncular", "Asian players")
+            else -> L("Avrupalı oyuncular", "European players")
         }
     }
 
@@ -42,11 +43,11 @@ object Dynamics {
         g.squad(t.id).groupBy { groupOf(g, t, it) }.filter { it.value.size >= 2 }
 
     fun cohesionText(c: Double) = when {
-        c >= 80 -> "Mükemmel uyum"
-        c >= 65 -> "İyi uyum"
-        c >= 45 -> "Ortalama uyum"
-        c >= 30 -> "Zayıf uyum"
-        else -> "Kopuk takım"
+        c >= 80 -> L("Mükemmel uyum", "Perfect chemistry")
+        c >= 65 -> L("İyi uyum", "Good chemistry")
+        c >= 45 -> L("Ortalama uyum", "Average chemistry")
+        c >= 30 -> L("Zayıf uyum", "Weak chemistry")
+        else -> L("Kopuk takım", "Disjointed team")
     }
 
     /** Maç gücü çarpanı (kullanıcı takımı): %97 - %103. */
@@ -95,7 +96,7 @@ object Dynamics {
         val grp = groupOf(g, t, p)
         g.squad(t.id).filter { groupOf(g, t, it) == grp }.forEach { it.morale = (it.morale - 4).coerceAtLeast(5.0) }
         g.cohesion = (g.cohesion - 5).coerceAtLeast(15.0)
-        g.addNews("Soyunma odası sarsıldı", "${p.name}'in ayrılığı ${grp.lowercase()} arasında üzüntü yarattı. Takım uyumu düştü.")
+        g.addNews(L("Soyunma odası sarsıldı", "Dressing room shaken"), L("${p.name}'in ayrılığı ${grp.lowercase()} arasında üzüntü yarattı. Takım uyumu düştü.", "${p.name}'s departure upset the ${grp.lowercase()}. Team chemistry dropped."))
     }
 
     fun pct(c: Double) = c.roundToInt()
