@@ -23,12 +23,29 @@ object Alias {
         "football", "futebol", "fútbol", "hotspur", "albion", "rovers", "wanderers", "county", "villa", "hove", "and", "1907", "1903",
     )
 
+    /** Soyadlarında karakteristik ekler (uzundan kısaya). */
+    private val nameSuffixes = listOf(
+        "oğlu", "oglu", "ović", "ovic", "ević", "evic", "inho", "sson", "elli", "etti", "ini", "ski", "sky", "ić", "son", "sen",
+    )
+
+    private fun plain(x: String): String =
+        java.text.Normalizer.normalize(x, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase()
+
     /** Tek kelimeyi tanınır şekilde değiştir. */
     fun word(w: String): String {
         if (w.length < 3) return w
         // Türk kulüplerinde "-spor" eki korunur, şehir kısmı değişir: Trabzonspor → Trabzunspor
         for (suf in listOf("spor", "gücü", "birliği")) {
             if (w.length > suf.length + 3 && w.endsWith(suf)) return word(w.dropLast(suf.length)) + suf
+        }
+        // Soyadı ekleri korunur, kök değişir (ek bozulunca isim yapay durur):
+        // Aktürkoğlu → Akturkoğlu (Aktürkoğlo değil), Vlahović → Vlehović, Mancini → Mencini
+        for (suf in nameSuffixes) {
+            if (w.length >= suf.length + 3 && w.lowercase().endsWith(suf)) {
+                val stem = w.dropLast(suf.length)
+                val changed = word(stem)
+                if (changed != stem + "e") return changed + w.takeLast(suf.length)
+            }
         }
         val chars = w.toMutableList()
         // 1) Çift harf varsa birini at: Mbappé → Mbapé, Haaland → Haland
@@ -38,14 +55,19 @@ object Alias {
                 return chars.joinToString("")
             }
         }
-        // 2) Son ünlüyü değiştir (son harf değilse önce onu dene): Güler → Gülar
-        val idx = chars.indices.reversed().firstOrNull { i -> chars[i].lowercaseChar() in vowels && i > 0 }
-        if (idx != null) {
-            val c = chars[idx]
+        // 2) Son ünlüyü değiştir: Güler → Gülar. Kelime ünlüyle bitiyorsa sondan bir önceki ünlü
+        //    değişir (ek gibi duran son harf korunur): Icardi → Icerdi, Saka → Seka
+        val vIdx = chars.indices.filter { i -> chars[i].lowercaseChar() in vowels && i > 0 }
+        val endsVowel = chars.last().lowercaseChar() in vowels
+        val first = if (endsVowel && vIdx.size >= 2) vIdx[vIdx.size - 2] else vIdx.lastOrNull()
+        // Yalnız aksan düşüyorsa (Guéhi → Guehi) isim aslında aynıdır: son ünlüye geç
+        for (idx in listOfNotNull(first, vIdx.lastOrNull()).distinct()) {
+            val cs = w.toMutableList()
+            val c = cs[idx]
             val n = vowelSwap.getValue(c.lowercaseChar())
-            chars[idx] = if (c.isUpperCase()) n.uppercaseChar() else n
-            val out = chars.joinToString("")
-            if (out != w) return out
+            cs[idx] = if (c.isUpperCase()) n.uppercaseChar() else n
+            val out = cs.joinToString("")
+            if (plain(out) != plain(w)) return out
         }
         return w + "e"
     }
