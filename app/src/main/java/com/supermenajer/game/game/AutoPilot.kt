@@ -48,6 +48,7 @@ object AutoPilot {
                 log.events++
                 log.add(L("Olay: ${e.title} → ${e.options.getOrNull(c)}", "Event: ${e.title} → ${e.options.getOrNull(c)}"))
             }
+            DailyReward.available(g) -> GameRepo.claimDaily()
             g.press != null -> {
                 val q = g.press!!
                 GameRepo.answerPress(q, rnd.nextInt(q.answers.size.coerceAtLeast(1)))

@@ -415,6 +415,15 @@ class Game(
     /** Sezon görevleri: "id|başlık|hedef|ilerleme|xp|bitti(0/1)". */
     var missions: MutableList<String> = mutableListOf(),
     var missionSeason: Int = -1,
+    /** Günlük giriş ödülü: son alınan gün (epoch), seri ve en uzun seri. */
+    var dailyLast: Long = -1,
+    var dailyStreak: Int = 0,
+    var dailyBest: Int = 0,
+    /** Maç görevleri ("id|durum"), son maçın sonuçları ve sayaçlar. */
+    var challenges: MutableList<String> = mutableListOf(),
+    var lastChallenges: MutableList<String> = mutableListOf(),
+    var challengesDone: Int = 0,
+    var challengesPerfect: Int = 0,
     /** Oynanmayı bekleyen milli maç: "rakip|tür|evde(1/0)" (boş = yok). */
     var natPending: String = "",
     var natFormation: String = "4-3-3",

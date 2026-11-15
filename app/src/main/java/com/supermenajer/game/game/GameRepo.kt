@@ -34,6 +34,9 @@ object GameRepo {
     var match: MatchSim? = null
         private set
     var selectedPlayer by mutableStateOf<Player?>(null)
+    /** Son maçın görev sonuçları (maç özeti ekranında gösterilir) ve günlük ödül mesajı. */
+    var challengeResult by mutableStateOf<List<Challenges.View>?>(null)
+    var dailyMsg by mutableStateOf<String?>(null)
     /** Karşılaştırma: sabitlenen oyuncu ve açık karşılaştırma (iki oyuncu kimliği). */
     var comparePin by mutableStateOf<Int?>(null)
     var tacticWizard by mutableStateOf(false)
@@ -783,6 +786,15 @@ object GameRepo {
         changed()
     }
 
+    /** Günlük giriş ödülünü al (sonuç metni; alınamıyorsa null). */
+    fun claimDaily(): String? {
+        val g = game ?: return null
+        val r = DailyReward.claim(g) ?: return null
+        dailyMsg = r
+        changed()
+        return r
+    }
+
     fun declineCareerOffer() {
         val g = game ?: return
         g.jobOffers.clear()
@@ -813,6 +825,7 @@ object GameRepo {
 
     fun closeSummary() {
         match = null
+        challengeResult = null
         if (versus) {
             // İki kişilik maç bitti: dünya kariyere karışmadan ana menüye dönülür
             versus = false

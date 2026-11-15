@@ -29,6 +29,11 @@ object Career {
         Achievement("fullhouse", "🎟️", L("Kapalı gişe", "Sold out"), L("Stadını tamamen doldur.", "Fill your stadium completely.")),
         Achievement("sponsors", "🤝", L("Ticari deha", "Commercial genius"), L("Üç sponsorluk alanını da doldur.", "Fill all three sponsorship slots.")),
         Achievement("camp", "🏕️", L("Kamp ateşi", "Camp fire"), L("Takımı antrenman kampına götür.", "Take the team to a training camp.")),
+        Achievement("daily7", "📅", L("Sadık menajer", "Loyal manager"), L("Günlük ödülü 7 gün üst üste al.", "Claim the daily reward 7 days in a row.")),
+        Achievement("daily30", "🗓️", L("Her gün sahada", "Every single day"), L("Günlük ödülü 30 gün üst üste al.", "Claim the daily reward 30 days in a row.")),
+        Achievement("challenges25", "✅", L("Görev adamı", "Task master"), L("25 maç görevi tamamla.", "Complete 25 match challenges.")),
+        Achievement("perfect5", "💯", L("Kusursuz plan", "Perfect plan"), L("Bir maçın 3 görevini birden 5 kez tamamla.", "Complete all 3 match challenges 5 times.")),
+        Achievement("hattrick", "🎩", L("Hat-trick", "Hat-trick"), L("Oyuncularından biri bir maçta 3 gol atsın.", "One of your players scores 3 goals in a match.")),
         Achievement("loyal", "💙", L("Kulüp efsanesi", "Club legend"), L("Aynı kulüpte 5 sezon tamamla.", "Complete 5 seasons at the same club.")),
     ) }
     val all get() = allCache.get()

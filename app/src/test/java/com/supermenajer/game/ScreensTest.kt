@@ -229,6 +229,49 @@ class ScreensTest {
         println("OTOTUR ${g.userTeam.name} sezon ${g.season} hafta ${g.week} · ${log.actions.takeLast(6)}")
     }
 
+    /** Günlük ödül kartı, maç hazırlığında görevler ve maç sonu görev sonuçları. */
+    @Test
+    fun dailyLoop() {
+        GameRepo.init(Files.createTempDirectory("smdaily").toFile())
+        var day = 20_000L
+        com.supermenajer.game.game.DailyReward.today = { day }
+        try {
+            val w = Generator.newWorld(kotlin.random.Random(4)).also { Season.computeExpectations(it) }
+            GameRepo.newCareer(w, "Emin Hoca", w.divisionTeams(0).sortedByDescending { it.reputation }[2].id)
+            val g = GameRepo.game!!
+            g.introDone = true; g.ceremonySeen = 999
+            repeat(3) { GameRepo.claimDaily(); day++ }
+            GameRepo.dailyMsg = null
+            GameRepo.screen = Screen.MAIN; GameRepo.tab = GameRepo.TAB_HOME
+            shot("daily_01_home")
+            GameRepo.claimDaily()
+            shot("daily_02_claimed")
+            GameRepo.dailyMsg = null
+            var guard = 0
+            while (g.todayUserFixture() == null && guard++ < 30) GameRepo.skipToNextMatch()
+            GameRepo.playMatch(live = false)
+            shot("daily_03_summary")
+            val res = GameRepo.challengeResult!!
+            GameRepo.closeSummary()
+            day++
+            paparazzi.snapshot("daily_04_cards") {
+                AppTheme {
+                    Surface(Modifier.fillMaxSize(), color = Bg) {
+                        androidx.compose.foundation.layout.Row(Modifier.padding(16.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                            androidx.compose.foundation.layout.Column(Modifier.weight(1.3f), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                                com.supermenajer.game.ui.DailyRewardCard(g)
+                                com.supermenajer.game.ui.DashCard("Maç Hazırlığı", Modifier) { com.supermenajer.game.ui.ChallengeStrip(g) }
+                            }
+                            androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { com.supermenajer.game.ui.ChallengeResultCard(res) }
+                        }
+                    }
+                }
+            }
+        } finally {
+            com.supermenajer.game.game.DailyReward.today = { java.time.LocalDate.now().toEpochDay() }
+        }
+    }
+
     /** Derbi: aynı şehrin kulüpleri ve iki devin maçı derbi sayılır; derbi haftası kartı ve tribün koreografisi. */
     @Test
     fun derbyAtmosphere() {

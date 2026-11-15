@@ -88,6 +88,7 @@ object Season {
         ManagerMarket.ensure(g, rnd)
         Contracts.assignClauses(g, rnd)
         Missions.ensure(g, rnd)
+        Challenges.ensure(g, rnd)
         Vision.ensure(g)
         for (t in g.teams) { t.attTotal = 0; t.attGames = 0 }
         Economy.startSeason(g)
@@ -413,6 +414,8 @@ object Season {
         run {
             val them0 = sim.other(us)
             Missions.ensure(g)
+            Challenges.afterMatch(g, sim, us, rnd)
+            if (us.used.any { it.goals >= 3 }) Career.unlock(g, "hattrick")
             Missions.afterMatch(g, us.goals, them0.goals, Talks.isDerby(g, sim.fixture), Comp.isLeague(sim.fixture.comp), us.onPitch.count { it.p.age <= 21 })
             Social.afterMatch(g, us.goals, them0.goals, them0.team.name, us.used.filter { it.goals > 0 }.maxByOrNull { it.goals }?.p?.name)
         }

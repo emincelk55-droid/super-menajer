@@ -381,6 +381,7 @@ fun MenuDrawer(g: Game, onClose: () -> Unit) {
 @Composable
 fun HomeDashboard(g: Game) {
     val pending = buildList<@Composable () -> Unit> {
+        if (!g.fired && (com.supermenajer.game.game.DailyReward.available(g) || GameRepo.dailyMsg != null)) add { DailyRewardCard(g) }
         if (!g.fired) com.supermenajer.game.game.Talks.upcomingDerby(g)?.let { (f, days) -> add { DerbyWeekCard(g, f, days) } }
         if (g.monthAwardsNew && com.supermenajer.game.game.MonthlyAwards.latest(g).isNotEmpty()) add { MonthlyAwardsCard(g) }
         if (!g.fired && g.pendingEvent != null) add { EventCard(g) }
@@ -498,7 +499,7 @@ private fun InfoCell(icon: String, title: String, sub: String, modifier: Modifie
 }
 
 @Composable
-private fun SideButton(label: String, accent: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun SideButton(label: String, accent: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         modifier.fillMaxWidth().pressClick(0.96f, onClick = onClick).clip(shape)
@@ -900,7 +901,9 @@ private fun MatchPrepCard(g: Game) {
         val cond = com.supermenajer.game.engine.Conditions.of(g, f)
         Text(cond.summary(), color = TextMain, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         cond.advice()?.let { Text("💡 $it", color = TextDim, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(6.dp))
+        ChallengeStrip(g)
+        Spacer(Modifier.height(6.dp))
         if (issues.isNotEmpty()) {
             Text(L("⚠️ İlk 11'de oynayamayan: ${issues.joinToString { it.name }}", "⚠️ Unavailable in the starting XI: ${issues.joinToString { it.name }}"), color = Gold, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))

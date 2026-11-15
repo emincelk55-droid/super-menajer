@@ -669,6 +669,7 @@ fun SummaryScreen() {
         Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             LazyColumn(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (motm != null) item { MotmCard(sim, motm) }
+                GameRepo.challengeResult?.let { r -> item { ChallengeResultCard(r) } }
                 if (sim.userSide != null && !sim.twoPlayer) item { PostTalkCard(sim) }
                 com.supermenajer.game.game.Facilities.crowdText(sim).takeIf { it.isNotEmpty() }?.let { crowd ->
                     item {
@@ -909,7 +910,7 @@ private fun OverlayCard(title: String, score: String, sub: String?, content: @Co
 }
 
 @Composable
-private fun SmActionButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun SmActionButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier.height(44.dp).pressClick(0.95f, onClick = onClick)
             .shadow(8.dp, RoundedCornerShape(10.dp), ambientColor = Color(0xFF12C795), spotColor = Color(0xFF12C795))
