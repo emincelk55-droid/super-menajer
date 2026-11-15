@@ -72,3 +72,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")
 }
+
+// Testler çoğaldı: her test sınıfı kendi sürecinde ve yeterli bellekle çalışsın (OutOfMemory ve sınıflar arası durum sızıntısı olmasın)
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "3g"
+    forkEvery = 1
+}

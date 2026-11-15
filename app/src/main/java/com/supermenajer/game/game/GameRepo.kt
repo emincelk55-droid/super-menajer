@@ -328,6 +328,37 @@ object GameRepo {
     /** En son oynanan kayıt yuvası (dosya tarihine göre), yoksa null. */
     fun lastSlot(): Int? = (1..3).filter { slotFile(it).exists() }.maxByOrNull { slotFile(it).lastModified() }
 
+    /** Yedek için yuvanın kayıt dosyası (gzip JSON); yoksa null. Açık kariyer önce diske yazılır. */
+    fun exportSlot(n: Int): ByteArray? {
+        if (n == slot && game != null) { save(force = true); flush() }
+        return slotFile(n).takeIf { it.exists() }?.readBytes()
+    }
+
+    /** Yedek dosyasının önerilen adı: SuperMenajer_<kulüp>_<sezon>.smk */
+    fun exportName(n: Int): String {
+        val s = slots().getOrNull(n - 1)
+        val team = (s?.team ?: "kariyer").filter { it.isLetterOrDigit() }.take(20)
+        return "SuperMenajer_${team}_yuva$n.smk"
+    }
+
+    /**
+     * Dışarıdan gelen yedeği yuvaya yazar. Dosya okunup oyun kaydı olarak çözülebiliyorsa yazılır,
+     * yuvadaki eski kayıt önce yedeğe alınır. Hata varsa nedenini döner.
+     */
+    fun importSlot(n: Int, bytes: ByteArray?): String? {
+        if (bytes == null || bytes.isEmpty()) return L("Dosya okunamadı.", "The file couldn't be read.")
+        val text = runCatching { readSaveBytes(bytes) }.getOrNull() ?: return L("Dosya bozuk.", "The file is corrupted.")
+        val g = runCatching { json.decodeFromString(Game.serializer(), text).also { Season.migrate(it) } }.getOrNull()
+            ?: return L("Bu dosya bir Süper Menajer kaydı değil.", "This file isn't a Super Manager save.")
+        val f = slotFile(n)
+        if (f.exists()) runCatching { f.copyTo(backupFile(n, 1), overwrite = true) }
+        writeSave(f, text)
+        metaFile(n).writeText(meta(g))
+        if (n == slot && screen == Screen.TITLE) game = null
+        bump()
+        return null
+    }
+
     fun deleteSlot(n: Int) {
         if (n == slot && screen == Screen.TITLE) game = null
         slotFile(n).delete()
@@ -354,8 +385,9 @@ object GameRepo {
         java.util.zip.GZIPOutputStream(f.outputStream().buffered(), 64 * 1024).bufferedWriter(Charsets.UTF_8).use { it.write(text) }
     }
 
-    internal fun readSave(f: File): String {
-        val bytes = f.readBytes()
+    internal fun readSave(f: File): String = readSaveBytes(f.readBytes())
+
+    internal fun readSaveBytes(bytes: ByteArray): String {
         val gz = bytes.size > 2 && bytes[0] == 0x1f.toByte() && bytes[1] == 0x8b.toByte()
         return if (gz) java.util.zip.GZIPInputStream(bytes.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
         else bytes.toString(Charsets.UTF_8)

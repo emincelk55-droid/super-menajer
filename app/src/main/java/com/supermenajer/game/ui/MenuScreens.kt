@@ -320,6 +320,7 @@ fun TitleScreen() {
                                 onDelete = { if (confirmDelete == s.n) { GameRepo.deleteSlot(s.n); confirmDelete = 0 } else confirmDelete = s.n },
                             ) { if (s.exists) load(s.n) else startNew(s.n) }
                         }
+                        BackupPanel(slots)
                     }
                     2 -> {
                         Text(L("YENİ KARİYER · YUVA SEÇ", "NEW CAREER · CHOOSE SLOT"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -488,4 +489,58 @@ private fun VersusPanel() {
             .clickable(enabled = ok) { GameRepo.takePreparedWorld(); GameRepo.startVersus(w, a!!.id, b!!.id) },
         contentAlignment = Alignment.Center,
     ) { Text(if (ok) L("MAÇA BAŞLA  ▶", "KICK OFF  ▶") else L("İki farklı takım seçin", "Pick two different teams"), color = if (ok) Color.Black else TextDim, fontWeight = FontWeight.Black, fontSize = 15.sp) }
+}
+
+
+/**
+ * Kayıt yedekleme: her yuva dosyaya aktarılır (Drive, WhatsApp, telefon) ya da dosyadan geri yüklenir.
+ * Telefon değişince ya da oyun silinince kariyer kaybolmasın.
+ */
+@Composable
+private fun BackupPanel(slots: List<GameRepo.SlotInfo>) {
+    // Dosya seçici yalnız gerçek ekranda var (önizleme ve testlerde yok)
+    if (androidx.activity.compose.LocalActivityResultRegistryOwner.current == null) return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var target by remember { mutableIntStateOf(0) }
+    var msg by remember { mutableStateOf<String?>(null) }
+    val exporter = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri ->
+        if (uri != null) msg = runCatching {
+            val bytes = GameRepo.exportSlot(target) ?: error("empty")
+            ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+            L("✓ Yuva $target dışa aktarıldı.", "✓ Slot $target exported.")
+        }.getOrElse { L("Dışa aktarılamadı.", "Export failed.") }
+    }
+    val importer = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            val bytes = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+            msg = GameRepo.importSlot(target, bytes) ?: L("✓ Yedek Yuva $target'e yüklendi.", "✓ Backup restored to slot $target.")
+        }
+    }
+    Spacer(Modifier.height(4.dp))
+    Text(L("💾 YEDEKLE / GERİ YÜKLE", "💾 BACKUP / RESTORE"), color = TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+    Text(
+        L("Kariyerini dosyaya kaydet (Drive, WhatsApp, telefon). Telefon değişirse dosyayı içe aktararak devam et.",
+            "Save your career to a file (Drive, WhatsApp, phone). If you change phones, import the file to continue."),
+        color = TextDim, fontSize = 11.sp, lineHeight = 14.sp,
+    )
+    slots.forEach { s ->
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(L("Yuva ${s.n}", "Slot ${s.n}"), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(64.dp))
+            if (s.exists) Text(
+                L("⬆ Dışa aktar", "⬆ Export"), color = Green, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).border(1.dp, Green.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .clickable { target = s.n; exporter.launch(GameRepo.exportName(s.n)) }.padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+            Text(
+                L("⬇ İçe aktar", "⬇ Import"), color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).border(1.dp, Gold.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .clickable { target = s.n; importer.launch(arrayOf("*/*")) }.padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+        }
+    }
+    msg?.let { Text(it, color = Gold, fontSize = 12.sp) }
 }

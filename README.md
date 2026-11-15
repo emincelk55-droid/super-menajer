@@ -236,6 +236,8 @@ gradle :app:recordPaparazziDebug       # ekran görüntüsü testleri
 - Ana menü ve yeni kariyer ekranında lig sayısı güncellendi (17 lig, 12 ülke).
 - 🌐 İngilizce dil desteği (Ayarlar → Dil / Language): arayüz, maç anlatımı, haberler, olay kartları, basın, transfer görüşmeleri, hedefler ve mevki kısaltmaları (GK, CB, LB, RB, DM, CM, AM, LW, RW, ST) iki dilli; ~3.400 metin. Telefon dili Türkçe değilse oyun İngilizce açılır. Metinler kaynakta L("türkçe", "english") olarak duruyor; çeviri araçları tools/i18n_extract.py ve tools/i18n_merge.py, çeviri tabloları tools/i18n/.
 - 📱 Dikey ekran: telefon dik tutulunca ana sayfa (kartlar alt alta), iki satırlı üst çubuk, kaydırılabilir sekmeler, taktik (saha üstte, panel altta), transfer (açılır filtreler), gelen kutusu (liste → tam ekran mesaj), kulüp kartları, maç ekranı (saha üstte, anlatım altta) ve oyuncu profili dikeye uyar. Ayarlar → Ekran yönü: Otomatik (döndürme kilidine uyar) / Yatay / Dikey.
+- 💾 Kayıt yedekleme (Ana menü → Kariyer yükle → Yedekle / Geri yükle): her yuva .smk dosyası olarak dışa aktarılır (Drive, WhatsApp, telefon), dosyadan herhangi bir yuvaya geri yüklenir. Bozuk ya da yanlış dosya reddedilir; yuvadaki eski kayıt önce yedeğe alınır.
+- Testler her sınıf ayrı süreçte ve 3 GB bellekle çalışıyor (test sayısı arttıkça bellek yetmiyordu).
 
 
 ### v2.15
