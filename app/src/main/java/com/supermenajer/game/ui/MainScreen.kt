@@ -191,7 +191,7 @@ private fun SettingsDialog() {
                     OutlinedButton(onClick = { GameRepo.save(force = true); saved = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (saved) L("✓ Kaydedildi", "✓ Saved") else L("💾 Oyunu kaydet", "💾 Save game"))
                     }
-                    OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.editorOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(L("🛠 Veri editörü", "🛠 Data editor")) }
+                    OutlinedButton(onClick = { GameRepo.settingsOpen = false; GameRepo.editorOpen = true }, modifier = Modifier.fillMaxWidth()) { Text(L("🛠 Veri editörü · isimler", "🛠 Data editor · names")) }
                     OutlinedButton(onClick = { Tips.reset(); GameRepo.settingsOpen = false }, modifier = Modifier.fillMaxWidth()) { Text(L("💡 İpuçlarını yeniden göster", "💡 Show tips again")) }
                     Spacer(Modifier.height(6.dp))
                     Text(L("🤖 TEST MODU", "🤖 TEST MODE"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)

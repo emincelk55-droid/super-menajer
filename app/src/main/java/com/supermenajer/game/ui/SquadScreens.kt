@@ -504,6 +504,13 @@ fun PlayerDialog(g: Game, p: Player) {
                     }
                     "Bilgi" -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         Column(Modifier.weight(1f)) {
+                            Text(
+                                L("✏️ İsmi düzenle", "✏️ Edit name"), color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).border(1.dp, Teal.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                    .clickable { GameRepo.selectedPlayer = null; GameRepo.editorPlayer = p.id; GameRepo.editorTab = 0; GameRepo.editorOpen = true }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                            )
+                            Spacer(Modifier.height(6.dp))
                             InfoLine(L("Potansiyel", "Potential"), com.supermenajer.game.game.Scouting.potText(g, p))
                             if (!known) InfoLine(L("Bilgi", "Info"), L("Gözlemci raporu yok", "No scout report"), Gold)
                             else if (!own && !loaned && p.id in g.scouted) Text(com.supermenajer.game.game.Scouting.report(g, p), color = TextDim, fontSize = 12.sp)

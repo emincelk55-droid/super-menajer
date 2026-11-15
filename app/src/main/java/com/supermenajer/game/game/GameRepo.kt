@@ -42,6 +42,9 @@ object GameRepo {
     var tacticWizard by mutableStateOf(false)
     var openTeam by mutableIntStateOf(-1)
     var editorOpen by mutableStateOf(false)
+    /** Editör açılınca seçili gelecek oyuncu ve sekme (0 oyuncular, 1 kulüpler, 2 isim paketi). */
+    var editorPlayer by mutableStateOf(-1)
+    var editorTab by mutableStateOf(0)
     var instrSub by mutableIntStateOf(0)
     var roleDialog by mutableIntStateOf(-1)
     var compare by mutableStateOf<Pair<Int, Int>?>(null)
@@ -926,7 +929,7 @@ object GameRepo {
 
     /** Veri editörü: oyuncu bilgilerini günceller. a: hız, şut, pas, teknik, savunma, fizik, kalecilik. */
     fun editPlayer(p: Player, name: String, age: Int, potential: Int, a: List<Int>) {
-        p.name = name
+        game?.let { NamePack.renamePlayer(it, p, name) }
         p.age = age.coerceIn(15, 45)
         p.pace = a[0].coerceIn(1, 99); p.shooting = a[1].coerceIn(1, 99); p.passing = a[2].coerceIn(1, 99)
         p.dribbling = a[3].coerceIn(1, 99); p.defending = a[4].coerceIn(1, 99); p.physical = a[5].coerceIn(1, 99)
@@ -1003,6 +1006,34 @@ object GameRepo {
         changed()
     }
 
+    /** Herhangi bir oyuncunun adını değiştirir (isim editörü); hata metni ya da null. */
+    fun renamePlayer(p: Player, name: String): String? {
+        val g = game ?: return null
+        val err = NamePack.renamePlayer(g, p, name)
+        if (err == null) changed()
+        return err
+    }
+
+    /** Herhangi bir kulübün adını değiştirir (isim editörü); hata metni ya da null. */
+    fun renameTeam(t: com.supermenajer.game.model.Team, name: String, short: String = ""): String? {
+        val g = game ?: return null
+        val err = NamePack.renameTeam(g, t, name, short)
+        if (err == null) changed()
+        return err
+    }
+
+    /** İsim paketini uygular; sonuç metni döner. */
+    fun importNamePack(bytes: ByteArray?): String {
+        val g = game ?: return L("Önce bir kariyer yükle.", "Load a career first.")
+        val text = bytes?.toString(Charsets.UTF_8) ?: return L("Dosya okunamadı.", "The file couldn't be read.")
+        if (text.length > 3_000_000) return L("Dosya çok büyük.", "The file is too large.")
+        val r = NamePack.import(g, text)
+        changed()
+        save(force = true)
+        return L("Uygulandı: ${r.teams} kulüp, ${r.players} oyuncu." + (if (r.missing > 0) " Bulunamayan: ${r.missing}." else "") + (if (r.errors > 0) " Hatalı satır: ${r.errors}." else ""),
+            "Applied: ${r.teams} clubs, ${r.players} players." + (if (r.missing > 0) " Not found: ${r.missing}." else "") + (if (r.errors > 0) " Invalid lines: ${r.errors}." else ""))
+    }
+
     /** Kulüp adını ve kısa adını değiştirir; kısa ad 3 harf ve benzersiz olmalı. */
     fun renameClub(name: String, short: String): String {
         val g = game ?: return ""
@@ -1013,7 +1044,7 @@ object GameRepo {
         if (g.teams.any { it.id != g.userTeamId && (it.short == s || it.name.equals(n, ignoreCase = true)) }) return L("Bu ad ya da kısa ad başka bir kulübün.", "That name or short name belongs to another club.")
         val t = g.userTeam
         val old = t.name
-        t.name = n; t.short = s
+        NamePack.renameTeam(g, t, n, s)?.let { return it }
         if (old != n) g.addNews(L("Kulübün yeni adı: $n", "The club's new name: $n"), L("$old artık $n ($s) adıyla anılacak. Taraftarlar yeni kimliği konuşuyor.", "$old will now be known as $n ($s). The fans are talking about the new identity."))
         changed()
         return L("Kaydedildi: $n ($s)", "Saved: $n ($s)")

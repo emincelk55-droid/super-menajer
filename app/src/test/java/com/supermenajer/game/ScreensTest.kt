@@ -308,6 +308,30 @@ class ScreensTest {
         }
     }
 
+    /** İsim editörü: kulüp adı ve isim paketi sekmeleri; yeni kariyerde isim seçimi. */
+    @Test
+    fun nameEditor() {
+        GameRepo.init(Files.createTempDirectory("smnames").toFile())
+        GameRepo.screen = Screen.NEW_GAME
+        shot("names_00_newgame")
+        val w = Generator.newWorld(kotlin.random.Random(8)).also { Season.computeExpectations(it) }
+        GameRepo.newCareer(w, "Emin Hoca", w.divisionTeams(0).sortedByDescending { it.reputation }[0].id)
+        val g = GameRepo.game!!
+        g.introDone = true; g.ceremonySeen = 999
+        GameRepo.renameTeam(g.userTeam, "Yıldız Kartallar", "YKR")
+        g.squad(g.userTeamId).take(3).forEachIndexed { i, p -> GameRepo.renamePlayer(p, listOf("Can Yılmaz", "Ali Demir", "Emre Kaya")[i]) }
+        GameRepo.screen = Screen.MAIN
+        GameRepo.editorOpen = true
+        GameRepo.editorTab = 1
+        shot("names_01_clubs")
+        GameRepo.editorOpen = false
+        GameRepo.editorTab = 2
+        GameRepo.editorOpen = true
+        shot("names_02_pack")
+        GameRepo.editorOpen = false
+        GameRepo.editorTab = 0
+    }
+
     /** Günlük ödül kartı, maç hazırlığında görevler ve maç sonu görev sonuçları. */
     @Test
     fun dailyLoop() {

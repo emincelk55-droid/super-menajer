@@ -415,6 +415,8 @@ class Game(
     /** Sezon görevleri: "id|başlık|hedef|ilerleme|xp|bitti(0/1)". */
     var missions: MutableList<String> = mutableListOf(),
     var missionSeason: Int = -1,
+    /** İsim düzenlemeleri (isim paketi satırları: "K;eski;yeni;KSA" / "O;eski;yeni"). */
+    var nameEdits: MutableList<String> = mutableListOf(),
     /** Günlük giriş ödülü: son alınan gün (epoch), seri ve en uzun seri. */
     var dailyLast: Long = -1,
     var dailyStreak: Int = 0,

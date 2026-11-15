@@ -233,6 +233,23 @@ private fun Tile(selected: Boolean, modifier: Modifier = Modifier, onClick: () -
     ) { content() }
 }
 
+/** İsim modu seçim kartı (yeni kariyer). */
+@Composable
+private fun NameModeCard(selected: Boolean, icon: String, title: String, sample: String, note: String, onClick: () -> Unit) {
+    Tile(selected, Modifier.fillMaxWidth().height(78.dp), onClick = onClick) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 24.sp)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Black, color = if (selected) Teal else TextMain)
+                Text(sample, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(note, color = TextDim, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (selected) Text("✓", color = Teal, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TeamStep(
@@ -242,11 +259,23 @@ private fun TeamStep(
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         // Sol: ülke ve lig
         Column(Modifier.width(250.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
-            ToggleRow(
-                L("🎭 Kurgusal isimler", "🎭 Fictional names"),
-                if (fictional) L("Kulüp ve oyuncu adları uydurma; güçler ve kadrolar gerçek veriden.", "Club and player names are made up; strengths and squads come from real data.") else L("Gerçeğe benzer adlar (bir iki harf değişik).", "Real-sounding names (a letter or two changed)."),
-                fictional,
-            ) { onFictional(!fictional) }
+            Text(L("İSİMLER", "NAMES"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            NameModeCard(
+                !fictional, "⚽", L("Gerçeğe benzer", "Real-like"),
+                L("Arda Gülar · Erling Haland · Galatasarey", "Erling Haland · Kylian Mbapé · Real Madred"),
+                L("Tanıdık adlar, bir iki harf farklı", "Familiar names, a letter or two changed"),
+            ) { onFictional(false) }
+            Spacer(Modifier.height(6.dp))
+            NameModeCard(
+                fictional, "🎭", L("Tamamen kurgusal", "Fully fictional"),
+                L("Uydurma kulüp ve oyuncu adları", "Made-up club and player names"),
+                L("Güçler ve kadrolar yine gerçek veriden", "Strengths and squads still from real data"),
+            ) { onFictional(true) }
+            Text(
+                L("İstediğin oyuncu ve kulüp adını oyunda değiştirebilir, isim paketi olarak paylaşabilirsin.", "You can rename any player or club in game and share them as a name pack."),
+                color = TextDim, fontSize = 10.sp, lineHeight = 13.sp, modifier = Modifier.padding(top = 4.dp),
+            )
             Spacer(Modifier.height(6.dp))
             Text(L("ÜLKE", "COUNTRY"), color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
