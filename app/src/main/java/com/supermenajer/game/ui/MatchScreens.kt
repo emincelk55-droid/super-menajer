@@ -113,6 +113,8 @@ fun MatchScreen() {
     // Kullanıcı maçında önce maç öncesi konuşma yapılır
     var running by remember { mutableStateOf(sim.userSide == null || (sim.minute > 0 && sim.minute != 45)) }
     var preResult by remember { mutableStateOf<Talks.Result?>(null) }
+    // Maç öncesi TV açılışı (ilk 11'ler): kullanıcı maçında, başlama düdüğünden önce
+    var intro by remember { mutableStateOf(sim.minute == 0 && sim.userSide != null && !sim.twoPlayer) }
     var speed by remember { mutableIntStateOf(0) }
     var revealed by remember { mutableIntStateOf(sim.events.size) }
     var ticker by remember { mutableStateOf(sim.events.lastOrNull()?.let { Ticker(it.minute, it.text, it.side, 0) }) }
@@ -208,6 +210,10 @@ fun MatchScreen() {
     val homeC = Color(sim.home.team.color1)
     val awayC = Color(sim.away.team.color1).let { if (colorDistance(it, homeC) < 0.5f) Color(sim.away.team.color2) else it }
 
+    if (intro) {
+        LineupIntro(sim, homeC, awayC) { intro = false }
+        return
+    }
     val shownEvents = sim.events.take(shown)
     Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0C1131), Color(0xFF120E36), Color(0xFF080B20))))) {
         SmScoreboard(sim, scoreH, scoreA, shownEvents, shown >= sim.events.size, homeC, awayC)
