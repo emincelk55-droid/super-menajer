@@ -132,3 +132,41 @@ fun EngagementLine(g: Game) {
         color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
 }
+
+/** Sezon önizlemesi: yorumcuların lig tahmini ve şampiyonluk ihtimalleri (sezonun ilk haftalarında). */
+@Composable
+fun SeasonPreviewCard(g: Game) {
+    val rows = com.supermenajer.game.game.Preview.rows(g)
+    if (rows.isEmpty()) return
+    val n = rows.size
+    DashCard(L("📺 Sezon Tahmini · ${com.supermenajer.game.model.Leagues.of(g.userTeam.division)?.name ?: ""}", "📺 Season Prediction · ${com.supermenajer.game.model.Leagues.of(g.userTeam.division)?.name ?: ""}"), Modifier.fillMaxWidth()) {
+        Text(L("Yorumcuların güç sıralaması ve şampiyonluk ihtimalleri. Sezon sonunda tahminle karşılaştırılacak.", "The pundits' power ranking and title odds. It will be compared with the final table at the end of the season."), color = TextDim, fontSize = 11.sp)
+        Spacer(Modifier.height(6.dp))
+        val mineIdx = rows.indexOfFirst { it.teamId == g.userTeamId }
+        val shown = (rows.take(5).map { it } + (if (mineIdx >= 5) listOf(rows[mineIdx]) else emptyList()) + rows.takeLast(3).filter { rows.indexOf(it) >= 5 && it.teamId != g.userTeamId }).distinct()
+        var last = 0
+        for (r in shown) {
+            if (r.pred > last + 1) Text("⋯", color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
+            last = r.pred
+            val t = g.team(r.teamId)
+            val mine = r.teamId == g.userTeamId
+            val zone = r.pred > n - 3
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (mine) Teal.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent)
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("${r.pred}.", color = if (zone) Red else TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(26.dp))
+                Text(t.name, fontSize = 12.sp, fontWeight = if (mine) FontWeight.Black else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (r.odds >= 1) {
+                    Box(Modifier.width(70.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(CardLine)) {
+                        Box(Modifier.fillMaxWidth((r.odds / 100f).coerceIn(0.03f, 1f)).height(6.dp).background(Gold))
+                    }
+                    Text("%${r.odds}", color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(40.dp))
+                } else if (zone) {
+                    Text(L("küme hattı", "drop zone"), color = Red, fontSize = 10.sp, textAlign = TextAlign.End, modifier = Modifier.width(110.dp))
+                } else Spacer(Modifier.width(110.dp))
+            }
+        }
+    }
+}

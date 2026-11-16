@@ -395,6 +395,7 @@ fun HomeDashboard(g: Game) {
         if (g.offers.isNotEmpty() && !g.fired) add { IncomingOffersCard(g) }
         if (g.sponsorOffers.isNotEmpty() && !g.fired) add { SponsorOffersCard(g) }
         if (!g.fired && !g.seasonOver && g.nextUserFixture() != null) add { MatchPrepCard(g) }
+        if (!g.fired && !g.seasonOver && g.userTeam.played < 4 && com.supermenajer.game.game.Preview.rows(g).isNotEmpty()) add { SeasonPreviewCard(g) }
         val eg = com.supermenajer.game.game.Europe.groupOf(g, g.userTeamId)
         if (eg >= 0) add { EuroGroupCard(g, eg) }
     }

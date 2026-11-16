@@ -20,6 +20,7 @@ import org.junit.Test
 import androidx.compose.foundation.background
 import com.supermenajer.game.ui.GoalCelebrationFrame
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.supermenajer.game.ui.drawTvPlayer
@@ -357,6 +358,13 @@ class ScreensTest {
             val res = GameRepo.challengeResult!!
             GameRepo.closeSummary()
             day++
+            paparazzi.snapshot("daily_05_preview") {
+                AppTheme {
+                    Surface(Modifier.fillMaxSize(), color = Bg) {
+                        androidx.compose.foundation.layout.Box(Modifier.padding(16.dp).width(520.dp)) { com.supermenajer.game.ui.SeasonPreviewCard(g) }
+                    }
+                }
+            }
             paparazzi.snapshot("daily_04_cards") {
                 AppTheme {
                     Surface(Modifier.fillMaxSize(), color = Bg) {

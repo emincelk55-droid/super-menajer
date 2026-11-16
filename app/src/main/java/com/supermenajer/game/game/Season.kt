@@ -95,6 +95,7 @@ object Season {
         Sponsors.refreshOffers(g, rnd)
         g.offers.clear()
         computeExpectations(g)
+        Preview.make(g)
         g.players.forEach { it.startOvr = it.overall }
         for (t in g.teams) {
             if (t.id == g.userTeamId && t.lineup.size == 11) Lineups.validate(g, t) else Lineups.autoPick(g, t)
@@ -824,6 +825,7 @@ object Season {
 
     private fun seasonEnd(g: Game) {
         g.seasonOver = true
+        Preview.review(g)
         g.press = null
         val us = g.userTeam
         val budgetBefore = us.budget
