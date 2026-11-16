@@ -944,6 +944,14 @@ object Season {
             val stars = g.players.count { it.teamId >= 0 && it.overall >= 85 }
             if (g.starBase <= 0) g.starBase = stars.coerceAtLeast(1)
             g.starDev = (g.starBase.toDouble() / stars.coerceAtLeast(1)).pow(2.0).coerceIn(0.4, 1.25)
+            // Gelişim hızı potansiyelin üstüne çıkaramaz: dünya zayıfladıkça gençler daha yetenekli doğar
+            // Gecikmesiz ölçüt: geleceğin yıldızları (23 yaş altı, potansiyel 80+). Bugünkü yıldız sayısına göre
+            // ayarlamak 5-6 yıl gecikmeyle salınım yaratıyordu (önce fazla, sonra az yıldız).
+            val pipe = g.players.count { it.teamId >= 0 && it.age <= 23 && it.potential >= 80 }
+            if (g.pipelineBase <= 0) g.pipelineBase = pipe.coerceAtLeast(1)
+            val pipeTerm = (g.pipelineBase.toDouble() / pipe.coerceAtLeast(1) - 1.0) * 20.0
+            val eliteTerm = (g.eliteBase.toDouble() / elite.coerceAtLeast(1) - 1.0) * 6.0
+            g.youthBoost = (g.youthBoost * 0.4 + (pipeTerm + eliteTerm) * 0.6).coerceIn(-5.0, 8.0)
         }
         val retired = mutableListOf<Player>()
         for (p in g.players.toList()) {
@@ -990,7 +998,7 @@ object Season {
         for (t in g.teams) {
             var sq = g.squad(t.id)
             fun need(): Pos? = minByPos.entries.firstOrNull { (pos, n) -> sq.count { it.pos == pos } < n }?.key
-                ?: if (sq.size < 24) Generator.squadPlan.maxBy { (pos, n) -> n - sq.count { it.pos == pos } }.key else null
+                ?: if (sq.size < 25) Generator.squadPlan.maxBy { (pos, n) -> n - sq.count { it.pos == pos } }.key else null
             var guard = 0
             while (guard++ < 20) {
                 val pos = need() ?: break

@@ -132,7 +132,7 @@ object Generator {
         val p = makePlayer(g.nextPlayerId++, pos, target, rnd.nextInt(17, 19), t.id, rnd, nationOf(g, t))
         // Potansiyel takım seviyesinin etrafında; çok yüksek potansiyel nadir.
         // Dünya dengesi: yıldız sayısı başlangıcın altındaysa altyapı biraz daha yetenekli çıkar (en çok ±4)
-        val world = ((g.worldDev - 1.0) * 10).coerceIn(-4.0, 4.0)
+        val world = if (g.eliteBase > 0) g.youthBoost else ((g.worldDev - 1.0) * 10).coerceIn(-4.0, 4.0)
         val pot = teamLevel(t.reputation) - 1 + bonus + world + gauss(rnd) * 6
         p.potential = pot.roundToInt().coerceIn(p.overall + 4, 91)
         // Nadir "altın çocuk": küçük kulüpte bile dünya yıldızı potansiyeli

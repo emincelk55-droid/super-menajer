@@ -415,6 +415,10 @@ class Game(
     /** Sezon görevleri: "id|başlık|hedef|ilerleme|xp|bitti(0/1)". */
     var missions: MutableList<String> = mutableListOf(),
     var missionSeason: Int = -1,
+    /** Dünya dengesi: altyapıdan çıkan gençlere eklenen potansiyel (yıldız sayısı düşünce artar). */
+    var youthBoost: Double = 0.0,
+    /** Başlangıçtaki genç yetenek havuzu (23 yaş altı, potansiyel 80+); 0 = henüz ölçülmedi. */
+    var pipelineBase: Int = 0,
     /** İsim düzenlemeleri (isim paketi satırları: "K;eski;yeni;KSA" / "O;eski;yeni"). */
     var nameEdits: MutableList<String> = mutableListOf(),
     /** Günlük giriş ödülü: son alınan gün (epoch), seri ve en uzun seri. */
