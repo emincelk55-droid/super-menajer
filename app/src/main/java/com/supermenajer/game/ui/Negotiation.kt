@@ -27,6 +27,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -177,8 +183,43 @@ private fun ClubControls(n: TransferTalks.Negotiation) {
             Text(L(" Sonraki satış:", " Sell-on:"), color = TextDim, fontSize = 11.sp)
             listOf(0, 10, 20).forEach { v -> Chip("%$v", n.sellOn == v) { n.sellOn = v; GameRepo.bump() } }
             n.counterFee?.let { c ->
-                OutlinedButton(onClick = { n.fee = c; n.loan = false; GameRepo.talkClub() }) { Text(L("${money(c)} kabul", "${money(c)} accepted"), fontSize = 12.sp) }
+                OutlinedButton(onClick = { n.fee = c; n.loan = false; n.swapId = n.counterSwap; GameRepo.talkClub() }) { Text(L("${money(c)} kabul", "${money(c)} accepted"), fontSize = 12.sp) }
             }
+        }
+        if (!n.loan && n.player.teamId >= 0) SwapPicker(n)
+    }
+}
+
+/** Takas: teklife kendi oyuncunu ekle. Satıcının biçtiği değer teklifle birlikte görünür. */
+@Composable
+private fun SwapPicker(n: TransferTalks.Negotiation) {
+    val g = GameRepo.game ?: return
+    var open by remember { mutableStateOf(false) }
+    val cur = g.player(n.swapId)
+    val seller = g.teamOrNull(n.player.teamId) ?: return
+    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(L("🔁 Takas:", "🔁 Swap:"), color = TextDim, fontSize = 11.sp)
+        Spacer(Modifier.width(6.dp))
+        Box {
+            Text(
+                (cur?.let { "${it.name} (${it.pos.short} ${it.overall})" } ?: L("Oyuncu ekle", "Add a player")) + " ▾",
+                color = if (cur != null) Gold else Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).border(1.dp, (if (cur != null) Gold else Teal).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { open = true }.padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+            androidx.compose.material3.DropdownMenu(open, { open = false }) {
+                androidx.compose.material3.DropdownMenuItem(text = { Text(L("Takas yok", "No swap")) }, onClick = { n.swapId = -1; open = false; GameRepo.bump() })
+                TransferTalks.swapCandidates(g, n.player).take(18).forEach { s ->
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text("${s.pos.short} ${s.overall} · ${s.name} · ${money(s.value)}", fontSize = 13.sp) },
+                        onClick = { n.swapId = s.id; open = false; GameRepo.bump() },
+                    )
+                }
+            }
+        }
+        if (cur != null) {
+            Spacer(Modifier.width(6.dp))
+            Text(L("${seller.short} gözünde ≈ ${money(TransferTalks.swapValue(g, seller, cur))}", "worth ≈ ${money(TransferTalks.swapValue(g, seller, cur))} to ${seller.short}"), color = TextDim, fontSize = 11.sp)
         }
     }
 }

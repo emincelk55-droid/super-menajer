@@ -39,10 +39,41 @@ object TransferTalks {
         var role = 2
         var counterFee: Long? = null
         var counterWage: Long? = null
+        /** Takas: teklife eklenen kendi oyuncumuz (-1 yok). */
+        var swapId = -1
+        /** Karşı teklif hangi takas oyuncusuyla verildi (değişirse karşı teklif geçmez). */
+        var counterSwap = -1
     }
 
     private fun r25k(v: Double) = (v / 25_000).roundToLong().coerceAtLeast(1) * 25_000
     private fun r500(v: Double) = (v / 500).roundToLong().coerceAtLeast(1) * 500
+
+    /**
+     * Satıcı kulübün takas oyuncusuna biçtiği değer. Kadrosunu güçlendirecek ve yaşı uygun oyuncuya
+     * değerine yakın, kadrosunun altında kalan ya da yaşlı oyuncuya çok daha az değer verir.
+     */
+    fun swapValue(g: Game, seller: com.supermenajer.game.model.Team, s: Player): Long {
+        val str = Lineups.strength(g, seller)
+        val fit = when {
+            s.overall >= str + 2 -> 0.95
+            s.overall >= str - 2 -> 0.82
+            s.overall >= str - 6 -> 0.6
+            else -> 0.3
+        }
+        val age = when {
+            s.age >= 32 -> 0.6
+            s.age >= 30 -> 0.8
+            s.age <= 23 && s.potential >= str -> 1.08
+            else -> 1.0
+        }
+        // Aynı mevkide zaten kalabalıksa ilgisi düşer
+        val crowded = g.squad(seller.id).count { it.pos == s.pos } >= (if (s.pos == com.supermenajer.game.model.Pos.GK) 3 else 9)
+        return r25k(s.value * fit * age * (if (crowded) 0.75 else 1.0))
+    }
+
+    /** Takasa konabilecek kendi oyuncularımız (kiralık ve sakat olmayanlar). */
+    fun swapCandidates(g: Game, target: Player): List<Player> =
+        g.squad(g.userTeamId).filter { it.loanFrom < 0 && it.injuredWeeks == 0 && it.id != target.id }.sortedByDescending { it.value }
 
     fun sellerName(g: Game, p: Player) = if (p.teamId >= 0) g.team(p.teamId).name else L("Serbest", "Free agent")
 
@@ -113,8 +144,11 @@ object TransferTalks {
             }
             return
         }
+        val swap = g.player(n.swapId)?.takeIf { it.teamId == us.id && it.loanFrom < 0 }
+        if (swap == null) n.swapId = -1
         val terms = buildString {
             append("${money(n.fee)}")
+            if (swap != null) append(L(" + ${swap.name}", " + ${swap.name}"))
             if (n.installments) append(L(", yarısı peşin yarısı gelecek sezon", ", half upfront and half next season"))
             if (n.sellOn > 0) append(L(", sonraki satıştan %${n.sellOn} pay", ", ${n.sellOn}% of the next sale"))
         }
@@ -124,9 +158,18 @@ object TransferTalks {
             return
         }
         val asking = GameRepo.askingPrice(p).toDouble()
-        val eff = n.fee * (1 + 0.04 * n.sellOn / 10.0) * (if (n.installments) 0.95 else 1.0)
+        val swapVal = swap?.let { swapValue(g, seller, it) } ?: 0L
+        val eff = n.fee * (1 + 0.04 * n.sellOn / 10.0) * (if (n.installments) 0.95 else 1.0) + swapVal
+        if (swap != null) {
+            val view = when {
+                swapVal >= swap.value * 0.85 -> L("${swap.name} bizim için iyi bir oyuncu, ilgimizi çekiyor.", "${swap.name} would be a good player for us, we're interested.")
+                swapVal >= swap.value * 0.55 -> L("${swap.name}'i alırız ama bize çok şey katmaz.", "We'd take ${swap.name} but he wouldn't add much for us.")
+                else -> L("${swap.name} bizim kadromuza uygun değil, ona pek değer vermiyoruz.", "${swap.name} doesn't fit our squad, we don't value him much.")
+            }
+            n.log += Line(false, dir, view + L(" (Takas değeri: ${money(swapVal)})", " (Swap value: ${money(swapVal)})"))
+        }
         when {
-            eff >= asking || (n.counterFee != null && n.fee >= n.counterFee!!) -> {
+            eff >= asking || (n.counterFee != null && n.fee >= n.counterFee!! && n.swapId == n.counterSwap) -> {
                 n.agreedFee = n.fee
                 n.stage = AGENT
                 n.log += Line(false, dir, listOf(L("Anlaştık! Oyuncuyla görüşmenize izin veriyoruz.", "Deal! You may speak to the player."), L("Teklifinizi kabul ediyoruz. Şimdi menajeriyle konuşabilirsiniz.", "We accept your offer. You can now talk to his agent."), L("Tamam, el sıkışalım. Oyuncunun kararı artık.", "OK, let's shake hands. It's the player's decision now.")).random())
@@ -134,10 +177,12 @@ object TransferTalks {
             }
             eff >= asking * 0.8 -> {
                 n.clubPatience--
-                val need = r25k(asking / ((1 + 0.04 * n.sellOn / 10.0) * (if (n.installments) 0.95 else 1.0)))
+                val need = r25k((asking - swapVal).coerceAtLeast(0.0) / ((1 + 0.04 * n.sellOn / 10.0) * (if (n.installments) 0.95 else 1.0)))
                 val c = r25k((n.fee + need) / 2.0).coerceAtLeast(n.fee + 25_000)
                 n.counterFee = c
-                n.log += Line(false, dir, listOf(L("Yaklaştınız ama yeterli değil. ${money(c)} olursa anlaşırız.", "You're close but it's not enough. At ${money(c)} we have a deal."), L("${money(c)} bizim son rakamımıza yakın. Düşünün.", "${money(c)} is close to our final figure. Think about it."), L("Bu teklifle olmaz. ${money(c)} verirseniz masadan kalkmayız.", "Not with this offer. Pay ${money(c)} and we'll stay at the table.")).random())
+                n.counterSwap = n.swapId
+                val withSwap = if (swap != null) L(" + ${swap.name}", " + ${swap.name}") else ""
+                n.log += Line(false, dir, listOf(L("Yaklaştınız ama yeterli değil. ${money(c)}$withSwap olursa anlaşırız.", "You're close but it's not enough. At ${money(c)} we have a deal."), L("${money(c)} bizim son rakamımıza yakın. Düşünün.", "${money(c)} is close to our final figure. Think about it."), L("Bu teklifle olmaz. ${money(c)} verirseniz masadan kalkmayız.", "Not with this offer. Pay ${money(c)} and we'll stay at the table.")).random())
                 if (n.clubPatience <= 0) fail(n, dir, L("Sabrımız tükendi, görüşmeleri bitiriyoruz.", "Our patience has run out, we're ending the talks."))
             }
             else -> {
@@ -234,6 +279,19 @@ object TransferTalks {
                 Economy.earn(seller, Economy.SALES, n.agreedFee)
                 seller.lineup.replaceAll { if (it == p.id) -1 else it }
                 paySellOn(g, p, n.agreedFee, seller.id)
+                // Takas oyuncusu karşı kulübe geçer
+                g.player(n.swapId)?.takeIf { it.teamId == us.id }?.let { s ->
+                    val v = swapValue(g, seller, s)
+                    us.lineup.replaceAll { if (it == s.id) -1 else it }
+                    g.logTransfer(s, us, seller, v)
+                    g.movePlayer(s, seller.id, fee = v)
+                    s.contractYears = s.contractYears.coerceAtLeast(2)
+                    s.listed = false
+                    s.morale = 70.0
+                    Career.sale(g, s.name, v)
+                    Lineups.validate(g, us)
+                    g.addNews(L("🔁 Takas", "🔁 Swap deal"), L("${s.name}, ${p.name} transferinde takas olarak ${seller.name}'a gitti (değeri ${money(v)}).", "${s.name} moved to ${seller.name} as part of the ${p.name} deal (valued at ${money(v)})."))
+                }
             }
             val now = if (n.installments) n.agreedFee / 2 else n.agreedFee
             Economy.earn(us, Economy.BUYS, -now)
